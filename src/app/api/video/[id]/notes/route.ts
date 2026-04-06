@@ -1,0 +1,73 @@
+/**
+ * Video Notes API Routes
+ * 
+ * Master Prompt v8.0 - Feature F16 (WATCH Mode)
+ * - POST /api/video/[id]/notes - Save a timestamped note
+ * - GET /api/video/[id]/notes - Get list of notes
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const { timestamp_seconds, content } = await request.json();
+
+    const { data, error } = await supabase
+      .from('video_notes')
+      .insert({
+        user_id: userId,
+        video_request_id: params.id,
+        timestamp_seconds,
+        content
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data });
+  } catch (err) {
+    console.error('Create Note Error:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const { data, error } = await supabase
+      .from('video_notes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('video_request_id', params.id)
+      .order('timestamp_seconds', { ascending: true });
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data });
+  } catch (err) {
+    console.error('Get Notes Error:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

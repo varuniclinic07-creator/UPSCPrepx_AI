@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Personalized Study Planner</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#007AFF", // Apple Blue
+                        "success": "#34C759", // Apple Green
+                        "warning": "#FF9500", // Apple Orange
+                        "danger": "#FF3B30", // Apple Red
+                        "background-light": "#F2F2F7", // iOS System Gray 6
+                        "background-dark": "#000000",
+                        "paper-light": "#FFFFFF",
+                        "paper-dark": "#1C1C1E", // iOS System Gray 6 Dark
+                        "text-main": "#000000",
+                        "text-sub": "#8E8E93", // iOS System Gray
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+                    },
+                    boxShadow: {
+                        'ios': '0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.04)',
+                        'ios-deep': '0 8px 32px rgba(0, 0, 0, 0.08)',
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .calendar-day-active {
+            background-color: theme('colors.primary');
+            color: white;
+            box-shadow: 0 8px 16px rgba(0, 122, 255, 0.25);
+        }
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+        .dark .ios-blur {
+            background-color: rgba(0, 0, 0, 0.85);
+        }
+    </style>
+<style>
+        body {
+            min-height: 100vh;padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display transition-colors duration-300 antialiased overflow-x-hidden pb-32">
+<header class="sticky top-0 z-40 ios-blur border-b border-black/5 dark:border-white/5 pt-safe-top">
+<div class="px-4 pt-6 pb-4">
+<div class="flex items-center justify-between mb-4">
+<div>
+<p class="text-[13px] font-bold text-primary uppercase tracking-wider mb-0.5">UPSC CSE Preparation</p>
+<h1 class="text-3xl font-extrabold tracking-tight text-black dark:text-white">Study Planner</h1>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBA6y27STJofVY2J1oSGGrB4wcJkxoN3npbNkRi9RH1FE_tt9I_V1UbobsYia4q0FDvlmhKPjcKZU_CzA-FPMr5SLa43TgFWRZWT3VY4FW-_da7qgxaunRpqgWvVCJWolDLELp9R0IcGPw6X5InyKgTN74H_meBaxpfVhkMxltLJQBKvOwp54U03GEsScaQuIXRxxiTUsgNjKgunDkFpzEw5L-s8zymQsawaMBi6qZcehiwbIb8yWt3ozhvSe6TlesXeNzBiIocsqm"/>
+</div>
+</div>
+<div class="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-4 px-4 pb-4 snap-x">
+<div class="snap-start flex flex-col items-center justify-center min-w-[58px] h-[84px] rounded-[20px] bg-paper-light dark:bg-paper-dark shadow-ios border border-transparent">
+<span class="text-[11px] font-bold uppercase text-text-sub">Mon</span>
+<span class="text-[20px] font-bold mt-0.5 text-text-sub">12</span>
+</div>
+<div class="snap-start flex flex-col items-center justify-center min-w-[58px] h-[84px] rounded-[20px] bg-paper-light dark:bg-paper-dark shadow-ios border border-transparent">
+<span class="text-[11px] font-bold uppercase text-text-sub">Tue</span>
+<span class="text-[20px] font-bold mt-0.5 text-text-sub">13</span>
+</div>
+<div class="snap-start flex flex-col items-center justify-center min-w-[58px] h-[84px] rounded-[20px] calendar-day-active transform scale-105 transition-transform">
+<span class="text-[11px] font-bold uppercase text-white/80">Wed</span>
+<span class="text-[20px] font-bold mt-0.5">14</span>
+<div class="mt-1.5 w-1 h-1 bg-white rounded-full"></div>
+</div>
+<div class="snap-start flex flex-col items-center justify-center min-w-[58px] h-[84px] rounded-[20px] bg-paper-light dark:bg-paper-dark shadow-ios border border-transparent">
+<span class="text-[11px] font-bold uppercase text-text-sub">Thu</span>
+<span class="text-[20px] font-bold mt-0.5">15</span>
+</div>
+<div class="snap-start flex flex-col items-center justify-center min-w-[58px] h-[84px] rounded-[20px] bg-paper-light dark:bg-paper-dark shadow-ios border border-transparent">
+<span class="text-[11px] font-bold uppercase text-text-sub">Fri</span>
+<span class="text-[20px] font-bold mt-0.5">16</span>
+</div>
+<div class="snap-start flex flex-col items-center justify-center min-w-[58px] h-[84px] rounded-[20px] bg-paper-light dark:bg-paper-dark shadow-ios border border-transparent">
+<span class="text-[11px] font-bold uppercase text-text-sub">Sat</span>
+<span class="text-[20px] font-bold mt-0.5">17</span>
+</div>
+</div>
+</div>
+</header>
+<main class="px-4 mt-6 max-w-md mx-auto">
+<section class="grid grid-cols-2 gap-3 mb-8">
+<div class="bg-paper-light dark:bg-paper-dark p-5 rounded-[22px] shadow-ios border border-white/50 dark:border-white/5">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="text-3xl font-extrabold tracking-tight">85<span class="text-lg align-top">%</span></h3>
+<p class="text-[13px] text-text-sub font-semibold mt-1">Weekly Goal</p>
+</div>
+<div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-lg">trending_up</span>
+</div>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full mt-4 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 85%"></div>
+</div>
+</div>
+<div class="bg-paper-light dark:bg-paper-dark p-5 rounded-[22px] shadow-ios border border-white/50 dark:border-white/5">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="text-3xl font-extrabold tracking-tight">4.5<span class="text-lg align-top">h</span></h3>
+<p class="text-[13px] text-text-sub font-semibold mt-1">Study Today</p>
+</div>
+<div class="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-warning text-lg">timer</span>
+</div>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full mt-4 overflow-hidden">
+<div class="bg-warning h-full rounded-full" style="width: 60%"></div>
+</div>
+</div>
+</section>
+<section>
+<div class="flex items-center justify-between mb-5">
+<h2 class="text-xl font-bold tracking-tight text-black dark:text-white">Today's Tasks</h2>
+<button class="text-primary text-[15px] font-semibold active:opacity-60 transition-opacity">See All</button>
+</div>
+<div class="space-y-4">
+<div class="bg-paper-light dark:bg-paper-dark p-4 pr-5 rounded-[22px] shadow-ios border border-white/60 dark:border-white/5 flex items-center gap-4 group active:scale-[0.98] transition-transform duration-200">
+<div class="w-[52px] h-[52px] rounded-[18px] bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[26px]">menu_book</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-[17px] truncate leading-tight">Revise Polity</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
+<p class="text-[13px] text-text-sub font-medium">In Progress • 45m left</p>
+</div>
+</div>
+<button class="px-5 py-2.5 rounded-full bg-primary text-white text-[14px] font-bold shadow-lg shadow-blue-500/20 active:bg-blue-600 transition-colors">
+                        Resume
+                    </button>
+</div>
+<div class="bg-paper-light dark:bg-paper-dark p-4 pr-5 rounded-[22px] shadow-ios border border-white/60 dark:border-white/5 flex items-center gap-4 active:scale-[0.98] transition-transform duration-200">
+<div class="w-[52px] h-[52px] rounded-[18px] bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-success shrink-0">
+<span class="material-symbols-outlined text-[26px]">quiz</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-[17px] truncate leading-tight">Daily Quiz</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+<p class="text-[13px] text-text-sub font-medium">Not Started • 15 mins</p>
+</div>
+</div>
+<button class="px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-[14px] font-bold shadow-md active:opacity-80 transition-opacity">
+                        Start
+                    </button>
+</div>
+<div class="bg-paper-light dark:bg-paper-dark p-4 pr-5 rounded-[22px] shadow-ios border border-white/60 dark:border-white/5 flex items-center gap-4 active:scale-[0.98] transition-transform duration-200">
+<div class="w-[52px] h-[52px] rounded-[18px] bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-warning shrink-0">
+<span class="material-symbols-outlined text-[26px]">edit_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-[17px] truncate leading-tight">Essay Writing</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+<p class="text-[13px] text-text-sub font-medium">Not Started • 60 mins</p>
+</div>
+</div>
+<button class="px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-[14px] font-bold shadow-md active:opacity-80 transition-opacity">
+                        Start
+                    </button>
+</div>
+<div class="bg-gray-50/80 dark:bg-gray-900/40 p-4 pr-5 rounded-[22px] border border-dashed border-gray-200 dark:border-white/10 flex items-center gap-4">
+<div class="w-[52px] h-[52px] rounded-[18px] bg-gray-200/50 dark:bg-gray-800 flex items-center justify-center text-text-sub/50 shrink-0">
+<span class="material-symbols-outlined text-[26px] fill-1">check_circle</span>
+</div>
+<div class="flex-1 min-w-0 opacity-60">
+<h3 class="font-bold text-[17px] truncate leading-tight line-through text-text-sub">Current Affairs</h3>
+<p class="text-[13px] text-text-sub font-medium mt-1">Completed at 9:30 AM</p>
+</div>
+<div class="px-3 py-1 bg-success/10 text-success text-[11px] font-bold uppercase rounded-lg tracking-wide">
+                        Done
+                    </div>
+</div>
+</div>
+</section>
+<section class="mt-8 mb-6">
+<div class="relative overflow-hidden bg-black dark:bg-[#1C1C1E] rounded-[28px] p-7 shadow-ios-deep text-white">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/30 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none"></div>
+<div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/20 rounded-full blur-[60px] -ml-12 -mb-12 pointer-events-none"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-5">
+<div class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+<span class="material-symbols-outlined text-white">lightbulb</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-sm">AI Insights</span>
+</div>
+<h3 class="text-2xl font-bold mb-2 leading-tight">Your Polity score is up 12%</h3>
+<p class="text-gray-300 text-[15px] leading-relaxed">Focus on Fundamental Rights to ace your mock test tomorrow.</p>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 z-50 ios-blur border-t border-gray-200/50 dark:border-white/10 px-6 pt-3 pb-8 flex justify-between items-end">
+<button class="flex flex-col items-center gap-1.5 text-primary w-16">
+<span class="material-symbols-outlined text-[26px] fill-1">calendar_today</span>
+<span class="text-[10px] font-semibold">Planner</span>
+</button>
+<button class="flex flex-col items-center gap-1.5 text-text-sub w-16 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">auto_awesome</span>
+<span class="text-[10px] font-medium">AI Notes</span>
+</button>
+<div class="relative -top-5">
+<button class="w-[60px] h-[60px] bg-black dark:bg-white text-white dark:text-black rounded-full shadow-lg shadow-black/20 flex items-center justify-center active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</div>
+<button class="flex flex-col items-center gap-1.5 text-text-sub w-16 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">analytics</span>
+<span class="text-[10px] font-medium">Progress</span>
+</button>
+<button class="flex flex-col items-center gap-1.5 text-text-sub w-16 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+</nav>
+
+</body></html>

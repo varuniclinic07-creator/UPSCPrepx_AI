@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "latest app",
+    "createdAt": 1768684540374,
+    "preset": "automation"
+  },
+  "authorizedRoots": []
+}

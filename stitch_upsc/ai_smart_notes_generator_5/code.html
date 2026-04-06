@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Mock Interview Simulation</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "ios-dark-bg": "#000000",
+                        "ios-card-bg": "#1C1C1E",
+                        "ios-accent": "#0A84FF",
+                        "ios-success": "#30D158",
+                        "ios-warning": "#FFD60A",
+                        "ios-danger": "#FF453A",
+                        "primary": "#D4AF37",},
+                    fontFamily: {
+                        "sans": ["SF Pro Display", "Inter", "sans-serif"],
+                    },
+                    boxShadow: {
+                        'ios': '0 4px 20px rgba(0, 0, 0, 0.5)',
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-ios-dark-bg text-white font-sans antialiased overflow-hidden;
+                height: 100dvh;
+            }
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .recording-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+        }
+        .video-gradient {
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="dark">
+<div class="relative h-full w-full flex flex-col">
+<header class="flex items-center justify-between px-6 py-4 ios-blur bg-black/40 sticky top-0 z-50">
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10">
+<span class="material-symbols-outlined text-white">chevron_left</span>
+</button>
+<div>
+<h1 class="text-sm font-semibold text-gray-400 uppercase tracking-widest">Mock Interview</h1>
+<p class="text-lg font-bold">UPSC Mains Board #4</p>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-ios-danger/20 border border-ios-danger/30">
+<div class="w-2 h-2 rounded-full bg-ios-danger recording-pulse"></div>
+<span class="text-xs font-bold text-ios-danger">08:42</span>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto no-scrollbar pb-32">
+<section class="relative aspect-[9/10] w-full bg-[#111] flex items-center justify-center overflow-hidden">
+<img alt="AI Interviewer Panelist" class="absolute inset-0 w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGuCWCSOzhtB_iMr7woUu9JrStpK8CjhypKPvTrkzIQKVPY7tc0gViiUH99KLPy4Xiz9H0mZdfrCg4fagTcxr_9HZfvVCVDP6xUfnFz3igLt-RNd2Ijh9AY5NVtLV3BF0VQLMYKdbbwA8GnDbllRDPD8VRyL0RuiEcla2uzVRNxkqhNywGreCqRXEt4Gp2yT4JMtWZzq25IktvdXGdJFXWoRAhWExn_yJMs2IL4NiSleruB6gBwiqVYRitB2dzBgFPfy4a21Pc2rER"/>
+<div class="absolute inset-0 video-gradient"></div>
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 h-12">
+<div class="w-1 bg-ios-accent h-4 rounded-full"></div>
+<div class="w-1 bg-ios-accent h-8 rounded-full"></div>
+<div class="w-1 bg-ios-accent h-12 rounded-full"></div>
+<div class="w-1 bg-ios-accent h-6 rounded-full"></div>
+<div class="w-1 bg-ios-accent h-10 rounded-full"></div>
+<div class="w-1 bg-ios-accent h-12 rounded-full"></div>
+<div class="w-1 bg-ios-accent h-5 rounded-full"></div>
+</div>
+<div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase">Panelist: AI Advisor</span>
+</div>
+</section>
+<div class="px-5 pt-6 space-y-6">
+<div class="bg-ios-card-bg/60 rounded-3xl p-5 border border-white/5">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Live Transcript</h3>
+<span class="material-symbols-outlined text-ios-accent text-lg">graphic_eq</span>
+</div>
+<p class="text-lg leading-relaxed text-gray-200">
+                        "Regarding the Indo-Pacific strategy, I believe India's position is central not just geographically, but also as a net security provider. We need to focus on <span class="text-ios-accent border-b border-ios-accent/40">multilateral cooperation</span> while maintaining strategic autonomy..."
+                    </p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-ios-card-bg rounded-2xl p-4 border border-white/5">
+<div class="flex items-center justify-between mb-3">
+<span class="material-symbols-outlined text-ios-success text-xl">record_voice_over</span>
+<span class="text-ios-success font-bold">92%</span>
+</div>
+<h4 class="text-xs font-medium text-gray-400">Clarity</h4>
+<div class="mt-2 w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+<div class="w-[92%] h-full bg-ios-success"></div>
+</div>
+</div>
+<div class="bg-ios-card-bg rounded-2xl p-4 border border-white/5">
+<div class="flex items-center justify-between mb-3">
+<span class="material-symbols-outlined text-ios-warning text-xl">psychology</span>
+<span class="text-ios-warning font-bold">78%</span>
+</div>
+<h4 class="text-xs font-medium text-gray-400">Confidence</h4>
+<div class="mt-2 w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+<div class="w-[78%] h-full bg-ios-warning"></div>
+</div>
+</div>
+</div>
+<div class="bg-ios-card-bg rounded-3xl p-5 border border-white/5">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Voice Analysis</h4>
+<span class="text-[10px] px-2 py-0.5 rounded-md bg-white/10 text-gray-300 uppercase">Real-time</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-sm">Emotional Tone</span>
+<span class="text-sm font-semibold text-ios-accent">Formal &amp; Balanced</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm">WPM (Words Per Minute)</span>
+<span class="text-sm font-semibold">142</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm">Filler Words</span>
+<span class="text-sm font-semibold text-ios-danger">3 detected</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed bottom-0 left-0 right-0 p-6 ios-blur bg-black/60 border-t border-white/5">
+<div class="flex items-center justify-between max-w-md mx-auto">
+<button class="flex flex-col items-center gap-1 group">
+<div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center group-active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-white">videocam_off</span>
+</div>
+<span class="text-[10px] text-gray-400">Camera</span>
+</button>
+<button class="w-16 h-16 rounded-full bg-ios-danger flex items-center justify-center shadow-lg shadow-ios-danger/20 active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-white text-3xl filled">call_end</span>
+</button>
+<button class="flex flex-col items-center gap-1 group">
+<div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center group-active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-white">mic</span>
+</div>
+<span class="text-[10px] text-gray-400">Mute</span>
+</button>
+</div>
+</div>
+<div class="fixed bottom-28 right-4 w-28 aspect-[3/4] rounded-2xl overflow-hidden border border-white/20 shadow-ios bg-[#222]">
+<img alt="User self view" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBA6y27STJofVY2J1oSGGrB4wcJkxoN3npbNkRi9RH1FE_tt9I_V1UbobsYia4q0FDvlmhKPjcKZU_CzA-FPMr5SLa43TgFWRZWT3VY4FW-_da7qgxaunRpqgWvVCJWolDLELp9R0IcGPw6X5InyKgTN74H_meBaxpfVhkMxltLJQBKvOwp54U03GEsScaQuIXRxxiTUsgNjKgunDkFpzEw5L-s8zymQsawaMBi6qZcehiwbIb8yWt3ozhvSe6TlesXeNzBiIocsqm"/>
+<div class="absolute inset-0 bg-black/20"></div>
+</div>
+</div>
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-20">
+<div class="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-ios-accent/30 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full"></div>
+</div>
+
+</body></html>

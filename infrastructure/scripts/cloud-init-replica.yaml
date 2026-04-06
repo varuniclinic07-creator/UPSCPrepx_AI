@@ -1,0 +1,111 @@
+# ═══════════════════════════════════════════════════════════════
+# CLOUD-INIT: REPLICA SERVER BOOTSTRAP
+# Disaster Recovery / Read Replica Server
+# ═══════════════════════════════════════════════════════════════
+
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - curl
+  - rsync
+  - htop
+  - vim
+  - ufw
+
+write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+
+  - path: /opt/upsc-master/scripts/sync-from-primary.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Sync data from primary server
+      PRIMARY_IP="${primary_ip}"
+      
+      echo "Syncing PostgreSQL data..."
+      rsync -avz --delete root@$PRIMARY_IP:/opt/upsc-master/data/postgres/ /opt/upsc-master/data/postgres/
+      
+      echo "Syncing MinIO data..."
+      rsync -avz --delete root@$PRIMARY_IP:/opt/upsc-master/data/minio/ /opt/upsc-master/data/minio/
+      
+      echo "Sync complete!"
+
+  - path: /opt/upsc-master/scripts/promote-to-primary.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # DISASTER RECOVERY: Promote replica to primary
+      
+      echo "═══════════════════════════════════════════════════════════════"
+      echo "PROMOTING REPLICA TO PRIMARY - DISASTER RECOVERY"
+      echo "═══════════════════════════════════════════════════════════════"
+      
+      # Stop sync service
+      systemctl stop upsc-sync.timer || true
+      
+      # Update DNS (requires Cloudflare API token)
+      # curl -X PUT "https://api.cloudflare.com/client/v4/zones/.../dns_records/..." \
+      #   -H "Authorization: Bearer $CF_TOKEN" \
+      #   -d '{"content":"'$(curl -s ifconfig.me)'"}'
+      
+      # Start full application stack
+      cd /opt/upsc-master
+      docker-compose -f docker-compose.production.yml up -d
+      
+      echo "Replica promoted to primary!"
+      echo "DNS update may take up to 5 minutes to propagate."
+
+  - path: /etc/cron.d/upsc-sync
+    content: |
+      # Sync from primary every 6 hours
+      0 */6 * * * root /opt/upsc-master/scripts/sync-from-primary.sh >> /var/log/upsc-sync.log 2>&1
+
+runcmd:
+  # Enable Docker
+  - systemctl enable docker
+  - systemctl start docker
+
+  # Create directories
+  - mkdir -p /opt/upsc-master/scripts
+  - mkdir -p /opt/upsc-master/data/postgres
+  - mkdir -p /opt/upsc-master/data/minio
+
+  # Download docker-compose
+  - curl -sSL "${docker_compose_url}" -o /opt/upsc-master/docker-compose.production.yml
+
+  # Configure firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow from 10.0.0.0/16  # Internal network
+  - ufw --force enable
+
+  # Setup SSH key for rsync (needs manual key exchange)
+  - ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N "" || true
+
+  # Initial sync from primary (will fail if primary not ready)
+  - /opt/upsc-master/scripts/sync-from-primary.sh || echo "Initial sync failed, primary may not be ready"
+
+final_message: |
+  ═══════════════════════════════════════════════════════════════
+  UPSC CSE MASTER - REPLICA SERVER READY
+  ═══════════════════════════════════════════════════════════════
+  Role: Disaster Recovery Replica
+  Primary: ${primary_ip}
+  Sync Schedule: Every 6 hours
+  
+  To promote to primary: /opt/upsc-master/scripts/promote-to-primary.sh
+  ═══════════════════════════════════════════════════════════════

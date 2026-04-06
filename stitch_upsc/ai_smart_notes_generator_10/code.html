@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Provider Configuration</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#007a8a",
+                        "primary-dark": "#006270",
+                        "accent-gold": "#D4AF37",
+                        "background-light": "#F2F4F6",
+                        "background-dark": "#0f1115",
+                        "paper-light": "#FFFFFF",
+                        "paper-dark": "#1C1C1E",
+                        "text-main": "#1C1C1E",
+                        "text-sub": "#8E8E93",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"],
+                        "serif": ["Epilogue", "serif"],
+                    },
+                    boxShadow: {
+                        'glow': '0 0 25px rgba(0, 122, 138, 0.15)',
+                        'card': '0 2px 12px rgba(0, 0, 0, 0.04)',
+                        'ios': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .magic-card {
+                @apply relative overflow-hidden transition-all duration-300;
+                background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,1) 100%);
+            }
+            .dark .magic-card {
+                background: linear-gradient(135deg, rgba(28,28,30,1) 0%, rgba(24,24,26,1) 100%);
+            }
+            .magic-card:hover {
+                @apply shadow-ios border-primary/20;
+                transform: translateY(-2px);
+            }
+            .toggle-switch {
+                @apply relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none;
+            }
+            .toggle-switch[aria-checked="true"] {
+                @apply bg-green-500;
+            }
+            .toggle-switch[aria-checked="false"] {
+                @apply bg-gray-200 dark:bg-gray-700;
+            }
+            .toggle-thumb {
+                @apply pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out;
+            }
+            .toggle-switch[aria-checked="true"] .toggle-thumb {
+                @apply translate-x-5;
+            }
+            .toggle-switch[aria-checked="false"] .toggle-thumb {
+                @apply translate-x-0;
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-gray-100 font-display transition-colors duration-300 antialiased overflow-x-hidden">
+<header class="sticky top-0 z-40 w-full bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-4 py-4">
+<div class="max-w-md mx-auto flex items-center justify-between">
+<button class="text-primary font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+            Admin
+        </button>
+<h1 class="font-bold text-[17px] tracking-tight">AI Providers</h1>
+<button class="text-primary font-medium">Save</button>
+</div>
+</header>
+<main class="max-w-md mx-auto px-4 pt-6 pb-32 space-y-6">
+<div>
+<h2 class="text-2xl font-extrabold tracking-tight mb-1">Configuration</h2>
+<p class="text-text-sub text-sm">Manage API keys and rate limits for active models.</p>
+</div>
+<div class="space-y-4">
+<div class="magic-card group p-5 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-card">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center text-orange-600">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<h3 class="font-bold text-lg">Grok</h3>
+<p class="text-[11px] font-bold text-orange-600 uppercase tracking-widest">X-AI</p>
+</div>
+</div>
+<button aria-checked="true" class="toggle-switch" role="switch">
+<span class="toggle-thumb"></span>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">API Key</label>
+<div class="relative">
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" type="password" value="sk-grok-82910381029310"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Rate Limit</label>
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" type="number" value="1000"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Tokens/Min</label>
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" type="number" value="50000"/>
+</div>
+</div>
+</div>
+</div>
+<div class="magic-card group p-5 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-card">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined">waves</span>
+</div>
+<div>
+<h3 class="font-bold text-lg">Kimi</h3>
+<p class="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Moonshot</p>
+</div>
+</div>
+<button aria-checked="false" class="toggle-switch" role="switch">
+<span class="toggle-thumb"></span>
+</button>
+</div>
+<div class="space-y-4 opacity-50 grayscale">
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">API Key</label>
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" placeholder="Enter API Key" type="password"/>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Rate Limit</label>
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" placeholder="500" type="number"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Tokens/Min</label>
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" placeholder="20000" type="number"/>
+</div>
+</div>
+</div>
+</div>
+<div class="magic-card group p-5 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-card">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center text-purple-600">
+<span class="material-symbols-outlined">smart_toy</span>
+</div>
+<div>
+<h3 class="font-bold text-lg">Llama 3</h3>
+<p class="text-[11px] font-bold text-purple-600 uppercase tracking-widest">Groq Cloud</p>
+</div>
+</div>
+<button aria-checked="true" class="toggle-switch" role="switch">
+<span class="toggle-thumb"></span>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">API Key</label>
+<div class="relative">
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" type="password" value="gsk_l3_j82kL90pQ1mNz"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Rate Limit</label>
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" type="number" value="5000"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Tokens/Min</label>
+<input class="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20" type="number" value="100000"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-2">
+<button class="w-full flex items-center justify-between p-4 bg-white dark:bg-paper-dark rounded-2xl border border-gray-200/60 dark:border-gray-800/60 shadow-card group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400">settings_suggest</span>
+<span class="font-semibold text-sm">Advanced Fallback Strategy</span>
+</div>
+<span class="material-symbols-outlined text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-800/50 pb-8 pt-2">
+<div class="max-w-md mx-auto flex justify-around items-center px-4">
+<button class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined text-[26px]">home</span>
+<span class="text-[10px] font-medium">Dashboard</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined text-[26px]">group</span>
+<span class="text-[10px] font-medium">Users</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[26px] fill-1">settings_input_component</span>
+<span class="text-[10px] font-bold">Providers</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined text-[26px]">analytics</span>
+<span class="text-[10px] font-medium">Usage</span>
+</button>
+</div>
+</nav>
+
+</body></html>

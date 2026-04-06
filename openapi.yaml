@@ -1,0 +1,148 @@
+openapi: 3.0.0
+info:
+  title: UPSC CSE Master API
+  version: 1.0.0
+  description: AI-powered learning platform for UPSC Civil Services Examination
+  contact:
+    email: support@upsccsemaster.com
+
+servers:
+  - url: https://your-app.vercel.app/api
+    description: Production
+  - url: http://localhost:3000/api
+    description: Development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        checks:
+          type: object
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        topic:
+          type: string
+        content:
+          type: string
+        summary:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Quiz:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        questions:
+          type: array
+          items:
+            type: object
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+
+  /notes/generate:
+    post:
+      summary: Generate AI notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - topic
+                - subject
+              properties:
+                topic:
+                  type: string
+                subject:
+                  type: string
+                difficulty:
+                  type: string
+                  enum: [beginner, intermediate, advanced]
+      responses:
+        '200':
+          description: Notes generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '429':
+          description: Rate limit exceeded
+
+  /quiz/generate:
+    post:
+      summary: Generate quiz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - topic
+              properties:
+                topic:
+                  type: string
+                difficulty:
+                  type: string
+                num_questions:
+                  type: integer
+      responses:
+        '200':
+          description: Quiz generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quiz'

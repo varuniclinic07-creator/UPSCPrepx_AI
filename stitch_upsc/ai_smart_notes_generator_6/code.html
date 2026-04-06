@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Essay Evaluation &amp; Scoring</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#007a8a",
+                        "primary-dark": "#006270",
+                        "accent-gold": "#D4AF37",
+                        "background-light": "#F2F4F6",
+                        "background-dark": "#0f1115",
+                        "paper-light": "#FFFFFF",
+                        "paper-dark": "#181b21",
+                        "text-main": "#0c1b1d",
+                        "text-sub": "#5f7174",
+                        "ios-gray": "#8E8E93",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"],
+                        "serif": ["Epilogue", "serif"],
+                    },
+                    boxShadow: {
+                        'glow': '0 0 25px rgba(0, 122, 138, 0.25)',
+                        'card': '0 8px 30px rgba(0, 0, 0, 0.04)',
+                        'float': '0 12px 40px rgba(0, 0, 0, 0.12)',
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .apple-slider-track {
+                @apply h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden;
+            }
+            .apple-slider-fill {
+                @apply h-full rounded-full transition-all duration-700;
+            }
+            .suggestion-highlight {
+                @apply bg-yellow-100 dark:bg-yellow-900/30 border-b-2 border-dashed border-accent-gold cursor-help px-0.5;
+            }
+            .grammar-highlight {
+                @apply bg-red-100 dark:bg-red-900/30 border-b-2 border-dashed border-red-500 cursor-help px-0.5;
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-gray-100 font-display transition-colors duration-300 antialiased overflow-x-hidden">
+<div class="relative min-h-screen flex flex-col pb-24">
+<header class="sticky top-0 z-30 flex items-center justify-between px-4 py-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+<div class="flex items-center gap-2">
+<button class="p-2 -ml-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition-colors">
+<span class="material-symbols-outlined text-[28px]">chevron_left</span>
+</button>
+</div>
+<div class="text-center">
+<h1 class="font-bold text-lg tracking-tight">Essay Evaluation</h1>
+<p class="text-[10px] text-primary font-bold uppercase tracking-widest">GS Paper II • Internal Security</p>
+</div>
+<div class="w-10 h-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-gray-400">more_horiz</span>
+</div>
+</header>
+<main class="flex-1 px-4 py-6 max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-2">
+<h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Your Submission</h2>
+<span class="text-xs font-medium text-gray-500">1,240 Words</span>
+</div>
+<article class="bg-paper-light dark:bg-paper-dark rounded-3xl p-6 shadow-card border border-black/5 dark:border-white/5 h-fit">
+<h3 class="font-serif text-xl font-bold mb-6 text-gray-900 dark:text-white leading-snug">
+                    Impact of Cyber Warfare on National Security: Challenges and The Way Forward
+                </h3>
+<div class="space-y-4 text-gray-700 dark:text-gray-300 leading-relaxed font-serif text-[17px]">
+<p>
+                        The dawn of the 21st century has witnessed a paradigm shift in the nature of warfare. Conventional battlefields are increasingly being supplemented, if not <span class="suggestion-highlight" title="Consider using 'superseded' for a more academic tone.">replaced</span>, by digital frontiers. Cyber warfare, once a theme of science fiction, is now a stark reality for modern nation-states.
+                    </p>
+<p>
+                        In the Indian context, the vulnerability of critical infrastructure such as power grids and banking systems poses a significant threat. <span class="grammar-highlight" title="Subject-verb agreement: 'The government has' instead of 'The government have'">The government have</span> initiated several measures like the National Cyber Security Policy, yet the implementation remains fragmented.
+                    </p>
+<p>
+                        Furthermore, the anonymity provided by the dark web allows non-state actors to launch attacks without immediate retribution. <span class="suggestion-highlight" title="Stronger transition needed here to link this paragraph to the previous one.">This is why</span> a robust institutional framework is the need of the hour. 
+                    </p>
+</div>
+</article>
+</section>
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-2">
+<h2 class="text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">auto_awesome</span> AI Evaluation
+                </h2>
+<span class="text-xs font-bold text-accent-gold">Score: 68/100</span>
+</div>
+<div class="flex flex-col gap-4">
+<div class="bg-paper-light dark:bg-paper-dark rounded-3xl p-6 shadow-card border border-black/5 dark:border-white/5">
+<div class="flex items-center justify-center mb-6">
+<div class="relative flex items-center justify-center">
+<svg class="w-32 h-32 transform -rotate-90">
+<circle class="text-gray-100 dark:text-gray-800" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.4" stroke-dashoffset="116.6" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-extrabold text-gray-900 dark:text-white">68</span>
+<span class="text-[10px] text-gray-400 font-bold uppercase">Average</span>
+</div>
+</div>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm">
+<span class="font-semibold text-gray-700 dark:text-gray-300">Structure &amp; Flow</span>
+<span class="font-bold text-primary">7.5/10</span>
+</div>
+<div class="apple-slider-track">
+<div class="apple-slider-fill bg-primary" style="width: 75%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm">
+<span class="font-semibold text-gray-700 dark:text-gray-300">Content Quality</span>
+<span class="font-bold text-accent-gold">6.2/10</span>
+</div>
+<div class="apple-slider-track">
+<div class="apple-slider-fill bg-accent-gold" style="width: 62%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm">
+<span class="font-semibold text-gray-700 dark:text-gray-300">Grammar &amp; Syntax</span>
+<span class="font-bold text-green-500">8.8/10</span>
+</div>
+<div class="apple-slider-track">
+<div class="apple-slider-fill bg-green-500" style="width: 88%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-paper-light dark:bg-paper-dark rounded-3xl p-6 shadow-card border border-black/5 dark:border-white/5">
+<h4 class="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">lightbulb</span>
+                        Key Improvements
+                    </h4>
+<ul class="space-y-4">
+<li class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-sm text-blue-500">history_edu</span>
+</div>
+<div class="text-sm">
+<p class="font-bold text-gray-800 dark:text-gray-200">Historical Context</p>
+<p class="text-gray-500">Add 1-2 examples of recent cyber-attacks (e.g., Kudankulam 2019) to strengthen arguments.</p>
+</div>
+</li>
+<li class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-sm text-orange-500">analytics</span>
+</div>
+<div class="text-sm">
+<p class="font-bold text-gray-800 dark:text-gray-200">Dimensionality</p>
+<p class="text-gray-500">Include the ethical and legal dimensions of cyber warfare under International Law.</p>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</section>
+</main>
+</div>
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4">
+<div class="flex items-center gap-2 p-2 bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl shadow-float rounded-2xl border border-white/20 dark:border-white/10 ring-1 ring-black/5">
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white font-bold text-sm transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span>Report</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-white font-bold text-sm shadow-glow transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+<span>Refine Essay</span>
+</button>
+</div>
+</div>
+
+</body></html>

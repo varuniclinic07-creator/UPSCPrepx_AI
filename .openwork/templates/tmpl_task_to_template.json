@@ -1,0 +1,7 @@
+{
+  "id": "tmpl_task_to_template",
+  "title": "Turn task into template",
+  "description": "Save workflow for later",
+  "prompt": "Help me turn the last task into a reusable template.",
+  "createdAt": 1768684540364
+}

@@ -1,0 +1,62 @@
+# ═══════════════════════════════════════════════════════════════
+# CLOUD-INIT: WORKER NODE BOOTSTRAP
+# BullMQ Worker for Horizontal Scaling
+# ═══════════════════════════════════════════════════════════════
+
+#cloud-config
+
+package_update: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - curl
+  - htop
+
+write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+
+  - path: /opt/upsc-worker/docker-compose.yml
+    content: |
+      version: '3.8'
+      
+      services:
+        worker:
+          image: ghcr.io/your-org/upsc-master-worker:latest
+          container_name: upsc-worker-${worker_id}
+          restart: unless-stopped
+          environment:
+            - REDIS_URL=${redis_url}
+            - WORKER_ID=${worker_id}
+            - NODE_ENV=production
+          deploy:
+            resources:
+              limits:
+                cpus: '1'
+                memory: 1536M
+
+runcmd:
+  # Enable Docker
+  - systemctl enable docker
+  - systemctl start docker
+
+  # Create directory
+  - mkdir -p /opt/upsc-worker
+
+  # Pull and start worker
+  - cd /opt/upsc-worker && docker-compose up -d
+
+final_message: |
+  ═══════════════════════════════════════════════════════════════
+  UPSC CSE MASTER - WORKER NODE READY
+  Worker ID: ${worker_id}
+  Redis: ${redis_url}
+  ═══════════════════════════════════════════════════════════════

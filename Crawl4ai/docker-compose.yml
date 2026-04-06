@@ -1,0 +1,82 @@
+# UPSC Content Crawler - Docker Compose Configuration
+version: '3.8'
+
+services:
+  upsc-crawler:
+    build: .
+    container_name: upsc-content-crawler
+    restart: unless-stopped
+    
+    # Environment variables
+    env_file:
+      - .env
+    
+    # Volumes for persistence
+    volumes:
+      - ./logs:/app/logs
+      - crawler-cache:/tmp/crawler-cache
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network
+    networks:
+      - crawler-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; from pathlib import Path; exit(0 if Path('/tmp/upsc_crawler.pid').exists() else 1)"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  crawler-cache:
+    driver: local
+
+networks:
+  crawler-network:
+    driver: bridge
+
+# Optional: Add monitoring with Prometheus
+# Uncomment if you want monitoring
+
+# prometheus:
+#   image: prom/prometheus:latest
+#   container_name: prometheus
+#   restart: unless-stopped
+#   volumes:
+#     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#     - prometheus-data:/prometheus
+#   ports:
+#     - "9090:9090"
+#   networks:
+#     - crawler-network
+
+# grafana:
+#   image: grafana/grafana:latest
+#   container_name: grafana
+#   restart: unless-stopped
+#   ports:
+#     - "3000:3000"
+#   volumes:
+#     - grafana-data:/var/lib/grafana
+#   networks:
+#     - crawler-network
+#   depends_on:
+#     - prometheus

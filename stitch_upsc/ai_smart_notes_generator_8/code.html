@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin System Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#007a8a",
+                        "primary-dark": "#006270",
+                        "system-green": "#34C759",
+                        "system-blue": "#007AFF",
+                        "system-orange": "#FF9500",
+                        "system-red": "#FF3B30",
+                        "background-light": "#F2F2F7",
+                        "background-dark": "#000000",
+                        "paper-light": "#FFFFFF",
+                        "paper-dark": "#1C1C1E",
+                        "text-main": "#000000",
+                        "text-sub": "#8E8E93",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"],
+                        "serif": ["Epilogue", "serif"],
+                    },
+                    boxShadow: {
+                        'ios': '0 4px 12px rgba(0, 0, 0, 0.05)',
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer components {
+            .apple-card {
+                @apply bg-paper-light dark:bg-paper-dark rounded-[20px] p-4 shadow-ios ring-1 ring-black/5 dark:ring-white/5;
+            }
+            .status-dot {
+                @apply w-2 h-2 rounded-full;
+            }
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-gray-100 font-display antialiased">
+<header class="sticky top-0 z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/10">
+<div class="px-4 pt-6 pb-2">
+<div class="flex items-center justify-between mb-4">
+<h1 class="text-2xl font-extrabold tracking-tight">System Admin</h1>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-500">notifications</span>
+<img alt="Admin profile" class="w-8 h-8 rounded-full object-cover border border-gray-200" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBA6y27STJofVY2J1oSGGrB4wcJkxoN3npbNkRi9RH1FE_tt9I_V1UbobsYia4q0FDvlmhKPjcKZU_CzA-FPMr5SLa43TgFWRZWT3VY4FW-_da7qgxaunRpqgWvVCJWolDLELp9R0IcGPw6X5InyKgTN74H_meBaxpfVhkMxltLJQBKvOwp54U03GEsScaQuIXRxxiTUsgNjKgunDkFpzEw5L-s8zymQsawaMBi6qZcehiwbIb8yWt3ozhvSe6TlesXeNzBiIocsqm"/>
+</div>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 bg-white dark:bg-paper-dark rounded-full mb-2 ring-1 ring-black/5">
+<div class="flex items-center gap-1.5 flex-1">
+<span class="status-dot bg-system-green animate-pulse"></span>
+<span class="text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400">Services Operational</span>
+</div>
+<div class="flex items-center gap-3 text-[11px] font-medium border-l border-gray-200 dark:border-white/10 pl-3">
+<div class="flex items-center gap-1">
+<span class="text-system-blue">API:</span>
+<span>99.9%</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-system-blue">Latency:</span>
+<span>24ms</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="p-4 flex flex-col gap-4 pb-28">
+<div class="grid grid-cols-2 gap-3">
+<div class="apple-card flex flex-col gap-1">
+<span class="text-[12px] font-semibold text-text-sub uppercase">Daily Active Users</span>
+<span class="text-2xl font-bold">12.4k</span>
+<div class="flex items-center gap-1 text-system-green text-[12px] font-bold mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+<span>+12%</span>
+</div>
+</div>
+<div class="apple-card flex flex-col gap-1">
+<span class="text-[12px] font-semibold text-text-sub uppercase">Lead Conversion</span>
+<span class="text-2xl font-bold">4.8%</span>
+<div class="flex items-center gap-1 text-system-blue text-[12px] font-bold mt-1">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+<span>Stable</span>
+</div>
+</div>
+</div>
+<section class="apple-card">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-sm font-bold uppercase text-text-sub tracking-wider">User Activity Growth</h2>
+<span class="text-xs font-semibold text-system-blue">Last 7 Days</span>
+</div>
+<div class="h-40 flex items-end justify-between gap-1.5 px-1">
+<div class="flex-1 bg-system-blue/10 rounded-t-lg relative h-[40%]">
+<div class="absolute bottom-0 w-full bg-system-blue rounded-t-lg h-[60%] opacity-80"></div>
+</div>
+<div class="flex-1 bg-system-blue/10 rounded-t-lg relative h-[60%]">
+<div class="absolute bottom-0 w-full bg-system-blue rounded-t-lg h-[75%] opacity-80"></div>
+</div>
+<div class="flex-1 bg-system-blue/10 rounded-t-lg relative h-[50%]">
+<div class="absolute bottom-0 w-full bg-system-blue rounded-t-lg h-[40%] opacity-80"></div>
+</div>
+<div class="flex-1 bg-system-blue/10 rounded-t-lg relative h-[80%]">
+<div class="absolute bottom-0 w-full bg-system-blue rounded-t-lg h-[90%] opacity-80"></div>
+</div>
+<div class="flex-1 bg-system-blue/10 rounded-t-lg relative h-[70%]">
+<div class="absolute bottom-0 w-full bg-system-blue rounded-t-lg h-[65%] opacity-80"></div>
+</div>
+<div class="flex-1 bg-system-blue/10 rounded-t-lg relative h-[95%]">
+<div class="absolute bottom-0 w-full bg-system-blue rounded-t-lg h-[100%]"></div>
+</div>
+<div class="flex-1 bg-gray-100 dark:bg-gray-800 rounded-t-lg h-[45%]"></div>
+</div>
+<div class="flex justify-between mt-3 px-1 text-[10px] font-bold text-text-sub uppercase">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</section>
+<section class="apple-card">
+<h2 class="text-sm font-bold uppercase text-text-sub tracking-wider mb-4">API Usage (A4F)</h2>
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="flex-1">
+<div class="flex justify-between text-xs font-bold mb-1">
+<span>Success Rate</span>
+<span class="text-system-green">99.8%</span>
+</div>
+<div class="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+<div class="h-full bg-system-green w-[99.8%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex-1">
+<div class="flex justify-between text-xs font-bold mb-1">
+<span>Latency (avg)</span>
+<span class="text-system-orange">210ms</span>
+</div>
+<div class="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+<div class="h-full bg-system-orange w-[45%]"></div>
+</div>
+</div>
+</div>
+<div class="mt-2 pt-4 border-t border-gray-100 dark:border-white/5 grid grid-cols-2 gap-4">
+<div>
+<span class="block text-[10px] font-bold text-text-sub uppercase mb-1">Total Requests</span>
+<span class="text-lg font-bold">1,402,891</span>
+</div>
+<div>
+<span class="block text-[10px] font-bold text-text-sub uppercase mb-1">Active Keys</span>
+<span class="text-lg font-bold">242</span>
+</div>
+</div>
+</div>
+</section>
+<section class="apple-card">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-sm font-bold uppercase text-text-sub tracking-wider">Conversion Heatmap</h2>
+<div class="flex gap-1">
+<div class="w-2 h-2 rounded-sm bg-system-blue/20"></div>
+<div class="w-2 h-2 rounded-sm bg-system-blue/60"></div>
+<div class="w-2 h-2 rounded-sm bg-system-blue"></div>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-1">
+<div class="aspect-square bg-system-blue rounded-sm"></div>
+<div class="aspect-square bg-system-blue/40 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/80 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/20 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/60 rounded-sm"></div>
+<div class="aspect-square bg-system-blue rounded-sm"></div>
+<div class="aspect-square bg-system-blue/40 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/10 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/90 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/30 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/60 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/20 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/40 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/80 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/50 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/70 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/20 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/90 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/40 rounded-sm"></div>
+<div class="aspect-square bg-system-blue rounded-sm"></div>
+<div class="aspect-square bg-system-blue/60 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/30 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/50 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/80 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/40 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/10 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/90 rounded-sm"></div>
+<div class="aspect-square bg-system-blue/50 rounded-sm"></div>
+</div>
+<p class="mt-4 text-[11px] text-text-sub font-medium leading-tight">
+                Conversion density is highest during post-Prelims result announcement window.
+            </p>
+</section>
+<section class="apple-card">
+<h2 class="text-sm font-bold uppercase text-text-sub tracking-wider mb-3">Critical Logs</h2>
+<div class="space-y-3">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-system-red text-[18px] mt-0.5">error</span>
+<div>
+<p class="text-[13px] font-bold leading-tight">Database scaling event</p>
+<p class="text-[11px] text-text-sub">Region: AP-South-1 • 2m ago</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-system-blue text-[18px] mt-0.5">info</span>
+<div>
+<p class="text-[13px] font-bold leading-tight">AI Model Update (v2.4.1)</p>
+<p class="text-[11px] text-text-sub">Status: Deployed • 14m ago</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-t border-gray-200 dark:border-white/10 px-6 pb-8 pt-2 z-50">
+<div class="flex items-center justify-between">
+<button class="flex flex-col items-center gap-1 text-system-blue">
+<span class="material-symbols-outlined fill-1">dashboard</span>
+<span class="text-[10px] font-bold">Overview</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-[10px] font-bold">Analytics</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">api</span>
+<span class="text-[10px] font-bold">Services</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</button>
+</div>
+</nav>
+
+</body></html>

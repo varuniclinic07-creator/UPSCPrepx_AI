@@ -1,0 +1,193 @@
+version: '3.8'
+
+networks:
+  coolify-services:
+    driver: bridge
+
+volumes:
+  redis-data:
+  minio-data:
+  postgres-data:
+  n8n-data:
+  uptime-kuma-data:
+  crawl4ai-data:
+
+services:
+  # Redis Cache (Port 6379)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    networks:
+      - coolify-services
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # MinIO S3-Compatible Storage (Ports 9000, 9001)
+  minio:
+    image: minio/minio:latest
+    container_name: minio-storage
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - coolify-services
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Manim Community (Port 8010)
+  manim-community:
+    image: manimcommunity/manim:latest
+    container_name: manim-community
+    restart: unless-stopped
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./manim-output:/manim/output
+    working_dir: /manim
+    networks:
+      - coolify-services
+    command: tail -f /dev/null
+
+  # FFmpeg Service (Port 8013)
+  ffmpeg-service:
+    image: jrottenberg/ffmpeg:latest
+    container_name: ffmpeg-service
+    restart: unless-stopped
+    ports:
+      - "8013:8013"
+    volumes:
+      - ./ffmpeg-workspace:/workspace
+    networks:
+      - coolify-services
+    entrypoint: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
+
+  # n8n Workflow Automation (Port 5678)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-automation
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme123}
+      - N8N_HOST=${N8N_HOST:-0.0.0.0}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://${SERVER_IP:-89.117.60.144}:5678/
+    volumes:
+      - n8n-data:/home/node/.n8n
+    networks:
+      - coolify-services
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Uptime Kuma Monitoring (Port 3001)
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - coolify-services
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Crawl4AI Web Scraping (Port 8014) - Official Image
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    container_name: crawl4ai-service
+    restart: unless-stopped
+    ports:
+      - "8014:8014"
+    environment:
+      - CRAWL4AI_API_TOKEN=${CRAWL4AI_API_TOKEN:-}
+    volumes:
+      - crawl4ai-data:/app/data
+    networks:
+      - coolify-services
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8014/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Remotion Video Rendering (Port 8012)
+  remotion:
+    image: node:18-alpine
+    container_name: remotion-service
+    restart: unless-stopped
+    ports:
+      - "8012:8012"
+    volumes:
+      - ./remotion-workspace:/app
+    working_dir: /app
+    networks:
+      - coolify-services
+    command: |
+      sh -c "npm install -g @remotion/cli @remotion/lambda && 
+      tail -f /dev/null"
+
+  # Bull Board UI for BullMQ (Port 3002)
+  bull-board:
+    image: node:18-alpine
+    container_name: bull-board
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - coolify-services
+    command: |
+      sh -c "npm install -g bull-board express bull && 
+      cat > /tmp/server.js << 'EOF'
+      const express = require('express');
+      const { createBullBoard } = require('bull-board');
+      const { BullAdapter } = require('bull-board/bullAdapter');
+      const Queue = require('bull');
+      
+      const app = express();
+      
+      const queues = [
+        new Queue('default', { redis: { host: 'redis', port: 6379 } })
+      ];
+      
+      const { router } = createBullBoard(queues.map(q => new BullAdapter(q)));
+      app.use('/', router);
+      
+      app.listen(3002, () => console.log('Bull Board running on 3002'));
+      EOF
+      node /tmp/server.js"

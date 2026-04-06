@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>UPSC CSE Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#007a8a",
+                        "accent": "#D4AF37",
+                        "background-light": "#f9fafb",
+                        "background-dark": "#14181f",
+                        "card-light": "#ffffff",
+                        "card-dark": "#1e2329",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2rem", "full": "9999px" },
+                    boxShadow: {
+                        "soft": "0 4px 20px -2px rgba(0, 0, 0, 0.05)",
+                        "glow": "0 0 15px rgba(0, 122, 138, 0.3)",
+                    },
+                    animation: {
+                        "shimmer": "shimmer 3s linear infinite",
+                        "float": "float 6s ease-in-out infinite",
+                    },
+                    keyframes: {
+                        shimmer: {
+                            "0%": { backgroundPosition: "200% center" },
+                            "100%": { backgroundPosition: "-200% center" }
+                        },
+                        float: {
+                            "0%, 100%": { transform: "translateY(0)" },
+                            "50%": { transform: "translateY(-10px)" },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Glassmorphism utility */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass {
+            background: rgba(20, 24, 31, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Gradient Text Animation */
+        .animate-gradient-text {
+            background-size: 200% auto;
+            animation: textShine 5s linear infinite;
+        }
+        @keyframes textShine {
+            to {
+                background-position: 200% center;
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased selection:bg-primary/30 selection:text-primary">
+<!-- Navbar -->
+<nav class="fixed top-0 left-0 right-0 z-50 glass h-16 transition-all duration-300">
+<div class="flex items-center justify-between h-full px-5 max-w-md mx-auto w-full md:max-w-full">
+<div class="flex items-center gap-2">
+<div class="flex items-center justify-center size-8 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-[20px]">school</span>
+</div>
+<span class="font-bold text-lg tracking-tight text-gray-900 dark:text-white">UPSC Master</span>
+</div>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors active:scale-95">
+<span class="material-symbols-outlined text-gray-600 dark:text-gray-300">account_circle</span>
+</button>
+</div>
+</nav>
+<!-- Main Content Container -->
+<main class="relative flex flex-col min-h-screen pt-24 pb-10 px-5 max-w-md mx-auto w-full md:max-w-3xl overflow-x-hidden">
+<!-- Hero Section -->
+<section class="flex flex-col items-center text-center gap-6 mb-12">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-xs font-semibold text-primary uppercase tracking-wide">New 2024 Syllabus</span>
+</div>
+<div class="space-y-2">
+<h1 class="text-4xl md:text-5xl font-black leading-[1.1] tracking-tight">
+                    Master the <br/>
+<span class="bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary animate-gradient-text">Civil Services.</span>
+</h1>
+<p class="text-gray-500 dark:text-gray-400 text-base md:text-lg font-medium leading-relaxed max-w-[320px] mx-auto">
+                    AI-driven preparation for India's toughest exam. Streamlined notes, daily quizzes, and expert insights.
+                </p>
+</div>
+<div class="flex flex-col w-full gap-4">
+<button class="relative w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all overflow-hidden group">
+<div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+<span class="relative flex items-center justify-center gap-2">
+                        Get Started
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</span>
+</button>
+<div class="flex items-center justify-center gap-3">
+<div class="flex -space-x-2">
+<img alt="Portrait of a smiling young student" class="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-background-dark object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwN-Vh_mJTEHxhxqQbb3kJdoQaLxPfSLddtxKE-1xV7r6j5xJqWGraSWmOy3u9CQwilDicHKtDvv4gugtTn_fL07LmkdBNMvxx2NAlmjefQEfNQMC_6T6_hEaaPu4rBcshzVxtDGsJWZhvH6-XGzyxkSvLcLvEVJXmCDIG-6MtI-i6sYLvlKIZUIIAijPTUV8xaeyZyFCOGMljq6MA2Myh-XFa4-Ecv5_KXJ2Ue66ObKQGqqjBh3U5Z_qj3a_L11bUPVjTOr5sNY0C"/>
+<img alt="Portrait of a male aspirant looking focused" class="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-background-dark object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtz-7e641lCLW26AuWsGmpS2ScUWJ_N20f6zP1Kzhh3nSCYUtK557t8MK2Q27F8IP73N7vrrLvBXuCNXiAeVAeF3zo2HE4pnDqdZ_yMZ2oAOhv8bvH9lRKpgwh6NOqZhtGoBp2gGZ6KYzP6sVfFJF6bnKqt4pd8itHhfz_UT0SBY5XwOa3_cuvMqRuvN7X6__G6cIAkJlyn7RlpDLo71W7Sgby5BLdtAmwhxjXJjik1_Z3TfUfXR40sOeIsSbSi8uWz-dG_KfsJRKG"/>
+<img alt="Portrait of a confident student" class="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-background-dark object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7bjKVxi5q7YZlZtOo6ZqFabbsYcRPxFcepdpdH8IXNtmM8Z4Axd671I5tJAXUcmUixwIp7qWEv9v7A5-nVKYA1fqFx-LzBEh2JNPyeZd20vYIqjCiNbXMpcY9CBj7UmTEV9q1I3xC8WlKg1SHgW99D9YWk9p1V7L48nkYCeX9N8nJ-F4NwTI363SiK4UhBsD8I-qZRiJVk_p5UcPM2Yx2iOW08Wx2OBVOLlv_yskzIqabVjO_z9gPrwdtNjVo43VHIiKn-emYTAy-"/>
+<div class="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white dark:ring-background-dark bg-gray-100 dark:bg-gray-800 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                            +10k
+                        </div>
+</div>
+<p class="text-sm text-gray-500 dark:text-gray-400 font-medium">Trusted Aspirants</p>
+</div>
+</div>
+</section>
+<!-- Bento Grid Features -->
+<section class="grid grid-cols-2 gap-4">
+<!-- Large Card: Smart Notes -->
+<div class="col-span-2 group relative overflow-hidden bg-white dark:bg-card-dark rounded-3xl p-6 shadow-soft border border-gray-100 dark:border-gray-800 active:scale-[0.99] transition-transform">
+<!-- Decorative background blob -->
+<div class="absolute -right-10 -top-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-colors"></div>
+<div class="relative z-10 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="size-12 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500">
+<span class="material-symbols-outlined filled">auto_stories</span>
+</div>
+<span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Premium</span>
+</div>
+<div>
+<h3 class="text-xl font-bold text-gray-900 dark:text-white mb-1">Smart Study Notes</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Concise, high-yield summaries generated by AI from standard textbooks.</p>
+</div>
+<!-- Visual Representation of Notes -->
+<div class="mt-2 space-y-2 opacity-80 group-hover:opacity-100 transition-opacity">
+<div class="h-2 w-3/4 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+<div class="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+<div class="h-2 w-5/6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Square Card: Quiz -->
+<div class="col-span-1 group relative overflow-hidden bg-white dark:bg-card-dark rounded-3xl p-5 shadow-soft border border-gray-100 dark:border-gray-800 active:scale-[0.98] transition-transform flex flex-col justify-between h-[180px]">
+<div class="absolute inset-0 bg-gradient-to-br from-transparent to-blue-50/50 dark:to-blue-900/10"></div>
+<div class="relative z-10">
+<div class="size-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 mb-3">
+<span class="material-symbols-outlined">quiz</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Practice Quiz</h3>
+</div>
+<!-- Circular Progress Mockup -->
+<div class="relative size-12 self-end">
+<svg class="size-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-gray-100 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="75, 100" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-primary">75%</div>
+</div>
+</div>
+<!-- Square Card: Current Affairs -->
+<div class="col-span-1 group relative overflow-hidden bg-white dark:bg-card-dark rounded-3xl p-5 shadow-soft border border-gray-100 dark:border-gray-800 active:scale-[0.98] transition-transform flex flex-col justify-between h-[180px]">
+<div class="absolute inset-0 bg-gradient-to-br from-transparent to-purple-50/50 dark:to-purple-900/10"></div>
+<div class="relative z-10">
+<div class="size-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-500 mb-3">
+<span class="material-symbols-outlined">newspaper</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Current Affairs</h3>
+</div>
+<!-- Date Mockup -->
+<div class="relative self-end bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-100 dark:border-gray-600 flex flex-col items-center min-w-[50px]">
+<span class="text-[8px] font-bold text-red-500 uppercase">Today</span>
+<span class="text-sm font-black text-gray-800 dark:text-gray-200">24</span>
+</div>
+</div>
+<!-- Wide Card: Community / Live -->
+<div class="col-span-2 relative overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl p-6 shadow-lg active:scale-[0.99] transition-transform text-white">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="text-lg font-bold mb-1">Live Mentorship</h3>
+<p class="text-sm text-gray-300">Join expert sessions every weekend.</p>
+</div>
+<div class="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-full backdrop-blur-sm">
+<span class="block size-2 bg-red-500 rounded-full animate-pulse"></span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Live</span>
+</div>
+</div>
+<!-- Abstract avatars -->
+<div class="mt-4 flex items-center gap-2">
+<div class="flex -space-x-3">
+<div class="size-8 rounded-full border-2 border-gray-800 bg-gray-600 bg-cover bg-center" data-alt="Female mentor professional headshot" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBA29QnA_3QaVCmg70kxPddSxvVD9NIln4RZVFWH_6htWF-2rMuiRaFnwK_wjKe4R2_miNzW_HoTVHiO3SMcStwdOaixcxfg3TVVVTFuQmxHI5N6j2_FLw4UvA9nFiCQRMjETUpRW7WOBRlqdxPaNbX5SIYZyxoki89bK13BrixtHy_RmcoHPLXgIe2mNgK0pJaNLKpJEp5Td6WC76sH1QVr52aGRLzdCSoVXWICPkKYcB17-Po7fiSzByh0U6z4MwQllh-LA64Nvlp')"></div>
+<div class="size-8 rounded-full border-2 border-gray-800 bg-gray-600 bg-cover bg-center" data-alt="Male mentor professional headshot" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAOl-qXy8Y-NjjRsmYaumuffbt_pr4ndtTzJAcVmGhmpfDhnQiba-273fJnzSuriFydUFAAUmn0mKpRxcluwV0euE6-eV_SgWJsoZ2jT-eq4QGde7VFyHMiglYK9iE3SOYCfFMP3bxNJe7H3_y9go858NhVYKr95d-aslTyy7HA-CwXyChebUBLGNXMgLUb5mtnYJyK0Ov6q--2YBr-YMX5sHeZbUFLSVBmgSV0_PeMX16v83lr3mjYkhoAeObw_rej6zCkwhT0z0Lm')"></div>
+</div>
+<span class="text-xs text-gray-400 font-medium">+ 5 Mentors online</span>
+</div>
+</div>
+</section>
+<!-- Footer / Bottom CTA -->
+<div class="mt-12 text-center pb-8">
+<p class="text-gray-500 dark:text-gray-400 text-sm mb-4">Ready to start your journey?</p>
+<a class="text-primary font-bold hover:underline decoration-2 underline-offset-4 text-sm" href="#">
+                Already have an account? Log in
+            </a>
+<div class="mt-8 flex justify-center gap-6 opacity-40">
+<span class="material-symbols-outlined text-2xl">workspace_premium</span>
+<span class="material-symbols-outlined text-2xl">shield</span>
+<span class="material-symbols-outlined text-2xl">verified</span>
+</div>
+<p class="mt-4 text-[10px] text-gray-400 uppercase tracking-widest font-bold">UPSC Master © 2024</p>
+</div>
+</main>
+<!-- Bottom blurred gradient for depth -->
+<div class="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent pointer-events-none z-10"></div>
+</body></html>

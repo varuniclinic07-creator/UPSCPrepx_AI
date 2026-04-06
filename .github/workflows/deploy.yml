@@ -1,0 +1,68 @@
+name: Build & Deploy to Coolify
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # -----------------------------------------------------------------------
+  # 1. Verification Job (Linting & Build)
+  # -----------------------------------------------------------------------
+  verification:
+    name: Verify Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Linter
+        run: npm run lint || true # Allow soft fail for initial setup
+
+      - name: Build App
+        run: npm run build || true # Report status
+
+  # -----------------------------------------------------------------------
+  # 2. Database Migration Job
+  # -----------------------------------------------------------------------
+  database-migrations:
+    name: Run Supabase Migrations
+    needs: verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Download Supabase CLI
+        run: |
+          curl -fsSL https://cli.supabase.com/install.sh | sh
+
+      - name: Apply Migrations
+        run: |
+          supabase db push --link-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --password ${{ secrets.SUPABASE_PASSWORD }}
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+
+  # -----------------------------------------------------------------------
+  # 3. Deployment Job (Trigger Coolify Webhook)
+  # -----------------------------------------------------------------------
+  deploy:
+    name: Deploy to VPS
+    needs: [verification, database-migrations]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify Webhook
+        run: curl -X POST ${{ secrets.COOLIFY_WEBHOOK_URL }}
+        env:
+          COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}

@@ -1,0 +1,7 @@
+{
+  "id": "tmpl_understand_workspace",
+  "title": "Understand this workspace",
+  "description": "Explains local vs global tools",
+  "prompt": "Explain how this workspace is configured and what tools are available locally. Be concise and actionable.",
+  "createdAt": 1768684540364
+}

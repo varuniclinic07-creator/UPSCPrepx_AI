@@ -1,0 +1,66 @@
+# ═══════════════════════════════════════════════════════════════
+# BULLMQ WORKER - DOCKERFILE
+# Background job processor for lectures, videos, etc.
+# ═══════════════════════════════════════════════════════════════
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+# Copy package files
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy TypeScript config and source
+COPY tsconfig.json ./
+COPY src/lib/lecture-generator ./src/lib/lecture-generator
+COPY src/lib/rate-limiter ./src/lib/rate-limiter
+COPY src/lib/services ./src/lib/services
+COPY src/lib/queues ./src/lib/queues
+COPY src/workers ./src/workers
+
+# Compile TypeScript to JavaScript
+RUN npx tsc --outDir dist --rootDir src src/workers/**/*.ts src/lib/**/*.ts || true
+
+# ═══════════════════════════════════════════════════════════════
+# PRODUCTION STAGE
+# ═══════════════════════════════════════════════════════════════
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Install runtime dependencies for video processing
+RUN apk add --no-cache \
+    ffmpeg \
+    python3 \
+    curl
+
+# Copy package files and install production deps only
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+# Copy compiled JavaScript from builder
+COPY --from=builder /app/dist ./dist
+
+# Create non-root user
+RUN addgroup --system --gid 1001 worker
+RUN adduser --system --uid 1001 worker
+RUN chown -R worker:worker /app
+
+USER worker
+
+# Environment
+ENV NODE_ENV=production
+
+# Health check endpoint
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Run the compiled worker
+CMD ["node", "dist/workers/bullmq-worker.js"]

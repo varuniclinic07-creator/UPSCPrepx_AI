@@ -1,0 +1,250 @@
+# ============================================
+# UPSC CSE Master - Complete VPS Stack
+# Coolify Deployment at 89.117.60.144:8000
+# ============================================
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # REDIS - Cache & Queue (CRITICAL)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: upsc-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - coolify
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    labels:
+      - "coolify.managed=true"
+      - "coolify.service=redis"
+
+  # ==========================================
+  # MINIO - Object Storage (CRITICAL)
+  # ==========================================
+  minio:
+    image: minio/minio:latest
+    container_name: upsc-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-upscadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-upsc2026miniopass}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - coolify
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "coolify.managed=true"
+      - "coolify.service=minio"
+      - "coolify.port=9000"
+
+  # ==========================================
+  # CRAWL4AI - Web Scraping (CRITICAL)
+  # ==========================================
+  crawl4ai:
+    build:
+      context: ./Crawl4ai
+      dockerfile: Dockerfile
+    image: upsc-crawl4ai:latest
+    container_name: upsc-crawl4ai
+    restart: unless-stopped
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      API_TOKEN: ${CRAWL4AI_API_TOKEN}
+      API_PORT: 11235
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      LOG_LEVEL: INFO
+      MAX_CONCURRENT_REQUESTS: 3
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "11235:11235"
+    volumes:
+      - crawl4ai-logs:/app/logs
+      - crawl4ai-cache:/tmp/crawler-cache
+    networks:
+      - coolify
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 2m
+      timeout: 10s
+      retries: 3
+    labels:
+      - "coolify.managed=true"
+      - "coolify.service=crawl4ai"
+      - "coolify.port=11235"
+
+  # ==========================================
+  # PLAUSIBLE - Analytics (OPTIONAL)
+  # ==========================================
+  plausible:
+    image: plausible/analytics:latest
+    container_name: upsc-plausible
+    restart: unless-stopped
+    command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+    environment:
+      BASE_URL: http://89.117.60.144:8088
+      SECRET_KEY_BASE: ${PLAUSIBLE_SECRET_KEY_BASE}
+      DISABLE_REGISTRATION: "true"
+    ports:
+      - "8088:8000"
+    volumes:
+      - plausible-data:/var/lib/plausible
+    networks:
+      - coolify
+    depends_on:
+      - plausible-db
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    labels:
+      - "coolify.managed=true"
+      - "coolify.service=plausible"
+
+  plausible-db:
+    image: postgres:14-alpine
+    container_name: upsc-plausible-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: plausible
+      POSTGRES_USER: plausible
+      POSTGRES_PASSWORD: ${PLAUSIBLE_DB_PASSWORD}
+    volumes:
+      - plausible-db-data:/var/lib/postgresql/data
+    networks:
+      - coolify
+
+  # ==========================================
+  # MAUTIC - Marketing Automation (OPTIONAL)
+  # ==========================================
+  mautic:
+    image: mautic/mautic:latest
+    container_name: upsc-mautic
+    restart: unless-stopped
+    environment:
+      MAUTIC_DB_HOST: mautic-db
+      MAUTIC_DB_NAME: mautic
+      MAUTIC_DB_USER: mautic
+      MAUTIC_DB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+      MAUTIC_TRUSTED_PROXIES: 0.0.0.0/0
+    ports:
+      - "8083:80"
+    volumes:
+      - mautic-data:/var/www/html
+    networks:
+      - coolify
+    depends_on:
+      - mautic-db
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    labels:
+      - "coolify.managed=true"
+      - "coolify.service=mautic"
+
+  mautic-db:
+    image: mysql:8
+    container_name: upsc-mautic-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: mautic
+      MYSQL_USER: mautic
+      MYSQL_PASSWORD: ${MAUTIC_DB_PASSWORD}
+    volumes:
+      - mautic-db-data:/var/lib/mysql
+    networks:
+      - coolify
+
+  # ==========================================
+  # UPTIME KUMA - Monitoring (OPTIONAL)
+  # ==========================================
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: upsc-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3003:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - coolify
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    labels:
+      - "coolify.managed=true"
+      - "coolify.service=uptime-kuma"
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  redis-data:
+    driver: local
+  minio-data:
+    driver: local
+  crawl4ai-logs:
+    driver: local
+  crawl4ai-cache:
+    driver: local
+  plausible-data:
+    driver: local
+  plausible-db-data:
+    driver: local
+  mautic-data:
+    driver: local
+  mautic-db-data:
+    driver: local
+  uptime-kuma-data:
+    driver: local
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  coolify:
+    external: true
+    name: coolify

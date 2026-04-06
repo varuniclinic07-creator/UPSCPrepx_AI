@@ -1,0 +1,101 @@
+# ═══════════════════════════════════════════════════════════════
+# CLOUD-INIT: PRIMARY SERVER BOOTSTRAP
+# Automatically configures the primary VPS on creation
+# ═══════════════════════════════════════════════════════════════
+
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - curl
+  - git
+  - htop
+  - vim
+  - ufw
+  - fail2ban
+
+# System settings
+write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        },
+        "storage-driver": "overlay2"
+      }
+
+  - path: /opt/upsc-master/.env
+    permissions: '0600'
+    content: |
+      ${env_content}
+
+  - path: /opt/upsc-master/docker-compose.yml
+    permissions: '0644'
+    content: |
+      # Downloaded from: ${docker_compose_url}
+
+  - path: /etc/cron.d/upsc-backup
+    content: |
+      # Automated backup at 2 AM daily
+      0 2 * * * root /opt/upsc-master/scripts/backup.sh >> /var/log/upsc-backup.log 2>&1
+
+  - path: /opt/upsc-master/scripts/health-check.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      curl -sf http://localhost:3000/api/health || exit 1
+
+runcmd:
+  # Enable Docker
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker root
+
+  # Create app directory
+  - mkdir -p /opt/upsc-master/scripts
+  - mkdir -p /opt/upsc-master/backups
+  - mkdir -p /opt/upsc-master/data
+
+  # Download docker-compose file
+  - curl -sSL "${docker_compose_url}" -o /opt/upsc-master/docker-compose.yml
+
+  # Copy backup script
+  - curl -sSL "https://raw.githubusercontent.com/your-repo/main/scripts/backup.sh" -o /opt/upsc-master/scripts/backup.sh
+  - chmod +x /opt/upsc-master/scripts/backup.sh
+
+  # Configure firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 3000/tcp
+  - ufw --force enable
+
+  # Configure fail2ban
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+
+  # Start application
+  - cd /opt/upsc-master && docker-compose up -d
+
+  # Wait for services to start
+  - sleep 30
+
+  # Verify health
+  - /opt/upsc-master/scripts/health-check.sh || echo "Health check failed, please verify manually"
+
+final_message: |
+  ═══════════════════════════════════════════════════════════════
+  UPSC CSE MASTER - PRIMARY SERVER READY
+  ═══════════════════════════════════════════════════════════════
+  Application: http://$HOSTNAME:3000
+  Health Check: http://$HOSTNAME:3000/api/health
+  ═══════════════════════════════════════════════════════════════

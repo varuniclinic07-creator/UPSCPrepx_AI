@@ -1,0 +1,24 @@
+{
+  "name": "claude-subagent-manager",
+  "description": "MCP server that exposes a fixed set of subagents for Claude projects.",
+  "version": "1.0.0",
+  "tools": {
+    "load_subagents": {
+      "description": "Returns the enforced list of Claude subagents.",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "subagents": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "handlers": {
+    "load_subagents": {
+      "command": "python",
+      "args": [
+        "return_subagents.py"
+      ]
+    }
+  }
+}

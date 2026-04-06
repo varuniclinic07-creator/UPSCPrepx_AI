@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>UPSCPrepX-AI Admin Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#53d22d",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#152012",
+                        "surface-dark": "#1e2b1b",
+                        "accent-blue": "#3b82f6",
+                        "accent-purple": "#8b5cf6",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "1.5rem", 
+                        "xl": "2rem",
+                        "2xl": "2.5rem",
+                        "3xl": "3rem",
+                        "full": "9999px"
+                    },
+                    animation: {
+                        'border-beam': 'border-beam 4s linear infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                        'marquee': 'marquee 25s linear infinite',
+                        'shimmer': 'shimmer 2s linear infinite',
+                    },
+                    keyframes: {
+                        'border-beam': {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' },
+                        },
+                        'marquee': {
+                            '0%': { transform: 'translateX(0%)' },
+                            '100%': { transform: 'translateX(-100%)' },
+                        },
+                        'shimmer': {
+                            '0%': { backgroundPosition: '-200%' },
+                            '100%': { backgroundPosition: '200%' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(30, 43, 27, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-sidebar {
+            background: rgba(21, 32, 18, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .border-beam-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }.shiny-text {
+            background: linear-gradient(
+                90deg, 
+                rgba(255,255,255,0.4) 0%, 
+                rgba(255,255,255,1) 50%, 
+                rgba(255,255,255,0.4) 100%
+            );
+            background-size: 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s infinite linear;
+        }.chart-grid {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white overflow-hidden selection:bg-primary/30 selection:text-primary">
+<div class="flex h-screen w-full relative">
+<div class="fixed top-[-10%] left-[20%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+<div class="fixed bottom-[-10%] right-[20%] w-[30%] h-[30%] bg-accent-blue/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+<div class="lg:hidden absolute top-4 left-4 z-50">
+<button class="p-2 glass-panel rounded-full text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+<aside class="hidden lg:flex flex-col w-72 glass-sidebar z-40 h-full p-6 justify-between shrink-0">
+<div class="flex flex-col gap-8">
+<div class="flex items-center gap-3 px-2">
+<div class="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-[#2e5c1b] flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-white text-[20px]">admin_panel_settings</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold tracking-tight">UPSCPrepX-AI</h1>
+<p class="text-white/40 text-xs font-medium tracking-wide uppercase">Admin Console</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_15px_-3px_rgba(83,210,45,0.2)] transition-all duration-300" href="#">
+<span class="material-symbols-outlined text-primary">analytics</span>
+<span class="text-white text-sm font-semibold">Analytics</span>
+</a>
+<a class="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all duration-300 text-white/60 hover:text-white" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">group</span>
+<span class="text-sm font-medium">Users Management</span>
+</a>
+<a class="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all duration-300 text-white/60 hover:text-white" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">tune</span>
+<span class="text-sm font-medium">AI Config</span>
+</a>
+<a class="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all duration-300 text-white/60 hover:text-white" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">bolt</span>
+<span class="text-sm font-medium">Leads &amp; Growth</span>
+</a>
+<a class="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all duration-300 text-white/60 hover:text-white" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">System Settings</span>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-4">
+<div class="glass-panel p-4 rounded-2xl flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-cover bg-center border border-white/10" data-alt="Portrait of a young male user" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCn9CI-sFbz74uN1FfSN5vGUeAebnPZfS_odIQdi4tuJNVnry1OBh6rElzGlryDQpQOTj9m-Nhwd5sexiKCHuzisePVVLaQtMiZcr4UYkr2QRq5Gd9T_6LDxL5gtlrVpPA_lVHcb1hw-YQoFPFj5dEm6xjAy7cVTq746cBfj-5oUxzozk1idbg1LI96rFMJWef5zlc-Er-aKBd11CvZnT3dWqGK-OpVNfzytlQqUR1Y1zsDwEXBQ1K_-vSZJvIy3gZb1VnHZoWJcU7e');"></div>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium">Varunsh</span>
+<span class="text-white/40 text-xs">Super Admin</span>
+</div>
+</div>
+<button class="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white/70 transition-colors">
+<span class="material-symbols-outlined text-[16px]">logout</span>
+                        Sign Out
+                    </button>
+</div>
+</div>
+</aside>
+<main class="flex-1 h-full overflow-hidden relative z-10 flex flex-col">
+<div class="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth">
+<div class="max-w-7xl mx-auto px-6 py-8 lg:px-8 lg:py-10 flex flex-col gap-8">
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="flex flex-col gap-1">
+<h1 class="text-3xl font-bold text-white tracking-tight">Dashboard Overview</h1>
+<p class="text-white/50 text-sm">Real-time platform metrics for UPSCPrepX-AI</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+<span class="text-primary text-xs font-bold uppercase tracking-wider">System Operational</span>
+<div class="h-8 w-[1px] bg-white/10 mx-2"></div>
+<button class="glass-panel px-4 py-2 rounded-lg text-sm text-white/80 hover:text-white transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                                Last 30 Days
+                            </button>
+</div>
+</header>
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="group relative overflow-hidden rounded-3xl bg-[#1e2b1b]/60 border border-white/5 p-6 transition-all hover:bg-[#1e2b1b]/80">
+<div class="absolute inset-0 z-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+<div class="relative z-10 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="p-2 rounded-xl bg-white/5 border border-white/5 text-white/60">
+<span class="material-symbols-outlined">group</span>
+</div>
+<span class="text-primary text-xs font-bold flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-full border border-primary/20">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +12.5%
+                                    </span>
+</div>
+<div>
+<p class="text-white/40 text-xs font-medium uppercase tracking-widest">Total Users</p>
+<h3 class="text-3xl font-bold text-white mt-1 shiny-text">24,592</h3>
+</div>
+</div>
+</div>
+<div class="group relative overflow-hidden rounded-3xl bg-[#1e2b1b]/60 border border-white/5 p-6 transition-all hover:bg-[#1e2b1b]/80">
+<div class="absolute -inset-[1px] rounded-3xl bg-gradient-to-r from-transparent via-accent-blue/50 to-transparent opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-500 animate-border-beam" style="background-size: 200% 100%;"></div>
+<div class="relative z-10 flex flex-col gap-4 h-full">
+<div class="flex items-center justify-between">
+<div class="p-2 rounded-xl bg-white/5 border border-white/5 text-white/60">
+<span class="material-symbols-outlined">workspace_premium</span>
+</div>
+<span class="text-accent-blue text-xs font-bold flex items-center gap-1 bg-accent-blue/10 px-2 py-1 rounded-full border border-accent-blue/20">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +8.2%
+                                    </span>
+</div>
+<div>
+<p class="text-white/40 text-xs font-medium uppercase tracking-widest">Active Subs</p>
+<h3 class="text-3xl font-bold text-white mt-1">1,840</h3>
+</div>
+</div>
+</div>
+<div class="group relative overflow-hidden rounded-3xl bg-[#1e2b1b]/60 border border-white/5 p-6 transition-all hover:bg-[#1e2b1b]/80">
+<div class="absolute inset-0 z-0 bg-gradient-to-br from-accent-purple/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+<div class="relative z-10 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="p-2 rounded-xl bg-white/5 border border-white/5 text-white/60">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<span class="text-accent-purple text-xs font-bold flex items-center gap-1 bg-accent-purple/10 px-2 py-1 rounded-full border border-accent-purple/20">
+<span class="material-symbols-outlined text-[14px]">bolt</span> 450/s
+                                    </span>
+</div>
+<div>
+<p class="text-white/40 text-xs font-medium uppercase tracking-widest">Tokens Consumed</p>
+<h3 class="text-3xl font-bold text-white mt-1 shiny-text">12.4M</h3>
+</div>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-[500px]">
+<div class="lg:col-span-2 relative glass-panel rounded-3xl p-6 lg:p-8 flex flex-col overflow-hidden group">
+<div class="flex items-center justify-between mb-8 z-10">
+<div>
+<h2 class="text-xl font-semibold text-white">User Growth Trends</h2>
+<p class="text-white/40 text-sm">Monthly acquisition vs churn</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1 rounded-lg bg-white/5 text-xs text-white hover:bg-white/10 transition">Weekly</button>
+<button class="px-3 py-1 rounded-lg bg-primary/20 text-xs text-primary border border-primary/20">Monthly</button>
+</div>
+</div>
+<div class="relative flex-1 w-full chart-grid rounded-xl border border-white/5 overflow-hidden flex items-end px-4 pb-0 pt-10 gap-2 md:gap-4">
+<div class="absolute inset-0 bg-gradient-to-t from-[#1e2b1b] to-transparent pointer-events-none"></div>
+<div class="w-full h-[30%] bg-primary/20 rounded-t-sm relative group/bar hover:bg-primary/40 transition-all duration-500">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 transition-opacity text-xs bg-black text-white px-2 py-1 rounded">Jan</div>
+</div>
+<div class="w-full h-[45%] bg-primary/20 rounded-t-sm relative group/bar hover:bg-primary/40 transition-all duration-500">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 transition-opacity text-xs bg-black text-white px-2 py-1 rounded">Feb</div>
+</div>
+<div class="w-full h-[40%] bg-primary/20 rounded-t-sm relative group/bar hover:bg-primary/40 transition-all duration-500">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 transition-opacity text-xs bg-black text-white px-2 py-1 rounded">Mar</div>
+</div>
+<div class="w-full h-[60%] bg-primary/20 rounded-t-sm relative group/bar hover:bg-primary/40 transition-all duration-500">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 transition-opacity text-xs bg-black text-white px-2 py-1 rounded">Apr</div>
+</div>
+<div class="w-full h-[75%] bg-primary/20 rounded-t-sm relative group/bar hover:bg-primary/40 transition-all duration-500">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 transition-opacity text-xs bg-black text-white px-2 py-1 rounded">May</div>
+</div>
+<div class="w-full h-[55%] bg-primary/20 rounded-t-sm relative group/bar hover:bg-primary/40 transition-all duration-500">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 transition-opacity text-xs bg-black text-white px-2 py-1 rounded">Jun</div>
+</div>
+<div class="w-full h-[85%] bg-gradient-to-t from-primary/30 to-primary/60 rounded-t-lg relative group/bar shadow-[0_0_20px_rgba(83,210,45,0.3)] animate-pulse-slow">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 text-xs bg-primary text-[#152012] font-bold px-2 py-1 rounded">Jul</div>
+</div>
+</div>
+</div>
+<div class="relative glass-panel rounded-3xl p-6 flex flex-col gap-6 overflow-hidden">
+<div class="flex items-center justify-between">
+<h2 class="text-xl font-semibold text-white">Recent Activity</h2>
+<button class="text-white/40 hover:text-white transition">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto no-scrollbar pr-2 h-[400px]">
+<div class="flex gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors group cursor-pointer">
+<div class="mt-1 h-8 w-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/20 shrink-0">
+<span class="material-symbols-outlined text-[16px]">person_add</span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-sm text-white"><span class="font-bold">Rahul M.</span> upgraded to Premium</p>
+<span class="text-xs text-white/30">2 minutes ago</span>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors group cursor-pointer">
+<div class="mt-1 h-8 w-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/20 shrink-0">
+<span class="material-symbols-outlined text-[16px]">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-sm text-white">AI Model <span class="font-mono text-purple-300">v2.4</span> deployment complete</p>
+<span class="text-xs text-white/30">15 minutes ago</span>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors group cursor-pointer">
+<div class="mt-1 h-8 w-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-sm text-white">High latency detected in <span class="text-amber-300">Region-IN-West</span></p>
+<span class="text-xs text-white/30">1 hour ago</span>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors group cursor-pointer">
+<div class="mt-1 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center border border-primary/20 shrink-0">
+<span class="material-symbols-outlined text-[16px]">payments</span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-sm text-white">Subscription revenue report ready</p>
+<span class="text-xs text-white/30">3 hours ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="shrink-0 border-t border-white/5 bg-[#152012] relative z-20 py-3 overflow-hidden">
+<div class="flex w-full whitespace-nowrap overflow-hidden group">
+<div class="animate-marquee flex gap-8 items-center min-w-full">
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Amit K. (Delhi)</span> - Interested in GS Foundation
+                        </span>
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Priya S. (Bangalore)</span> - Downloaded Syllabus
+                        </span>
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Rohan J. (Mumbai)</span> - Watched Demo Lecture
+                        </span>
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Sneha P. (Pune)</span> - Signed up for Trial
+                        </span>
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Vikram R. (Hyderabad)</span> - Contacted Support
+                        </span>
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Amit K. (Delhi)</span> - Interested in GS Foundation
+                        </span>
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Priya S. (Bangalore)</span> - Downloaded Syllabus
+                        </span>
+<span class="flex items-center gap-2 text-xs font-medium text-white/60">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> New Lead: <span class="text-white">Rohan J. (Mumbai)</span> - Watched Demo Lecture
+                        </span>
+</div>
+</div>
+</div>
+<div class="absolute bottom-1 right-4 text-[10px] text-white/20 pointer-events-none z-30">
+                UPSCPrepX-AI by Varunsh • Admin Analytics v1.0
+            </div>
+</main>
+</div>
+
+</body></html>

@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Production/Deployment env files (SECURITY CRITICAL)
+.env.complete
+.env.coolify
+.env.docker
+.env.production
+.env.vps-stack
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Build state
+.build-state/
+
+# Temp files
+%TEMP%/
+*.env.local
+.env.production
+.a0proj/secrets.env
+secrets.env
+*.pem
+*.key

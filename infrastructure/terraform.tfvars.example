@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════════════
+# TERRAFORM VARIABLES - EXAMPLE VALUES
+# Copy to terraform.tfvars and fill in real values
+# ═══════════════════════════════════════════════════════════════
+
+# Provider Credentials (REQUIRED)
+hcloud_token         = "your-hetzner-cloud-api-token"
+cloudflare_api_token = "your-cloudflare-api-token"
+cloudflare_zone_id   = "your-zone-id"
+ssh_key_name         = "upsc-master"
+
+# Environment
+environment   = "production"
+app_subdomain = "app"
+
+# Primary Server
+primary_server_type = "cx31"    # 2 vCPU, 8GB RAM - €11.90/mo
+primary_location    = "nbg1"    # Nuremberg, Germany
+
+# Disaster Recovery - Replica Server
+enable_replica      = true
+replica_server_type = "cx21"    # 2 vCPU, 4GB RAM - €5.93/mo
+replica_location    = "fsn1"    # Falkenstein (different DC)
+
+# Horizontal Scaling - Workers
+worker_count       = 0          # Start with 0, scale up as needed
+worker_server_type = "cx11"     # 1 vCPU, 2GB RAM - €4.15/mo
+
+# Load Balancer
+enable_load_balancer = true     # €5.83/mo
+
+# Storage
+data_volume_size = 100          # GB - €4.76/mo
+
+# Backups
+enable_automated_backups = true
+
+# Security - Restrict SSH to your IP
+allowed_ssh_ips = [
+  "YOUR_IP/32",
+  "10.0.0.0/16"
+]
+
+# Application Config
+docker_compose_url = "https://raw.githubusercontent.com/your-org/upsc-master/main/docker-compose.production.yml"
+
+# ═══════════════════════════════════════════════════════════════
+# ESTIMATED MONTHLY COST
+# ═══════════════════════════════════════════════════════════════
+# Primary (cx31):     €11.90
+# Replica (cx21):     €5.93
+# Load Balancer:      €5.83
+# Volume (100GB):     €4.76
+# ─────────────────────────────
+# Total:              ~€28.42/month
+# ═══════════════════════════════════════════════════════════════

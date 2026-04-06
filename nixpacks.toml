@@ -1,0 +1,31 @@
+# Nixpacks Configuration for Coolify Deployment
+# This file configures how Nixpacks builds the Next.js application
+
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-9_x", "openssl"]
+aptPkgs = ["curl", "wget", "ca-certificates"]
+
+[phases.install]
+# Use npm install instead of npm ci to handle lock file mismatches gracefully
+# Also ensure devDependencies are installed for build tools (webpack, typescript, etc.)
+cmds = ["npm install --include=dev"]
+
+[phases.build]
+# Ensure NODE_ENV is set correctly during build
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"
+
+[variables]
+# Critical: Set NODE_ENV to development during install phase to get devDependencies
+# Then production mode is used at runtime
+NPM_CONFIG_PRODUCTION = "false"
+CI = "true"
+NIXPACKS_NODE_VERSION = "22"
+# Ensure devDependencies are installed (needed for build tools like webpack, typescript)
+NODE_ENV = "production"
+# Skip optional dependencies that might fail
+NPM_CONFIG_OPTIONAL = "false"
+# Increase memory for Next.js build
+NODE_OPTIONS = "--max-old-space-size=4096"

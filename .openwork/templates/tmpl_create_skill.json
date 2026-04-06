@@ -1,0 +1,7 @@
+{
+  "id": "tmpl_create_skill",
+  "title": "Create a new skill",
+  "description": "Guide to adding capabilities",
+  "prompt": "I want to create a new skill for this workspace. Guide me through it.",
+  "createdAt": 1768684540364
+}

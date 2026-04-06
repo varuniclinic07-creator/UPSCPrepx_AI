@@ -1,0 +1,54 @@
+# UPSC Content Crawler - Systemd Service
+# Save this file to: /etc/systemd/system/upsc-crawler.service
+# 
+# Installation:
+# 1. sudo cp upsc-crawler.service /etc/systemd/system/
+# 2. sudo systemctl daemon-reload
+# 3. sudo systemctl enable upsc-crawler
+# 4. sudo systemctl start upsc-crawler
+#
+# Commands:
+# - Start:   sudo systemctl start upsc-crawler
+# - Stop:    sudo systemctl stop upsc-crawler
+# - Restart: sudo systemctl restart upsc-crawler
+# - Status:  sudo systemctl status upsc-crawler
+# - Logs:    sudo journalctl -u upsc-crawler -f
+
+[Unit]
+Description=UPSC Content Crawler Service
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/upsc-crawler
+Environment="PATH=/opt/upsc-crawler/venv/bin"
+ExecStart=/opt/upsc-crawler/venv/bin/python crawler_scheduler.py start --daemon
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Resource limits
+LimitNOFILE=65535
+MemoryLimit=2G
+CPUQuota=80%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=upsc-crawler
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/upsc-crawler/logs
+
+[Install]
+WantedBy=multi-user.target
