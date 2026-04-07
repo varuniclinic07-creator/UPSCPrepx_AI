@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  
+  transpilePackages: [
+    "@tiptap/react",
+    "@tiptap/starter-kit",
+    "@tiptap/extension-placeholder",
+    "@tiptap/core",
+    "@tiptap/extension-paragraph",
+    "@tiptap/extension-text"
+  ],
 
   // Required for Docker standalone deployment
   output: 'standalone',
