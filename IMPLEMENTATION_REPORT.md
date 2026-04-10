@@ -375,6 +375,54 @@ Resumed from previous session stuck on Task #11. Completed streaming support and
 
 ---
 
-## Remaining Tasks (Session 4+)
-- Task #9: Wire API routes to call Edge Functions
-- Task #10: Flesh out Edge Function logic per feature
+## Session 4 — Edge Function Logic Implementation (2026-04-10)
+**Agent:** Amelia (Dev)
+
+### Summary
+Completed Task #9 and #10: Enhanced all 17 Supabase Edge Functions with feature-specific logic.
+
+### Edge Functions Enhanced (17 total)
+
+| Edge Function | Feature | Logic Added |
+|--------------|---------|-------------|
+| `doubt-solver-pipe` | F5 | RAG context retrieval, doubt thread saving, follow-up questions, source citation |
+| `mains-evaluator-pipe` | F6 | Rubric-based scoring (5 categories), structured JSON feedback, model answer outline |
+| `mentor-chat-pipe` | F10 | User context (profile, progress, streak), mode-specific prompts, conversation history |
+| `notes-generator-pipe` | F3/F4 | Syllabus context, RAG chunks, brevity levels, source tracking |
+| `quiz-engine-pipe` | F7 | MCQ generation with 4 options, difficulty settings, UPSC style validation |
+| `search-pipe` | F11 | Hybrid vector + FTS search, result merging, AI synthesis |
+| `daily-digest-pipe` | F2 | Article aggregation, digest summarization, MCQ generation from current affairs |
+| `video-shorts-pipe` | F18 | 60-second script structure, visual cues, JSON output |
+| `gamification-pipe` | F13 | XP calculation, badge unlocking, motivation messages |
+| `onboarding-pipe` | F1 | Diagnostic quiz generation, answer analysis, personalized study plan |
+| `planner-pipe` | F8 | Weekly schedule generation, progress-based adaptation |
+| `ethics-pipe` | F6 (GS4) | Case study generation, answer evaluation with GS4 rubric |
+| `legal-pipe` | F12 | Constitutional article explanation, case law references, related articles |
+| `math-solver-pipe` | CSAT | Step-by-step solutions, similar problem generation |
+| `custom-notes-pipe` | F4 | Summarize, expand, apply template, improve language actions |
+
+### Common Patterns Across All Edge Functions
+1. **Auth Check** — Authorization header validation
+2. **Entitlement Check** — `checkAccess()` for feature access
+3. **Database Integration** — Supabase client for reading/writing
+4. **RAG Context** — Fetch from `knowledge_chunks` where applicable
+5. **Structured Output** — JSON responses with metadata
+6. **Usage Tracking** — `increment_usage()` RPC calls
+7. **Error Handling** — Try-catch with descriptive errors
+
+### callAI() Usage
+All Edge Functions use the shared `callAI()` from `_shared/ai-provider.ts`:
+- 3-provider fallback: 9Router → Groq → Ollama
+- `SIMPLIFIED_LANGUAGE_PROMPT` prepended by default
+- `skipSimplifiedLanguage: true` for JSON responses
+
+### Verification
+- Build: exit code 0
+- All Edge Functions type-check valid (Deno runtime)
+
+---
+
+## Remaining Work
+- Deploy Edge Functions to Supabase (`deno deploy` or Supabase CLI)
+- Wire API routes to optionally call Edge Functions (currently using local `callAI()` directly)
+- Test Edge Functions with authenticated requests
