@@ -54,7 +54,7 @@ export class AIProviderClient {
       {
         name: '9router',
         baseUrl: process.env.NINE_ROUTER_BASE_URL || 'https://r94p885.9router.com/v1',
-        apiKey: process.env.NINE_ROUTER_API_KEY || 'sk-da7a2ad945e26f3a-qsxe57-15d6ca9a',
+        apiKey: process.env.NINE_ROUTER_API_KEY || '',
         model: process.env.NINE_ROUTER_MODEL || 'upsc',
         priority: 1, // Primary
         rateLimitRPM: 60,
@@ -74,7 +74,7 @@ export class AIProviderClient {
       {
         name: 'ollama',
         baseUrl: process.env.OLLAMA_BASE_URL || 'https://ollama.com/v1',
-        apiKey: process.env.OLLAMA_API_KEY || 'bda967ce912e42a3b775782ddf7a6360.PFAbR3YJIolgYV0JkKMNDocN',
+        apiKey: process.env.OLLAMA_API_KEY || '',
         model: process.env.OLLAMA_MODEL || 'qwen3.5:397b-cloud',
         priority: 3, // Fallback 2
         rateLimitRPM: 20,
@@ -83,16 +83,9 @@ export class AIProviderClient {
       },
     ];
 
-    // Groq 7-key rotation (user provided)
-    this.groqKeys = [
-      'REPLACE_WITH_YOUR_GROQ_KEY',
-      'REPLACE_WITH_YOUR_GROQ_KEY',
-      'REPLACE_WITH_YOUR_GROQ_KEY',
-      'REPLACE_WITH_YOUR_GROQ_KEY',
-      'REPLACE_WITH_YOUR_GROQ_KEY',
-      'REPLACE_WITH_YOUR_GROQ_KEY',
-      'REPLACE_WITH_YOUR_GROQ_KEY',
-    ];
+    // Groq key from environment
+    const groqKey = process.env.GROQ_API_KEY || '';
+    this.groqKeys = [groqKey];
 
     // Initialize health status
     this.providers.forEach(p => this.providerHealth.set(p.name, true));
@@ -389,4 +382,339 @@ export function getAIProviderClient(): AIProviderClient {
     aiProviderInstance = new AIProviderClient();
   }
   return aiProviderInstance;
+}
+
+// ============================================================================
+// callAI() — Universal AI call function with 3-provider fallback
+// Supports two call signatures:
+//   callAI(prompt, { temperature?, maxTokens? })
+//   callAI({ prompt?, messages?, temperature?, maxTokens? })
+// ============================================================================
+// callAIStream() — True streaming support for real-time AI responses
+// ============================================================================
+
+export type AIProvider = '9router' | 'groq' | 'ollama';
+
+interface CallAIOptions {
+  prompt?: string;
+  messages?: Array<{ role: string; content: string }>;
+  system?: string;
+  temperature?: number;
+  maxTokens?: number;
+  /** Set true to skip SIMPLIFIED_LANGUAGE_PROMPT (for non-user-facing calls like JSON parsing) */
+  skipSimplifiedLanguage?: boolean;
+}
+
+interface CallAIStreamOptions extends CallAIOptions {
+  /** Called for each chunk of streamed response */
+  onChunk: (chunk: string) => void;
+  /** Called when streaming is complete */
+  onComplete?: () => void;
+  /** Called on error */
+  onError?: (error: Error) => void;
+}
+
+// v8 Spec Rule 3: Prepend to EVERY AI call generating user-facing content
+const SIMPLIFIED_LANGUAGE_PROMPT = `
+CRITICAL LANGUAGE RULES — FOLLOW STRICTLY:
+1. Write for a 10th-class student. One reading = full understanding.
+2. No jargon without explanation. Technical terms get parenthetical definitions.
+3. Real-life Indian examples for every concept.
+4. Analogies.
+5. Max 15 words per sentence.
+6. Mnemonics.
+7. Exam tips.
+8. If Hindi: use simple Hindi (Hinglish acceptable).
+`.trim();
+
+export async function callAI(
+  promptOrOptions: string | CallAIOptions,
+  options?: { temperature?: number; maxTokens?: number; system?: string; skipSimplifiedLanguage?: boolean }
+): Promise<string> {
+  const client = getAIProviderClient();
+
+  // Normalize both call signatures
+  let messages: Array<{ role: string; content: string }>;
+  let temperature: number;
+  let maxTokens: number;
+  let skipSimplified = false;
+
+  if (typeof promptOrOptions === 'string') {
+    // Signature 1: callAI(prompt, opts?)
+    skipSimplified = options?.skipSimplifiedLanguage ?? false;
+    const baseSystem = options?.system || 'You are an expert UPSC CSE educator.';
+    messages = [
+      {
+        role: 'system',
+        content: skipSimplified ? baseSystem : `${SIMPLIFIED_LANGUAGE_PROMPT}\n\n${baseSystem}`,
+      },
+      { role: 'user', content: promptOrOptions },
+    ];
+    temperature = options?.temperature ?? 0.7;
+    maxTokens = options?.maxTokens ?? 2000;
+  } else {
+    // Signature 2: callAI({ prompt?, messages?, temperature?, maxTokens? })
+    skipSimplified = promptOrOptions.skipSimplifiedLanguage ?? false;
+    if (promptOrOptions.messages) {
+      messages = [...promptOrOptions.messages];
+      // Prepend SIMPLIFIED_LANGUAGE_PROMPT to existing system message if present
+      if (!skipSimplified) {
+        const sysIdx = messages.findIndex(m => m.role === 'system');
+        if (sysIdx >= 0) {
+          messages[sysIdx] = { ...messages[sysIdx], content: `${SIMPLIFIED_LANGUAGE_PROMPT}\n\n${messages[sysIdx].content}` };
+        } else {
+          messages.unshift({ role: 'system', content: SIMPLIFIED_LANGUAGE_PROMPT });
+        }
+      }
+    } else {
+      const baseSystem = promptOrOptions.system || 'You are an expert UPSC CSE educator.';
+      messages = [
+        {
+          role: 'system',
+          content: skipSimplified ? baseSystem : `${SIMPLIFIED_LANGUAGE_PROMPT}\n\n${baseSystem}`,
+        },
+        { role: 'user', content: promptOrOptions.prompt || '' },
+      ];
+    }
+    temperature = promptOrOptions.temperature ?? 0.7;
+    maxTokens = promptOrOptions.maxTokens ?? 2000;
+  }
+
+  // Try providers in priority order (9Router → Groq → Ollama)
+  const providers = (client as any).providers as AIProviderConfig[];
+  const sortedProviders = [...providers].sort((a, b) => a.priority - b.priority);
+
+  for (const provider of sortedProviders) {
+    if (!provider.isActive) continue;
+
+    const health = (client as any).providerHealth as Map<string, boolean>;
+    if (health.get(provider.name) === false) continue;
+
+    try {
+      const apiKey = provider.name === 'groq'
+        ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
+        : provider.apiKey;
+
+      if (!apiKey) {
+        console.warn(`Skipping provider ${provider.name}: no API key configured`);
+        continue;
+      }
+
+      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: provider.model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Provider ${provider.name} returned ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+
+      // Reset failure count on success
+      const failures = (client as any).providerFailures as Map<string, number>;
+      failures.set(provider.name, 0);
+      health.set(provider.name, true);
+
+      return content;
+    } catch (error) {
+      console.error(`callAI: Provider ${provider.name} failed:`, error);
+
+      const failures = (client as any).providerFailures as Map<string, number>;
+      const count = (failures.get(provider.name) || 0) + 1;
+      failures.set(provider.name, count);
+
+      if (count >= 3) {
+        health.set(provider.name, false);
+        console.warn(`callAI: Provider ${provider.name} marked unhealthy after ${count} failures`);
+      }
+
+      continue;
+    }
+  }
+
+  throw new Error('All AI providers failed — service temporarily unavailable');
+}
+
+// ============================================================================
+// callAIStream() — True streaming support for real-time AI responses
+// ============================================================================
+
+export async function callAIStream(
+  promptOrOptions: string | CallAIStreamOptions,
+  options?: { temperature?: number; maxTokens?: number; system?: string; skipSimplifiedLanguage?: boolean; onChunk?: (chunk: string) => void; onComplete?: () => void; onError?: (error: Error) => void }
+): Promise<void> {
+  const client = getAIProviderClient();
+
+  // Normalize both call signatures
+  let messages: Array<{ role: string; content: string }>;
+  let temperature: number;
+  let maxTokens: number;
+  let skipSimplified = false;
+  let onChunk: (chunk: string) => void;
+  let onComplete: (() => void) | undefined;
+  let onError: ((error: Error) => void) | undefined;
+
+  if (typeof promptOrOptions === 'string') {
+    // Signature 1: callAIStream(prompt, opts?)
+    skipSimplified = options?.skipSimplifiedLanguage ?? false;
+    onChunk = options?.onChunk ?? (() => {});
+    onComplete = options?.onComplete;
+    onError = options?.onError;
+    const baseSystem = options?.system || 'You are an expert UPSC CSE educator.';
+    messages = [
+      {
+        role: 'system',
+        content: skipSimplified ? baseSystem : `${SIMPLIFIED_LANGUAGE_PROMPT}\n\n${baseSystem}`,
+      },
+      { role: 'user', content: promptOrOptions },
+    ];
+    temperature = options?.temperature ?? 0.7;
+    maxTokens = options?.maxTokens ?? 2000;
+  } else {
+    // Signature 2: callAIStream({ prompt?, messages?, temperature?, maxTokens?, onChunk?, onComplete?, onError? })
+    skipSimplified = promptOrOptions.skipSimplifiedLanguage ?? false;
+    onChunk = promptOrOptions.onChunk ?? (() => {});
+    onComplete = promptOrOptions.onComplete;
+    onError = promptOrOptions.onError;
+    if (promptOrOptions.messages) {
+      messages = [...promptOrOptions.messages];
+      if (!skipSimplified) {
+        const sysIdx = messages.findIndex(m => m.role === 'system');
+        if (sysIdx >= 0) {
+          messages[sysIdx] = { ...messages[sysIdx], content: `${SIMPLIFIED_LANGUAGE_PROMPT}\n\n${messages[sysIdx].content}` };
+        } else {
+          messages.unshift({ role: 'system', content: SIMPLIFIED_LANGUAGE_PROMPT });
+        }
+      }
+    } else {
+      const baseSystem = promptOrOptions.system || 'You are an expert UPSC CSE educator.';
+      messages = [
+        {
+          role: 'system',
+          content: skipSimplified ? baseSystem : `${SIMPLIFIED_LANGUAGE_PROMPT}\n\n${baseSystem}`,
+        },
+        { role: 'user', content: promptOrOptions.prompt || '' },
+      ];
+    }
+    temperature = promptOrOptions.temperature ?? 0.7;
+    maxTokens = promptOrOptions.maxTokens ?? 2000;
+  }
+
+  // Try providers in priority order (9Router → Groq → Ollama)
+  const providers = (client as any).providers as AIProviderConfig[];
+  const sortedProviders = [...providers].sort((a, b) => a.priority - b.priority);
+
+  for (const provider of sortedProviders) {
+    if (!provider.isActive) continue;
+
+    const health = (client as any).providerHealth as Map<string, boolean>;
+    if (health.get(provider.name) === false) continue;
+
+    try {
+      const apiKey = provider.name === 'groq'
+        ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
+        : provider.apiKey;
+
+      if (!apiKey) {
+        console.warn(`Skipping provider ${provider.name}: no API key configured`);
+        continue;
+      }
+
+      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: provider.model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+          stream: true,
+        }),
+        signal: AbortSignal.timeout(60000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Provider ${provider.name} returned ${response.status}: ${response.statusText}`);
+      }
+
+      // Stream the response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || trimmedLine === 'data: [DONE]') continue;
+
+          // Parse SSE data
+          if (trimmedLine.startsWith('data: ')) {
+            const dataStr = trimmedLine.slice(6);
+            try {
+              const data = JSON.parse(dataStr);
+              const content = data.choices?.[0]?.delta?.content || '';
+              if (content) {
+                onChunk(content);
+              }
+            } catch (e) {
+              console.warn('Failed to parse SSE chunk:', e);
+            }
+          }
+        }
+      }
+
+      // Reset failure count on success
+      const failures = (client as any).providerFailures as Map<string, number>;
+      failures.set(provider.name, 0);
+      health.set(provider.name, true);
+
+      onComplete?.();
+      return;
+    } catch (error) {
+      console.error(`callAIStream: Provider ${provider.name} failed:`, error);
+
+      const failures = (client as any).providerFailures as Map<string, number>;
+      const count = (failures.get(provider.name) || 0) + 1;
+      failures.set(provider.name, count);
+
+      if (count >= 3) {
+        health.set(provider.name, false);
+        console.warn(`callAIStream: Provider ${provider.name} marked unhealthy after ${count} failures`);
+      }
+
+      onError?.(error instanceof Error ? error : new Error(String(error)));
+      continue;
+    }
+  }
+
+  // All providers failed
+  const allFailedError = new Error('All AI providers failed — service temporarily unavailable');
+  onError?.(allFailedError);
+  throw allFailedError;
 }
