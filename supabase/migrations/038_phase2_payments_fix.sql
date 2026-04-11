@@ -130,28 +130,24 @@ CREATE INDEX idx_usage_limits_feature ON usage_limits(feature_name);
 -- 5. CREATE USAGE_TRACKING TABLE (for detailed usage logs)
 -- ═══════════════════════════════════════════════════════════════
 
--- usage_tracking was created by migration 018 with column 'feature'.
--- We keep CREATE TABLE IF NOT EXISTS here for fresh-DB runs, using 'feature'
--- to match 018's schema. On existing DBs this block is a no-op.
+-- usage_tracking was created by migration 018 with column 'feature' and 'created_at'.
+-- CREATE TABLE IF NOT EXISTS is a no-op when 018 already ran; the ALTER TABLE
+-- statements below safely add any columns that 018 did not include.
 CREATE TABLE IF NOT EXISTS public.usage_tracking (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-
-    -- What was used (column named 'feature' to match migration 018)
     feature VARCHAR(100) NOT NULL,
-    resource_id UUID, -- Optional: reference to created resource
-    resource_type VARCHAR(50), -- 'note', 'quiz', 'doubt', etc.
-
-    -- Usage details
-    tokens_used INTEGER DEFAULT 0, -- For AI features
-    credits_consumed INTEGER DEFAULT 0,
-
-    -- Timestamp
-    used_at TIMESTAMPTZ DEFAULT NOW(),
-
-    -- Metadata
     metadata JSONB DEFAULT '{}'
 );
+
+-- Add columns that 038 needs but migration 018 did not create.
+-- All statements use IF NOT EXISTS so re-runs are safe.
+ALTER TABLE public.usage_tracking ADD COLUMN IF NOT EXISTS resource_id    UUID;
+ALTER TABLE public.usage_tracking ADD COLUMN IF NOT EXISTS resource_type  VARCHAR(50);
+ALTER TABLE public.usage_tracking ADD COLUMN IF NOT EXISTS tokens_used    INTEGER DEFAULT 0;
+ALTER TABLE public.usage_tracking ADD COLUMN IF NOT EXISTS credits_consumed INTEGER DEFAULT 0;
+-- used_at mirrors created_at from 018; add it so 038 functions can reference it.
+ALTER TABLE public.usage_tracking ADD COLUMN IF NOT EXISTS used_at        TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_usage_tracking_user_id ON usage_tracking(user_id);
 CREATE INDEX IF NOT EXISTS idx_usage_tracking_feature ON usage_tracking(feature);
