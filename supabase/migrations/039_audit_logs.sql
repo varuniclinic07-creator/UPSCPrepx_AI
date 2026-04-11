@@ -3,7 +3,11 @@
 -- Append-only record of all privileged admin/system operations.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-CREATE TABLE IF NOT EXISTS audit_logs (
+-- Drop and recreate to fix any prior partial run that may have
+-- created the table with a different schema (missing actor_id etc.)
+DROP TABLE IF EXISTS audit_logs CASCADE;
+
+CREATE TABLE audit_logs (
     id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     action       TEXT NOT NULL,
     actor_id     UUID NOT NULL,

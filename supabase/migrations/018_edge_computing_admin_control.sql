@@ -320,48 +320,61 @@ ALTER TABLE public.user_api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.video_generation_tasks ENABLE ROW LEVEL SECURITY;
 
 -- Usage tracking: Users can only see their own usage
+DROP POLICY IF EXISTS "Users can view own usage" ON public.usage_tracking;
 CREATE POLICY "Users can view own usage" ON public.usage_tracking
     FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Service role can insert usage" ON public.usage_tracking;
 CREATE POLICY "Service role can insert usage" ON public.usage_tracking
     FOR INSERT WITH CHECK (auth.uid() IS NULL);  -- Service role only
 
 -- Feature flags: Public read (for mobile app to check)
+DROP POLICY IF EXISTS "Public can view feature flags" ON public.feature_flags;
 CREATE POLICY "Public can view feature flags" ON public.feature_flags
     FOR SELECT USING (true);
 
 -- User statistics: Users can only see their own stats
+DROP POLICY IF EXISTS "Users can view own statistics" ON public.user_statistics;
 CREATE POLICY "Users can view own statistics" ON public.user_statistics
     FOR SELECT USING (user_id = auth.uid());
 
 -- Remote commands: Users can only see their own commands
+DROP POLICY IF EXISTS "Users can view own commands" ON public.remote_commands;
 CREATE POLICY "Users can view own commands" ON public.remote_commands
     FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Service role can insert commands" ON public.remote_commands;
 CREATE POLICY "Service role can insert commands" ON public.remote_commands
     FOR INSERT WITH CHECK (auth.uid() IS NULL);  -- Service role only
 
+DROP POLICY IF EXISTS "Users can mark commands as executed" ON public.remote_commands;
 CREATE POLICY "Users can mark commands as executed" ON public.remote_commands
     FOR UPDATE USING (user_id = auth.uid())
     WITH CHECK (is_executed = true);
 
 -- User API keys: Users can only see their own keys
+DROP POLICY IF EXISTS "Users can view own API keys" ON public.user_api_keys;
 CREATE POLICY "Users can view own API keys" ON public.user_api_keys
     FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can insert own API keys" ON public.user_api_keys;
 CREATE POLICY "Users can insert own API keys" ON public.user_api_keys
     FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own API keys" ON public.user_api_keys;
 CREATE POLICY "Users can update own API keys" ON public.user_api_keys
     FOR UPDATE USING (user_id = auth.uid());
 
 -- Video generation tasks: Users can only see their own tasks
+DROP POLICY IF EXISTS "Users can view own video tasks" ON public.video_generation_tasks;
 CREATE POLICY "Users can view own video tasks" ON public.video_generation_tasks
     FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can insert own video tasks" ON public.video_generation_tasks;
 CREATE POLICY "Users can insert own video tasks" ON public.video_generation_tasks
     FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own video tasks" ON public.video_generation_tasks;
 CREATE POLICY "Users can update own video tasks" ON public.video_generation_tasks
     FOR UPDATE USING (user_id = auth.uid());
 

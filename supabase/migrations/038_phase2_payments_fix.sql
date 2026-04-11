@@ -130,12 +130,15 @@ CREATE INDEX idx_usage_limits_feature ON usage_limits(feature_name);
 -- 5. CREATE USAGE_TRACKING TABLE (for detailed usage logs)
 -- ═══════════════════════════════════════════════════════════════
 
+-- usage_tracking was created by migration 018 with column 'feature'.
+-- We keep CREATE TABLE IF NOT EXISTS here for fresh-DB runs, using 'feature'
+-- to match 018's schema. On existing DBs this block is a no-op.
 CREATE TABLE IF NOT EXISTS public.usage_tracking (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
 
-    -- What was used
-    feature_name VARCHAR(100) NOT NULL,
+    -- What was used (column named 'feature' to match migration 018)
+    feature VARCHAR(100) NOT NULL,
     resource_id UUID, -- Optional: reference to created resource
     resource_type VARCHAR(50), -- 'note', 'quiz', 'doubt', etc.
 
@@ -150,9 +153,9 @@ CREATE TABLE IF NOT EXISTS public.usage_tracking (
     metadata JSONB DEFAULT '{}'
 );
 
-CREATE INDEX idx_usage_tracking_user_id ON usage_tracking(user_id);
-CREATE INDEX idx_usage_tracking_feature ON usage_tracking(feature_name);
-CREATE INDEX idx_usage_tracking_used_at ON usage_tracking(used_at);
+CREATE INDEX IF NOT EXISTS idx_usage_tracking_user_id ON usage_tracking(user_id);
+CREATE INDEX IF NOT EXISTS idx_usage_tracking_feature ON usage_tracking(feature);
+CREATE INDEX IF NOT EXISTS idx_usage_tracking_used_at ON usage_tracking(used_at);
 
 -- ═══════════════════════════════════════════════════════════════
 -- 6. HELPER FUNCTIONS
@@ -227,7 +230,7 @@ BEGIN
         SELECT COUNT(*) INTO v_today_count
         FROM usage_tracking
         WHERE user_id = p_user_id
-        AND feature_name = p_feature
+        AND feature = p_feature
         AND used_at >= DATE_TRUNC('day', NOW());
 
         current_count := v_today_count;
@@ -256,7 +259,7 @@ RETURNS VOID AS $$
 BEGIN
     -- Insert usage record
     INSERT INTO usage_tracking (
-        user_id, feature_name, resource_id, resource_type,
+        user_id, feature, resource_id, resource_type,
         tokens_used, credits_consumed, metadata
     ) VALUES (
         p_user_id, p_feature, p_resource_id, p_resource_type,
@@ -317,28 +320,34 @@ ALTER TABLE usage_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usage_tracking ENABLE ROW LEVEL SECURITY;
 
 -- Payments: Users can only see their own payments
+DROP POLICY IF EXISTS "Users can view own payments" ON payments;
 CREATE POLICY "Users can view own payments"
 ON payments FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can insert payments" ON payments;
 CREATE POLICY "System can insert payments"
 ON payments FOR INSERT
 WITH CHECK (true); -- Allow service role to insert
 
+DROP POLICY IF EXISTS "System can update payments" ON payments;
 CREATE POLICY "System can update payments"
 ON payments FOR UPDATE
 USING (true); -- Allow service role to update
 
 -- Usage limits: Users can see their own limits
+DROP POLICY IF EXISTS "Users can view own usage limits" ON usage_limits;
 CREATE POLICY "Users can view own usage limits"
 ON usage_limits FOR SELECT
 USING (auth.uid() = user_id);
 
 -- Usage tracking: Users can see their own usage
+DROP POLICY IF EXISTS "Users can view own usage tracking" ON usage_tracking;
 CREATE POLICY "Users can view own usage tracking"
 ON usage_tracking FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can insert usage tracking" ON usage_tracking;
 CREATE POLICY "System can insert usage tracking"
 ON usage_tracking FOR INSERT
 WITH CHECK (true);
