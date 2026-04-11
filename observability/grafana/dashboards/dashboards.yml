@@ -1,0 +1,16 @@
+# Grafana Dashboard Provisioning
+# Auto-imports dashboards from the dashboards folder
+
+apiVersion: 1
+
+providers:
+  - name: 'UPSC PrepX-AI'
+    orgId: 1
+    folder: 'UPSC PrepX-AI'
+    folderUid: 'upsc-prepx-ai'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

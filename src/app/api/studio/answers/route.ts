@@ -17,6 +17,8 @@ import { z } from 'zod';
 import { getAuthUser } from '@/lib/security/auth';
 import { checkSubscriptionAccess } from '@/lib/trial/subscription-checker';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================

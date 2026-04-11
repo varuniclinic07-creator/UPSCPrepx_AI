@@ -6,12 +6,21 @@
 import Redis from 'ioredis';
 import twilio from 'twilio';
 
-const redis = new Redis(process.env.REDIS_URL!);
+let _redis: Redis | null = null;
+function getRedis() {
+  if (!_redis) _redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  return _redis;
+}
 
-// Twilio client
-const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
-    ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
-    : null;
+let _twilioClient: ReturnType<typeof twilio> | null = null;
+function getTwilioClient() {
+  if (_twilioClient === null) {
+    _twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+      ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+      : (undefined as any);
+  }
+  return _twilioClient;
+}
 
 /**
  * Generate 6-digit OTP
@@ -33,6 +42,7 @@ export async function sendOTP(phone: string): Promise<{
 
     // Check rate limit (1 OTP per minute per phone)
     const rateLimitKey = `otp:ratelimit:${normalizedPhone}`;
+    const redis = getRedis();
     const rateLimitExists = await redis.exists(rateLimitKey);
 
     if (rateLimitExists) {
@@ -58,6 +68,7 @@ export async function sendOTP(phone: string): Promise<{
     const provider = process.env.SMS_PROVIDER || 'twilio';
 
     try {
+        const twilioClient = getTwilioClient();
         if (provider === 'twilio' && twilioClient) {
             await twilioClient.messages.create({
                 body: `Your UPSC CSE Master OTP is: ${otp}. Valid for 10 minutes.`,
@@ -103,6 +114,7 @@ export async function verifyOTP(phone: string, enteredOTP: string): Promise<bool
     const normalizedPhone = phone.replace(/\D/g, '');
     const otpKey = `otp:${normalizedPhone}`;
 
+    const redis = getRedis();
     const storedOTP = await redis.get(otpKey);
 
     if (!storedOTP) {

@@ -93,10 +93,13 @@ const NEGATIVE_MARKS_PER_QUESTION = 0.66; // 1/3 of 2 marks
 // ============================================================================
 
 export class MockTestService {
-  private supabase;
+  
 
-  constructor() {
-    this.supabase = createClient();
+  constructor() {
+  }
+
+  private async getSupabase() {
+    return createClient();
   }
 
   /**
@@ -104,7 +107,7 @@ export class MockTestService {
    */
   async getActiveMockTests(isPremium?: boolean): Promise<MockTest[]> {
     try {
-      let query = this.supabase
+      let query = (await this.getSupabase())
         .from('mcq_mock_tests')
         .select('*')
         .eq('is_active', true)
@@ -133,7 +136,7 @@ export class MockTestService {
    */
   async getMockTestById(mockId: string): Promise<MockTest | null> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from('mcq_mock_tests')
         .select('*')
         .eq('id', mockId)
@@ -161,7 +164,7 @@ export class MockTestService {
         ...config,
       };
 
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from('mcq_mock_tests')
         .insert({
           title: mockConfig.title,
@@ -202,7 +205,7 @@ export class MockTestService {
 
       // Check premium access
       if (mock.isPremium) {
-        const { data: user } = await this.supabase
+        const { data: user } = await (await this.getSupabase())
           .from('users')
           .select('subscription_tier')
           .eq('id', userId)
@@ -214,7 +217,7 @@ export class MockTestService {
       }
 
       // Create attempt record
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from('mcq_attempts')
         .insert({
           user_id: userId,
@@ -255,7 +258,7 @@ export class MockTestService {
   } | null> {
     try {
       // Get attempt details
-      const { data: attempt } = await this.supabase
+      const { data: attempt } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('*, mock_id')
         .eq('id', attemptId)
@@ -269,7 +272,7 @@ export class MockTestService {
       const timeTakenSec = Math.floor((Date.now() - new Date(attempt.started_at).getTime()) / 1000);
 
       // Update attempt with final stats (trigger will calculate from answers)
-      await this.supabase
+      await (await this.getSupabase())
         .from('mcq_attempts')
         .update({
           completed_at: new Date().toISOString(),
@@ -279,7 +282,7 @@ export class MockTestService {
 
       // Insert answers (trigger will update attempt stats)
       for (const answer of submission.answers) {
-        await this.supabase
+        await (await this.getSupabase())
           .from('mcq_answers')
           .insert({
             attempt_id: attemptId,
@@ -293,7 +296,7 @@ export class MockTestService {
       // Wait for trigger to update stats, then fetch final results
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const { data: finalAttempt } = await this.supabase
+      const { data: finalAttempt } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('*')
         .eq('id', attemptId)
@@ -310,13 +313,13 @@ export class MockTestService {
       );
 
       // Update attempt with percentile and rank
-      await this.supabase
+      await (await this.getSupabase())
         .from('mcq_attempts')
         .update({ percentile, rank })
         .eq('id', attemptId);
 
       // Update mock test attempt count
-      await this.supabase.rpc('increment_mock_attempt_count', { p_mock_id: attempt.mock_id });
+      await (await this.getSupabase()).rpc('increment_mock_attempt_count', { p_mock_id: attempt.mock_id });
 
       return {
         netMarks: finalAttempt.net_marks,
@@ -335,7 +338,7 @@ export class MockTestService {
    */
   async getUserMockHistory(userId: string, limit: number = 10): Promise<MockAttempt[]> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select(`
           *,
@@ -373,7 +376,7 @@ export class MockTestService {
   ): Promise<{ percentile: number; rank: number }> {
     try {
       // Get all attempts for this mock test
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('net_marks')
         .eq('mock_id', mockId)

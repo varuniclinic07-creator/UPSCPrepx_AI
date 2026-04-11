@@ -19,12 +19,12 @@ const STORAGE_KEY = 'upsc-theme';
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<Theme>('system');
-    const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
+    const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('light');
     const [mounted, setMounted] = useState(false);
 
     // Get system preference
     const getSystemTheme = (): 'dark' | 'light' => {
-        if (typeof window === 'undefined') return 'dark';
+        if (typeof window === 'undefined') return 'light';
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     };
 
@@ -92,7 +92,7 @@ export function useTheme(): ThemeContextValue {
         // Return default values if not in provider
         return {
             theme: 'system',
-            resolvedTheme: 'dark',
+            resolvedTheme: 'light',
             setTheme: () => { },
         };
     }

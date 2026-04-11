@@ -23,10 +23,11 @@ import {
   awardOnboardingXP,
 } from '@/lib/onboarding/study-plan-generator';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
  * Request validation schema
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     const { user_id, quiz_id, answers } = completeRequestSchema.parse(body);
 
     // Fetch user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await getSupabase()
       .from('user_profiles')
       .select('*')
       .eq('user_id', user_id)
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch quiz questions for validation
-    const { data: jobData } = await supabase
+    const { data: jobData } = await getSupabase()
       .from('jobs')
       .select('payload')
       .eq('user_id', user_id)
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
     await awardOnboardingXP(user_id);
 
     // Mark onboarding as completed
-    await supabase
+    await getSupabase()
       .from('user_profiles')
       .update({
         onboarding_completed: true,
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user_id);
 
     // Store quiz attempt
-    await supabase.from('quiz_attempts').insert({
+    await getSupabase().from('quiz_attempts').insert({
       user_id,
       quiz_type: 'diagnostic',
       questions: storedQuestions,
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log audit event
-    await supabase.from('audit_logs').insert({
+    await getSupabase().from('audit_logs').insert({
       user_id,
       action: 'onboarding_completed',
       resource_type: 'user_profile',

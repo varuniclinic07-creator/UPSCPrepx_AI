@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
 import { generateDigest, getDigestHistory } from '@/lib/digest/digest-generator';
 import { errors } from '@/lib/security/error-sanitizer';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
         const session = await requireSession();
-        const userId = (session as any).user.id;
+        const userId = session.id;
+
+        // Rate limit check
+        const rateLimit = await checkRateLimit(userId, RATE_LIMITS.aiGenerate);
+        if (!rateLimit.success) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+                { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+            );
+        }
         const { subjects, length, includeQuestions } = await request.json();
 
         // Validate subjects if provided
@@ -35,7 +47,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
     try {
         const session = await requireSession();
-        const userId = (session as any).user.id;
+        const userId = session.id;
         const history = await getDigestHistory(userId);
         return NextResponse.json({ history });
 

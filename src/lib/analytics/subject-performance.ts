@@ -8,10 +8,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface SubjectPerformance {
   subject: string;
@@ -26,13 +25,13 @@ export async function getSubjectPerformance(userId: string): Promise<SubjectPerf
   const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const prev30 = new Date(past30.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const { data: recent } = await supabase
+  const { data: recent } = await getSupabase()
     .from('mcq_attempts')
     .select('subject, is_correct')
     .eq('user_id', userId)
     .gte('created_at', past30.toISOString());
 
-  const { data: previous } = await supabase
+  const { data: previous } = await getSupabase()
     .from('mcq_attempts')
     .select('subject, is_correct')
     .eq('user_id', userId)

@@ -6,6 +6,8 @@ import { withErrorHandler } from '@/lib/errors/error-handler';
 import { logAuditEvent } from '@/lib/audit/audit-service';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const MAX_SOURCES = 10;
 
 const scrapeSchema = z.object({

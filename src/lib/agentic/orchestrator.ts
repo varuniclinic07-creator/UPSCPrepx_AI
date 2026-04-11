@@ -3,9 +3,9 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { searchWeb } from './web-search-client';
-import { analyzeDocument } from './autodoc-client';
+import { generateExplanation as analyzeDocument } from './autodoc-client';
 import { searchFiles } from './file-search-client';
-import { aiRouter } from '@/lib/ai/provider-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import type {
     AgenticQueryRequest,
     AgenticQueryResponse,
@@ -146,24 +146,17 @@ export class AgenticOrchestrator {
             .map(s => `[${s.type}] ${s.title}: ${s.excerpt}`)
             .join('\n\n');
 
-        // Use AI router for generation
-        const response = await aiRouter.chat({
-            model: 'provider-8/claude-sonnet-4.5',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a UPSC CSE preparation assistant. Provide comprehensive, accurate answers based on the given sources. Always cite sources.',
-                },
-                {
-                    role: 'user',
-                    content: `Question: ${query}\n\nSources:\n${context}\n\nProvide a detailed answer for UPSC CSE preparation.`,
-                },
-            ],
-            temperature: 0.7,
-            max_tokens: 4096,
-        });
+        // Use callAI for generation
+        const answer = await callAI(
+            `Question: ${query}\n\nSources:\n${context}\n\nProvide a detailed answer for UPSC CSE preparation.`,
+            {
+                system: 'You are a UPSC CSE preparation assistant. Provide comprehensive, accurate answers based on the given sources. Always cite sources.',
+                temperature: 0.7,
+                maxTokens: 4096,
+            }
+        );
 
-        return response.choices[0]?.message?.content || '';
+        return answer;
     }
 
     /**
@@ -174,31 +167,24 @@ export class AgenticOrchestrator {
         _sources: any[],
         _context?: any
     ): Promise<{ answer: string; tokens: number }> {
-        // Use AI router for refinement
-        const response = await aiRouter.chat({
-            model: 'provider-8/claude-sonnet-4.5',
-            messages: [
-                {
-                    role: 'system',
-                    content: `You are a content refiner for UPSC CSE preparation. Your task:
+        // Use callAI for refinement
+        const refined = await callAI(
+            `Refine this content:\n\n${content}`,
+            {
+                system: `You are a content refiner for UPSC CSE preparation. Your task:
 1. Simplify language to 10th standard level
 2. Remove irrelevant content
 3. Add proper citations
 4. Ensure UPSC syllabus relevance
 5. Structure content clearly`,
-                },
-                {
-                    role: 'user',
-                    content: `Refine this content:\n\n${content}`,
-                },
-            ],
-            temperature: 0.3,
-            max_tokens: 4096,
-        });
+                temperature: 0.3,
+                maxTokens: 4096,
+            }
+        );
 
         return {
-            answer: response.choices[0]?.message?.content || content,
-            tokens: response.usage?.total_tokens || 0,
+            answer: refined || content,
+            tokens: 0,
         };
     }
 

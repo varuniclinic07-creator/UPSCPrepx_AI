@@ -9,10 +9,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { gamification } from './xp-service';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 interface AchievementDefinition {
   code: string;
@@ -39,7 +38,7 @@ export class AchievementService {
   async checkUserAchievements(userId: string) {
     try {
       // 1. Get current user stats
-      const { data: stats, error: statsErr } = await supabase
+      const { data: stats, error: statsErr } = await getSupabase()
         .from('user_xp_stats')
         .select('*')
         .eq('user_id', userId)
@@ -48,7 +47,7 @@ export class AchievementService {
       if (statsErr || !stats) return;
 
       // 2. Get already unlocked achievements
-      const { data: unlocked } = await supabase
+      const { data: unlocked } = await getSupabase()
         .from('user_achievements')
         .select('achievement_code') // assuming we join or store code
         .eq('user_id', userId);
@@ -69,7 +68,7 @@ export class AchievementService {
   }
 
   private async unlockAchievement(userId: string, code: string) {n    // Find achievement details
-    const { data: achievement } = await supabase
+    const { data: achievement } = await getSupabase()
       .from('achievements')
       .select('*')
       .eq('code', code)
@@ -78,7 +77,7 @@ export class AchievementService {
     if (!achievement) return;
 
     // Grant Achievement
-    await supabase.from('user_achievements').insert({
+    await getSupabase().from('user_achievements').insert({
       user_id: userId,
       achievement_id: achievement.id
     });

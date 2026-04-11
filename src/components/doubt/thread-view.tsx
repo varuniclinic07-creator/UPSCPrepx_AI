@@ -318,7 +318,8 @@ ${thread.answers[0]?.sources ? `\nSOURCES:\n${thread.answers[0].sources.map((s, 
                   {answer.isFollowUp
                     ? showHindi ? `अनुवर्ती उत्तर ${index}` : `Follow-up Answer ${index}`
                     : showHindi ? 'मुख्य उत्तर' : 'Main Answer'
-                }
+                  }
+                </span>
               </div>
               {thread.answers.length > 1 && (
                 <button

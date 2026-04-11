@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendOTP, getOTPStatus } from '@/lib/sms/otp-service';
 import { withRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/auth/otp/send
  * Send OTP to mobile number

@@ -6,8 +6,6 @@
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
-const redis = new Redis(process.env.REDIS_URL!);
-
 export interface LectureJobData {
     jobId: string;
     userId: string;
@@ -24,74 +22,104 @@ export interface ChapterJobData {
     content: string;
 }
 
-// Lecture queue for main orchestration
-export const lectureQueue = new Queue<LectureJobData>('lectures', {
-    connection: redis,
-    defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-            type: 'exponential',
-            delay: 10000
-        },
-        removeOnComplete: 50,
-        removeOnFail: 100
-    }
-});
+// Lazy-init Redis and queues to avoid connection at import time
+let _redis: Redis | null = null;
+function getRedis(): Redis {
+    if (!_redis) _redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    return _redis;
+}
 
-// Outline generation queue
-export const outlineQueue = new Queue<LectureJobData>('lecture-outline', {
-    connection: redis,
-    defaultJobOptions: {
-        attempts: 2,
+let _lectureQueue: Queue<LectureJobData> | null = null;
+function getLectureQueue(): Queue<LectureJobData> {
+    if (!_lectureQueue) {
+        _lectureQueue = new Queue<LectureJobData>('lectures', {
+            connection: getRedis(),
+            defaultJobOptions: {
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 10000 },
+                removeOnComplete: 50,
+                removeOnFail: 100,
+            },
+        });
     }
-});
+    return _lectureQueue;
+}
 
-// Script generation queue (one job per chapter)
-export const scriptQueue = new Queue<ChapterJobData>('lecture-scripts', {
-    connection: redis,
-    defaultJobOptions: {
-        attempts: 2,
+let _outlineQueue: Queue<LectureJobData> | null = null;
+function getOutlineQueue(): Queue<LectureJobData> {
+    if (!_outlineQueue) {
+        _outlineQueue = new Queue<LectureJobData>('lecture-outline', {
+            connection: getRedis(),
+            defaultJobOptions: { attempts: 2 },
+        });
     }
-});
+    return _outlineQueue;
+}
 
-// Visual generation queue
-export const visualQueue = new Queue<ChapterJobData>('lecture-visuals', {
-    connection: redis,
-    defaultJobOptions: {
-        attempts: 2,
+let _scriptQueue: Queue<ChapterJobData> | null = null;
+function getScriptQueue(): Queue<ChapterJobData> {
+    if (!_scriptQueue) {
+        _scriptQueue = new Queue<ChapterJobData>('lecture-scripts', {
+            connection: getRedis(),
+            defaultJobOptions: { attempts: 2 },
+        });
     }
-});
+    return _scriptQueue;
+}
 
-// TTS generation queue
-export const ttsQueue = new Queue<ChapterJobData>('lecture-tts', {
-    connection: redis,
-    defaultJobOptions: {
-        attempts: 2,
+let _visualQueue: Queue<ChapterJobData> | null = null;
+function getVisualQueue(): Queue<ChapterJobData> {
+    if (!_visualQueue) {
+        _visualQueue = new Queue<ChapterJobData>('lecture-visuals', {
+            connection: getRedis(),
+            defaultJobOptions: { attempts: 2 },
+        });
     }
-});
+    return _visualQueue;
+}
 
-// Video compilation queue
-export const compilationQueue = new Queue<{ lectureJobId: string }>('lecture-compilation', {
-    connection: redis,
-    defaultJobOptions: {
-        attempts: 1,
+let _ttsQueue: Queue<ChapterJobData> | null = null;
+function getTtsQueue(): Queue<ChapterJobData> {
+    if (!_ttsQueue) {
+        _ttsQueue = new Queue<ChapterJobData>('lecture-tts', {
+            connection: getRedis(),
+            defaultJobOptions: { attempts: 2 },
+        });
     }
-});
+    return _ttsQueue;
+}
 
-// Note: QueueScheduler was removed in BullMQ v4+
-// Delayed job handling is now built into the Worker class
+let _compilationQueue: Queue<{ lectureJobId: string }> | null = null;
+function getCompilationQueue(): Queue<{ lectureJobId: string }> {
+    if (!_compilationQueue) {
+        _compilationQueue = new Queue<{ lectureJobId: string }>('lecture-compilation', {
+            connection: getRedis(),
+            defaultJobOptions: { attempts: 1 },
+        });
+    }
+    return _compilationQueue;
+}
+
+// Re-export as getters for backward compatibility
+export const lectureQueue = { get: getLectureQueue };
+export const outlineQueue = { get: getOutlineQueue };
+export const scriptQueue = { get: getScriptQueue };
+export const visualQueue = { get: getVisualQueue };
+export const ttsQueue = { get: getTtsQueue };
+export const compilationQueue = { get: getCompilationQueue };
 
 /**
  * Add lecture generation job
  */
 export async function addLectureJob(data: LectureJobData) {
-    const job = await lectureQueue.add('generate-lecture', data, {
-        priority: 3 // MEDIUM priority
+    const queue = getLectureQueue();
+    const job = await queue.add('generate-lecture', data, {
+        priority: 3,
     });
 
     return {
         jobId: job.id!,
-        queuePosition: await lectureQueue.getWaitingCount()
+        queuePosition: await queue.getWaitingCount(),
     };
 }
 
@@ -99,7 +127,8 @@ export async function addLectureJob(data: LectureJobData) {
  * Get job status
  */
 export async function getLectureJobStatus(jobId: string) {
-    const job = await lectureQueue.getJob(jobId);
+    const queue = getLectureQueue();
+    const job = await queue.getJob(jobId);
 
     if (!job) {
         return { found: false };
@@ -113,7 +142,7 @@ export async function getLectureJobStatus(jobId: string) {
         progress: job.progress,
         data: job.data,
         returnvalue: job.returnvalue,
-        failedReason: job.failedReason
+        failedReason: job.failedReason,
     };
 }
 
@@ -121,7 +150,8 @@ export async function getLectureJobStatus(jobId: string) {
  * Cancel lecture job
  */
 export async function cancelLectureJob(jobId: string) {
-    const job = await lectureQueue.getJob(jobId);
+    const queue = getLectureQueue();
+    const job = await queue.getJob(jobId);
 
     if (job && (await job.getState()) !== 'completed') {
         await job.remove();

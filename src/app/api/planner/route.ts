@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireSession } from '@/lib/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/planner - Get user's study plans and today's tasks
 export async function GET() {
     try {

@@ -5,6 +5,10 @@ import { withErrorHandler } from '@/lib/errors/error-handler';
 import { z } from 'zod';
 import { captureException } from '@/lib/monitoring/sentry';
 import { traceRequest } from '@/lib/monitoring/tracing';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
+
 
 const explainSchema = z.object({
   content: z.string().min(1).max(10000),
@@ -14,7 +18,16 @@ const explainSchema = z.object({
 export const POST = withErrorHandler(async (request: NextRequest) => {
   return traceRequest('agentic.explain', async () => {
     try {
-      await requireAuth();
+      const session = await requireAuth();
+
+      // Rate limit check using authenticated user ID
+      const rateLimit = await checkRateLimit(session.id, RATE_LIMITS.agenticQuery);
+      if (!rateLimit.success) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+          { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+        );
+      }
 
       if (!isAutodocAvailable()) {
         return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });

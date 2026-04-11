@@ -11,14 +11,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // SUPABASE CLIENT
 // ============================================================================
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -86,7 +87,7 @@ async function getDigests(filters: {
   const digestsWithDetails = await Promise.all(
     (data || []).map(async digest => {
       // Get subject distribution
-      const { data: articles } = await supabase
+      const { data: articles } = await getSupabase()
         .from('ca_articles')
         .select(`
           id,
@@ -131,7 +132,7 @@ async function getDigestsBySubject(subject: string, filters: {
   limit: number;
 }) {
   // Find articles with this subject mapping
-  const { data: articleMappings } = await supabase
+  const { data: articleMappings } = await getSupabase()
     .from('ca_syllabus_mapping')
     .select('article_id, digest_id:ca_articles(digest_id)')
     .eq('subject', subject);

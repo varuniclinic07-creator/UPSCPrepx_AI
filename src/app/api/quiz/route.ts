@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getUserQuizzes, getUserQuizStats } from '@/lib/services/quiz-service';
 import { requireUser } from '@/lib/auth/auth-config';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/quiz
  * Get all quizzes for the authenticated user

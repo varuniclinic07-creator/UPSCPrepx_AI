@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
 import { createShort } from '@/lib/video/shorts-generator';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/shorts/generate
  */

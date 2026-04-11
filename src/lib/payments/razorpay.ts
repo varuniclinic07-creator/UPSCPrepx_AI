@@ -6,11 +6,19 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
-// Initialize Razorpay instance
-export const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID!,
-    key_secret: process.env.RAZORPAY_KEY_SECRET!
-});
+// Lazy-initialize Razorpay to avoid errors during Next.js build when env vars are absent
+let _razorpay: InstanceType<typeof Razorpay> | null = null;
+function getRazorpay(): InstanceType<typeof Razorpay> {
+    if (!_razorpay) {
+        _razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID || 'placeholder',
+            key_secret: process.env.RAZORPAY_KEY_SECRET || 'placeholder',
+        });
+    }
+    return _razorpay;
+}
+/** @deprecated Use getRazorpay() for lazy initialization */
+export const razorpay = { orders: { create: (...args: any[]) => getRazorpay().orders.create(...args) } };
 
 export interface PaymentOrder {
     id: string;

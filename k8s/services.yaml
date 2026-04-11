@@ -1,0 +1,97 @@
+# ═══════════════════════════════════════════════════════════════
+# UPSC PREPX-AI - KUBERNETES SERVICES
+# ClusterIP services for internal communication
+# ═══════════════════════════════════════════════════════════════
+
+# Web Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: upsc-web
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-web
+    app.kubernetes.io/component: frontend
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: upsc-web
+    app.kubernetes.io/component: frontend
+
+---
+# API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: upsc-api
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-api
+    app.kubernetes.io/component: backend
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3001"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3001
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: upsc-api
+    app.kubernetes.io/component: backend
+
+---
+# Worker Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: upsc-worker
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-worker
+    app.kubernetes.io/component: worker
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3002"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3002
+      protocol: TCP
+      name: http
+      name: metrics
+  selector:
+    app.kubernetes.io/name: upsc-worker
+    app.kubernetes.io/component: worker
+
+---
+# Admin Service (for admin dashboard - separate routing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: upsc-admin
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-admin
+    app.kubernetes.io/component: admin
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: upsc-web
+    app.kubernetes.io/component: frontend

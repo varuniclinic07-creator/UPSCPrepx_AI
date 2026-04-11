@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserNotes, searchNotes, getBookmarkedNotes } from '@/lib/services/notes-service';
 import { requireUser } from '@/lib/auth/auth-config';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/notes
  * Get all notes for the authenticated user

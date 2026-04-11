@@ -1,11 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireSession } from '@/lib/auth/auth-config';
+import { checkAccess } from '@/lib/auth/check-access';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
+
 
 // POST /api/mind-maps/generate - Generate a new mind map
 export async function POST(request: NextRequest) {
     try {
         const session = await requireSession();
+
+        // Rate limit check
+        const rateLimitId = (session as any).user.id;
+        const rateLimit = await checkRateLimit(rateLimitId, RATE_LIMITS.aiGenerate);
+        if (!rateLimit.success) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+                { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+            );
+        }
+
+        // Check entitlement (free: 2 mind maps/day)
+        const access = await checkAccess((session as any).user.id, 'mind_maps');
+        if (!access.allowed) {
+            return NextResponse.json(
+                { error: access.reason, remaining: access.remaining },
+                { status: 403 }
+            );
+        }
+
         const supabase = await createClient();
         const body = await request.json();
 

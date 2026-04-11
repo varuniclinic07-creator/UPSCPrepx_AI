@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
 import { explainArticle, compareArticles, getExamSummary } from '@/lib/legal/explainer-service';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/legal/explain
  * Generate explanation for an article

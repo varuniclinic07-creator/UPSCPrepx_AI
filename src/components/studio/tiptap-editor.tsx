@@ -18,14 +18,16 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useEditor, EditorContent, BubbleMenu, FloatingMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/extension-bubble-menu';
+import { FloatingMenu } from '@tiptap/extension-floating-menu';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
-import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableCell from '@tiptap/extension-table-cell';
-import TableHeader from '@tiptap/extension-table-header';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import Image from '@tiptap/extension-image';
 import Highlight from '@tiptap/extension-highlight';
 import TaskList from '@tiptap/extension-task-list';
@@ -424,6 +426,9 @@ export function TipTapEditor({
 // ============================================================================
 // EDITOR STYLES (CSS-in-JS for custom TipTap styling)
 // ============================================================================
+
+// Alias for consumers importing as TiptapEditor (camelCase vs TipTapEditor)
+export { TipTapEditor as TiptapEditor };
 
 export const editorStyles = `
   .ProseMirror {

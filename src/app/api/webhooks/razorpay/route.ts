@@ -8,6 +8,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { verifyWebhookSignature, getPaymentDetails } from '@/lib/payments/razorpay';
 import { createSubscription } from '@/lib/payments/subscription-service';
 
+export const dynamic = 'force-dynamic';
+
 const MAX_BODY_SIZE = 1024 * 1024; // 1MB limit
 const WEBHOOK_TIMEOUT = 10000; // 10 seconds
 
@@ -134,13 +136,19 @@ async function handlePaymentCaptured(payment: any, supabase: any) {
     }
 
     // Find payment by order ID
-    const { data: paymentRecord } = await (supabase.from('payments') as any)
+    const { data: paymentRecord, error: fetchError } = await (supabase.from('payments') as any)
         .select('*')
         .eq('razorpay_order_id', orderId)
         .single();
 
-    if (!paymentRecord) {
-        console.error('Payment record not found for order:', orderId);
+    if (fetchError || !paymentRecord) {
+        console.error('[Webhook] Payment record not found for order:', orderId, fetchError);
+        return;
+    }
+
+    // Idempotency check - skip if already processed
+    if (paymentRecord.status === 'completed' && paymentRecord.razorpay_payment_id === payment.id) {
+        console.log('[Webhook] Payment already processed:', paymentRecord.id);
         return;
     }
 
@@ -149,24 +157,30 @@ async function handlePaymentCaptured(payment: any, supabase: any) {
         .update({
             status: 'completed',
             razorpay_payment_id: payment.id,
+            razorpay_signature: payment.signature,
             payment_method: verifiedPayment.method,
             completed_at: new Date().toISOString()
         })
         .eq('id', paymentRecord.id);
 
-    // Create subscription if not already created
+    // Create or update subscription
     const { data: existingSub } = await (supabase.from('user_subscriptions') as any)
         .select('id')
         .eq('payment_id', paymentRecord.id)
         .single();
 
-    if (!existingSub) {
-        await createSubscription(
-            paymentRecord.user_id,
-            paymentRecord.plan_id,
-            paymentRecord.id
-        );
+    if (existingSub) {
+        console.log('[Webhook] Subscription already exists:', existingSub.id);
+        return;
     }
+
+    await createSubscription(
+        paymentRecord.user_id,
+        paymentRecord.plan_id,
+        paymentRecord.id
+    );
+
+    console.log('[Webhook] Payment captured and subscription created:', paymentRecord.id);
 }
 
 async function handlePaymentFailed(payment: any, supabase: any) {

@@ -8,6 +8,8 @@ import {
 import { requireAdmin } from '@/lib/auth/auth-config';
 import { getRateLimitHeaders, checkRateLimit } from '@/lib/ai/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/current-affairs
  * Get current affairs with optional filters

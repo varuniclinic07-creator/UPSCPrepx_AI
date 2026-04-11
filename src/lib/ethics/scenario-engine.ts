@@ -3,7 +3,7 @@
 // AI-driven ethics case studies and roleplay
 // ═══════════════════════════════════════════════════════════════
 
-import { aiRouter } from '@/lib/ai/provider-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 
 export interface EthicsScenario {
     id: string;
@@ -87,20 +87,11 @@ Respond in JSON:
   "suggestedApproach": "recommended balanced action"
 }`;
 
-    const response = await aiRouter.chat({
-        model: 'provider-8/claude-sonnet-4.5',
-        messages: [
-            {
-                role: 'system',
-                content: 'You are an ethics expert guiding UPSC aspirants through case studies.'
-            },
-            { role: 'user', content: prompt }
-        ],
+    const content = await callAI(prompt, {
+        system: 'You are an ethics expert guiding UPSC aspirants through case studies.',
         temperature: 0.3,
-        max_tokens: 1500
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
+        maxTokens: 1500,
+    }) || '{}';
     const parsed = JSON.parse(content);
 
     return {

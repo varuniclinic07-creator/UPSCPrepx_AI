@@ -6,10 +6,14 @@
 import { OpenAI } from 'openai';
 import { rateLimiter } from '@/lib/rate-limiter/api-manager';
 
-const client = new OpenAI({
+let _openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI {
+  if (!_openaiClient) _openaiClient = new OpenAI({
     apiKey: process.env.A4F_API_KEY,
     baseURL: process.env.A4F_BASE_URL || 'https://api.a4f.co/v1'
 });
+  return _openaiClient;
+}
 
 /**
  * Enhance content quality for UPSC preparation
@@ -18,7 +22,7 @@ export async function refineContent(content: string): Promise<string> {
     await rateLimiter.waitForSlot();
 
     try {
-        const response = await client.chat.completions.create({
+        const response = await getOpenAIClient().chat.completions.create({
             model: 'provider-2/qwen-3-max',
             messages: [
                 {
@@ -48,7 +52,7 @@ export async function addExamContext(content: string, topic: string): Promise<st
     await rateLimiter.waitForSlot();
 
     try {
-        const response = await client.chat.completions.create({
+        const response = await getOpenAIClient().chat.completions.create({
             model: 'provider-2/qwen-3-max',
             messages: [
                 {
@@ -82,7 +86,7 @@ export async function formatForUPSC(content: string): Promise<string> {
     await rateLimiter.waitForSlot();
 
     try {
-        const response = await client.chat.completions.create({
+        const response = await getOpenAIClient().chat.completions.create({
             model: 'provider-3/qwen-3-max',
             messages: [
                 {
@@ -117,7 +121,7 @@ export async function addMnemonics(content: string): Promise<string> {
     await rateLimiter.waitForSlot();
 
     try {
-        const response = await client.chat.completions.create({
+        const response = await getOpenAIClient().chat.completions.create({
             model: 'provider-2/qwen-3-max',
             messages: [
                 {

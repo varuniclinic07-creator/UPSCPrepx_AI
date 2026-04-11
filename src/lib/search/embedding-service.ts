@@ -6,7 +6,7 @@
  * 1536-dimensional embeddings for search content.
  */
 
-import { aiRouter } from '@/lib/ai/ai-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 
 export interface EmbeddingResponse {
   embedding: number[];

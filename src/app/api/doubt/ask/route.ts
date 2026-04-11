@@ -15,6 +15,10 @@ import { answerGenerator } from '@/lib/doubt/answer-generator';
 import { imageProcessor } from '@/lib/doubt/image-processor';
 import { voiceProcessor } from '@/lib/doubt/voice-processor';
 import { z } from 'zod';
+import { checkAccess } from '@/lib/auth/check-access';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
 
 // ============================================================================
 // REQUEST SCHEMA
@@ -48,13 +52,31 @@ export async function POST(request: NextRequest) {
   
   try {
     // Get authenticated user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
+      );
+    }
+
+    // Rate limit check
+    const rateLimit = await checkRateLimit(user.id, RATE_LIMITS.aiChat);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { success: false, error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
+    }
+
+    // Check entitlement (free: 3 doubts/day)
+    const access = await checkAccess(user.id, 'doubt');
+    if (!access.allowed) {
+      return NextResponse.json(
+        { success: false, error: access.reason, remaining: access.remaining },
+        { status: 403 }
       );
     }
 
@@ -67,7 +89,7 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: 'Invalid request',
-          details: validation.error.errors 
+          details: validation.error.issues
         },
         { status: 400 }
       );
@@ -84,7 +106,7 @@ export async function POST(request: NextRequest) {
       subject: data.subject,
       topic: data.topic,
       question: data.question,
-      attachments: processedAttachments,
+      attachments: processedAttachments as any,
     });
 
     if (createResult.error || !createResult.threadId || !createResult.questionId) {

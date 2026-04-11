@@ -1,0 +1,158 @@
+# ═══════════════════════════════════════════════════════════════
+# UPSC PREPX-AI - KUBERNETES CONFIGMAPS
+# Application configuration from env.production
+# ═══════════════════════════════════════════════════════════════
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: upsc-app-config
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-prepx-ai
+    app.kubernetes.io/component: config
+data:
+  # Application
+  NODE_ENV: "production"
+  NEXT_PUBLIC_APP_URL: "https://upscbyvarunsh.aimasteryedu.in"
+  NEXT_PUBLIC_APP_NAME: "UPSCPrepX-AI"
+
+  # Supabase
+  NEXT_PUBLIC_SUPABASE_URL: "https://emotqkukvfwjycvwfvyj.supabase.co"
+  SUPABASE_JWT_SECRET: "qDYyoXcdCGtwvBLUbiq36Pm4DF6xAD2ZodL8i9ceOk5uxaNWIf390BOwTpEJrcu+J/arHLZkCjhRRJ2RoUHksA=="
+
+  # AI Provider - 9Router (Primary)
+  PRIMARY_AI_PROVIDER: "9router"
+  9ROUTER_BASE_URL: "https://r94p885.9router.com/v1"
+  9ROUTER_RATE_LIMIT_RPM: "60"
+  9ROUTER_RATE_LIMIT_CONCURRENT: "20"
+
+  # AI Provider - Groq
+  GROQ_MODEL: "groq/llama-3.3-70b-versatile"
+  GROQ_BASE_URL: "https://api.groq.com/openai/v1"
+  GROQ_RATE_LIMIT_RPM: "30"
+  GROQ_RATE_LIMIT_CONCURRENT: "10"
+  GROQ_ENABLE_KEY_ROTATION: "true"
+  GROQ_ROTATION_STRATEGY: "round-robin"
+  GROQ_KEY_FAILURE_THRESHOLD: "3"
+  GROQ_KEY_COOLDOWN_SECONDS: "300"
+
+  # AI Provider - Ollama
+  OLLAMA_MODEL: "qwen3.5:397b-cloud"
+  OLLAMA_BASE_URL: "https://ollama.com/v1"
+  OLLAMA_RATE_LIMIT_RPM: "20"
+  OLLAMA_RATE_LIMIT_CONCURRENT: "5"
+
+  # AI Router
+  USE_AI_ROUTING: "true"
+  AI_ROUTER_STRATEGY: "priority-fallback"
+  AI_ROUTER_PRIORITY_ORDER: "9router,groq,ollama"
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: "5"
+  CIRCUIT_BREAKER_SUCCESS_THRESHOLD: "2"
+  CIRCUIT_BREAKER_TIMEOUT: "60000"
+  ENABLE_REQUEST_CACHING: "true"
+  CACHE_TTL_SECONDS: "300"
+
+  # Agentic Services
+  CRAWL4AI_URL: "http://89.117.60.144:11235"
+  AGENTIC_AUTODOC_URL: "http://89.117.60.144:8031"
+  AGENTIC_FILE_SEARCH_URL: "http://89.117.60.144:8032"
+  AGENTIC_WEB_SEARCH_URL: "http://89.117.60.144:8030"
+  SERVER_IP: "89.117.60.144"
+
+  # Redis
+  REDIS_TLS_ENABLED: "false"
+
+  # MinIO Storage
+  MINIO_ENDPOINT: "89.117.60.144"
+  MINIO_PORT: "9000"
+  MINIO_USE_SSL: "false"
+  MINIO_BUCKET_NAME: "upsc-production"
+  MATERIALS_BUCKET: "upsc-materials"
+  MATERIALS_BASE_URL: "https://cdn.aimasteryedu.in/materials"
+
+  # N8N Automation
+  N8N_URL: "http://89.117.60.144:5678"
+
+  # Monitoring
+  PROMETHEUS_URL: "http://89.117.60.144:9090"
+  GRAFANA_URL: "http://89.117.60.144:3004"
+  JAEGER_ENDPOINT: "http://89.117.60.144:14268/api/traces"
+  JAEGER_AGENT_HOST: "89.117.60.144"
+  JAEGER_AGENT_PORT: "6831"
+
+  # Plausible Analytics
+  NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "app.aimasteryedu.in"
+  NEXT_PUBLIC_PLAUSIBLE_API_HOST: "https://analytics.aimasteryedu.in"
+  PLAUSIBLE_BASE_URL: "https://analytics.aimasteryedu.in"
+  PLAUSIBLE_DISABLE_REGISTRATION: "true"
+
+  # Uptime Kuma
+  UPTIME_KUMA_URL: "http://89.117.60.144:3003"
+
+  # Feature Flags
+  ENABLE_SYLLABUS_CHECK: "true"
+  ENABLE_FACT_CHECKING: "true"
+  TARGET_READING_LEVEL: "10th-grade"
+  ENABLE_AGENTIC_SEARCH: "true"
+  ENABLE_PDF_EXPORT: "true"
+  ENABLE_LIVE_PREVIEWS: "true"
+
+  # Video Services
+  MANIM_URL: "http://89.117.60.144:8085"
+  REMOTION_URL: "http://89.117.60.144:3002"
+  REMOTION_CONCURRENCY: "2"
+  FFMPEG_WORKER_URL: "http://89.117.60.144:8080"
+
+  # Mautic Marketing
+  MAUTIC_URL: "http://89.117.60.144:8083"
+  MAUTIC_DB_HOST: "mautic-db"
+  MAUTIC_DB_USER: "mautic"
+  MAUTIC_DB_NAME: "mautic"
+
+  # SMTP
+  SMTP_HOST: "smtp.sendgrid.net"
+  SMTP_PORT: "587"
+  SMTP_USER: "apikey"
+  SMTP_FROM: "noreply@upsc.aimasteryedu.in"
+
+  # Twilio
+  TWILIO_PHONE_NUMBER: "+12196003657"
+
+  # CORS & Rate Limiting
+  CORS_ORIGINS: "https://upscbyvarunsh.aimasteryedu.in"
+  RATE_LIMIT_WINDOW: "60000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+
+  # Sentry
+  NEXT_PUBLIC_SENTRY_DSN: "https://1190845463e6572f6982c93b43ae95e3@o4510713202933760.ingest.us.sentry.io/4510713204047872"
+  LOG_LEVEL: "info"
+
+  # NextAuth
+  NEXTAUTH_URL: "https://upscbyvarunsh.aimasteryedu.in"
+
+---
+# ═══════════════════════════════════════════════════════════════
+# NGINX INGRESS CONFIGMAP
+# ═══════════════════════════════════════════════════════════════
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-ingress-config
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: nginx-ingress
+data:
+  use-forwarded-headers: "true"
+  compute-full-forwarded-for: "true"
+  use-proxy-protocol: "false"
+  proxy-body-size: "50m"
+  proxy-read-timeout: "60"
+  proxy-send-timeout: "60"
+  ssl-protocols: "TLSv1.2 TLSv1.3"
+  ssl-ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+  ssl-prefer-server-ciphers: "true"
+  hsts: "true"
+  hsts-include-subdomains: "true"
+  hsts-max-age: "31536000"

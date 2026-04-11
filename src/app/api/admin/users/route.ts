@@ -9,10 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 interface AdminRequest {
     userId: string;
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Perform Action
     if (action === 'grant_xp' && amount) {
-        await supabase
+        await getSupabase()
           .from('user_xp_stats')
           .upsert({ user_id: userId, total_earned: amount, current_balance: amount })
           .select();
@@ -45,9 +46,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: `Granted ${amount} XP to ${userId}` });
     }
 
-    // In production, this would call Supabase Auth Admin API to ban/suspend
-    // For now, we log to audit trail and return mock success
-    await supabase.from('admin_logs').insert({
+    // Execute admin action via Supabase Auth Admin API
+    if (action === 'suspend' || action === 'ban') {
+      // Call Supabase Auth Admin API to update user metadata
+      const { error: authError } = await getSupabase().auth.admin.updateUserById(
+        userId,
+        {
+          user_metadata: {
+            suspended: action === 'suspend',
+            banned: action === 'ban',
+            suspended_at: new Date().toISOString(),
+          }
+        }
+      );
+
+      if (authError) {
+        console.error('Failed to update user auth:', authError);
+        return NextResponse.json(
+          { error: 'Failed to update user status', details: authError.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    if (action === 'activate') {
+      const { error: authError } = await getSupabase().auth.admin.updateUserById(
+        userId,
+        {
+          user_metadata: {
+            suspended: false,
+            banned: false,
+            activated_at: new Date().toISOString(),
+          }
+        }
+      );
+
+      if (authError) {
+        console.error('Failed to activate user:', authError);
+        return NextResponse.json(
+          { error: 'Failed to activate user', details: authError.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Log to audit trail
+    await getSupabase().from('admin_logs').insert({
       admin_id: 'system_admin',
       action: action.toUpperCase(),
       target_id: userId,
@@ -55,9 +99,9 @@ export async function POST(request: NextRequest) {
       details: JSON.stringify(body)
     });
 
-    return NextResponse.json({ 
-        success: true, 
-        message: `User ${userId} successfully ${action}ed.` 
+    return NextResponse.json({
+        success: true,
+        message: `User ${userId} successfully ${action === 'grant_xp' ? 'granted' : action + 'ed'}.`
     });
 
   } catch (err) {

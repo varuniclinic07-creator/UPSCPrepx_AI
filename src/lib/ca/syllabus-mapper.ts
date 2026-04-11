@@ -12,10 +12,9 @@ import { createClient } from '@supabase/supabase-js';
 import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
 // INTERFACES
@@ -209,7 +208,7 @@ async function findSyllabusNode(
 ): Promise<string | null> {
   try {
     // Search for matching syllabus node
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('syllabus_nodes')
       .select('id, name, parent_id')
       .ilike('name', `%${topic}%`)
@@ -221,7 +220,7 @@ async function findSyllabusNode(
       // Try fuzzy search with keywords
       const keywords = topic.split(' ').filter(w => w.length > 3);
       for (const keyword of keywords.slice(0, 2)) {
-        const { data: fuzzyData } = await supabase
+        const { data: fuzzyData } = await getSupabase()
           .from('syllabus_nodes')
           .select('id')
           .ilike('name', `%${keyword}%`)
@@ -264,7 +263,7 @@ export async function saveSyllabusMappings(
       relevance_score: m.relevance_score,
     }));
 
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('ca_syllabus_mapping')
       .insert(mappingsToInsert);
 
@@ -349,7 +348,7 @@ export async function getSyllabusDistribution(articleIds: string[]): Promise<{
   GS4: number;
   Essay: number;
 }> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('ca_syllabus_mapping')
     .select('subject')
     .in('article_id', articleIds);
@@ -377,7 +376,7 @@ export async function findRelatedNotes(
   articleId: string
 ): Promise<Array<{ noteId: string; title: string; relevanceScore: number }>> {
   // Get article's syllabus mappings
-  const { data: mappings } = await supabase
+  const { data: mappings } = await getSupabase()
     .from('ca_syllabus_mapping')
     .select('syllabus_node_id, subject, topic')
     .eq('article_id', articleId)
@@ -397,7 +396,7 @@ export async function findRelatedNotes(
     return [];
   }
 
-  const { data: relatedNotes } = await supabase
+  const { data: relatedNotes } = await getSupabase()
     .from('content_library')
     .select('id, title, syllabus_mapping')
     .in('syllabus_node_id', syllabusNodeIds)

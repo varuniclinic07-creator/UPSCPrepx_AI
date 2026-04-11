@@ -17,7 +17,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { callAI } from '@/lib/ai/ai-provider';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
 // ============================================================================

@@ -1,0 +1,198 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-config
+  namespace: observability
+  labels:
+    app: tempo
+data:
+  tempo-config.yml: |
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+      log_level: info
+
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            http:
+              endpoint: 0.0.0.0:4318
+            grpc:
+              endpoint: 0.0.0.0:4317
+        zipkin:
+          endpoint: 0.0.0.0:9411
+        jaeger:
+          protocols:
+            thrift_http:
+              endpoint: 0.0.0.0:14268
+            grpc:
+              endpoint: 0.0.0.0:14250
+
+    ingester:
+      max_block_duration: 5m
+      max_block_bytes: 104857600
+      trace_idle_period: 10s
+      max_traces_per_user: 100000
+
+    compactor:
+      compaction:
+        block_retention: 72h
+        compacted_block_retention: 24h
+
+    metrics_generator:
+      registry:
+        enable_default_registry: true
+      processor:
+        local_blocks:
+          filter_server_spans: false
+        span_metrics:
+          dimensions:
+            - service_name
+            - span_name
+            - status_code
+      storage:
+        path: /tmp/tempo/generator/wal
+        remote_write:
+          - url: http://prometheus:9090/api/v1/write
+            send_exemplars: true
+
+    storage:
+      trace:
+        backend: local
+        wal:
+          path: /tmp/tempo/wal
+        local:
+          path: /tmp/tempo/blocks
+
+    overrides:
+      defaults:
+        metrics_generator:
+          processors:
+            - span-metrics
+            - service-graphs
+
+    query_frontend:
+      search:
+        duration_slo: 5s
+        throughput_bytes_slo: 1.073741824e+09
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: observability
+  labels:
+    app: tempo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3200"
+    spec:
+      securityContext:
+        fsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.3.0
+          args:
+            - "-config.file=/etc/tempo/tempo-config.yml"
+          ports:
+            - containerPort: 3200
+              name: http
+              protocol: TCP
+            - containerPort: 4317
+              name: otlp-grpc
+              protocol: TCP
+            - containerPort: 4318
+              name: otlp-http
+              protocol: TCP
+            - containerPort: 9411
+              name: zipkin
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 3200
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3200
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo
+            - name: storage
+              mountPath: /tmp/tempo
+      volumes:
+        - name: config
+          configMap:
+            name: tempo-config
+        - name: storage
+          persistentVolumeClaim:
+            claimName: tempo-storage
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tempo-storage
+  namespace: observability
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: observability
+  labels:
+    app: tempo
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3200
+      targetPort: 3200
+      protocol: TCP
+      name: http
+    - port: 4317
+      targetPort: 4317
+      protocol: TCP
+      name: otlp-grpc
+    - port: 4318
+      targetPort: 4318
+      protocol: TCP
+      name: otlp-http
+    - port: 9411
+      targetPort: 9411
+      protocol: TCP
+      name: zipkin
+  selector:
+    app: tempo

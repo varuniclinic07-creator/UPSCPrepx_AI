@@ -12,10 +12,9 @@ import { createClient } from '@supabase/supabase-js';
 import { withSimplifiedLanguage } from './simplified-language-prompt';
 import type { QuizQuestion } from './quiz-generator';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 /**
  * User profile data from onboarding wizard
@@ -191,7 +190,7 @@ export async function seedSyllabusProgress(
 ): Promise<number> {
   try {
     // Get all syllabus nodes
-    const { data: syllabusNodes, error: fetchError } = await supabase
+    const { data: syllabusNodes, error: fetchError } = await getSupabase()
       .from('syllabus_nodes')
       .select('id, subject, level, weightage');
 
@@ -218,7 +217,7 @@ export async function seedSyllabusProgress(
     });
 
     // Insert progress data (upsert to avoid duplicates)
-    const { error: insertError } = await supabase
+    const { error: insertError } = await getSupabase()
       .from('user_progress')
       .upsert(progressData, { onConflict: 'user_id,syllabus_node_id' });
 
@@ -251,7 +250,7 @@ export async function activateTrialSubscription(
     const trialExpiresAt = new Date(trialStartedAt.getTime() + 3 * 24 * 60 * 60 * 1000);
 
     // Get Free plan ID
-    const { data: freePlan } = await supabase
+    const { data: freePlan } = await getSupabase()
       .from('plans')
       .select('id')
       .eq('slug', 'free')
@@ -262,7 +261,7 @@ export async function activateTrialSubscription(
     }
 
     // Create trial subscription
-    const { data: subscription, error: insertError } = await supabase
+    const { data: subscription, error: insertError } = await getSupabase()
       .from('subscriptions')
       .insert({
         user_id,
@@ -301,7 +300,7 @@ export async function saveStudyPlanToProfile(
   studyPlan: StudyPlan
 ): Promise<void> {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('user_profiles')
       .update({
         study_plan: studyPlan,
@@ -377,7 +376,7 @@ function validateStudyPlan(plan: StudyPlan): void {
 export async function awardOnboardingXP(user_id: string): Promise<void> {
   try {
     // Award 100 XP for completing onboarding
-    const { error } = await supabase.rpc('add_user_xp', {
+    const { error } = await getSupabase().rpc('add_user_xp', {
       p_user_id: user_id,
       p_xp_amount: 100,
       p_reason: 'completed_onboarding',
@@ -385,7 +384,7 @@ export async function awardOnboardingXP(user_id: string): Promise<void> {
 
     if (error) {
       // If RPC doesn't exist, update directly
-      await supabase
+      await getSupabase()
         .from('user_gamification')
         .upsert({
           user_id,

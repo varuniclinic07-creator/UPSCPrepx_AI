@@ -14,6 +14,8 @@ import { doubtService } from '@/lib/doubt/doubt-service';
 import { answerGenerator } from '@/lib/doubt/answer-generator';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // REQUEST SCHEMA
 // ============================================================================
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
   
   try {
     // Get authenticated user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: 'Invalid request',
-          details: validation.error.errors 
+          details: validation.error.issues 
         },
         { status: 400 }
       );
@@ -144,9 +146,9 @@ export async function POST(request: NextRequest) {
     );
 
     // Update thread status
-    await supabase
-      .from('doubt_threads')
-      .update({ 
+    await (supabase
+      .from('doubt_threads') as any)
+      .update({
         status: 'answered',
         updated_at: new Date().toISOString(),
       })

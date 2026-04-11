@@ -13,6 +13,8 @@ import { createClient } from '@/lib/supabase/server';
 import { doubtService, ratingSchema } from '@/lib/doubt/doubt-service';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // REQUEST SCHEMA
 // ============================================================================
@@ -28,7 +30,7 @@ const rateRequestSchema = ratingSchema.extend({
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: 'Invalid request',
-          details: validation.error.errors 
+          details: validation.error.issues 
         },
         { status: 400 }
       );

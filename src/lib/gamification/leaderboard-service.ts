@@ -8,16 +8,15 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export class LeaderboardService {
   
   // Get top users by total XP
   async getTopUsers(limit: number = 10): Promise<any[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('user_xp_stats')
       .select('*')
       .order('total_earned', { ascending: false })
@@ -29,7 +28,7 @@ export class LeaderboardService {
 
   // Get specific user's rank
   async getUserRank(userId: string): Promise<any> {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('user_xp_stats')
       .select('user_id, total_earned')
       .order('total_earned', { ascending: false });
@@ -56,7 +55,7 @@ export class LeaderboardService {
       startDate.setDate(now.getDate() - 30);
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('xp_transactions')
       .select('user_id, amount')
       .gte('created_at', startDate.toISOString());

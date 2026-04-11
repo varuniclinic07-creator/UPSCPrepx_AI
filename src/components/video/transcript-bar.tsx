@@ -48,7 +48,7 @@ export function TranscriptBar({ segments, currentTime, onSeek, showHindi = false
 
   return (
     <div className="bg-white border-l border-gray-200 h-full flex flex-col w-80 flex-shrink-0">
-      {/* Header */
+      {/* Header */}
       <div className="p-3 border-b border-gray-200 flex items-center justify-between">
         <h3 className="font-semibold text-gray-800">
           {showHindi ? 'प्रतिलेख' : 'Transcript'}
@@ -60,7 +60,7 @@ export function TranscriptBar({ segments, currentTime, onSeek, showHindi = false
         </div>
       </div>
 
-      {/* Content */
+      {/* Content */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {segments.map((seg, idx) => {
           const isActive = idx === activeIndex;
@@ -80,7 +80,7 @@ export function TranscriptBar({ segments, currentTime, onSeek, showHindi = false
                   {formatTime(seg.start)}
                 </span>
                 {isActive && (
-                  <div className="flex gap-1 text-[10px] text-saffron-600".
+                  <div className="flex gap-1 text-[10px] text-saffron-600">
                     <span className="hover:bg-saffron-200 px-1.5 py-0.5 rounded cursor-pointer flex items-center gap-1">
                       <Bookmark className="w-3 h-3"/> {showHindi ? 'Note' : 'Add Note'}
                     </span>

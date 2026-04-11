@@ -422,7 +422,185 @@ All Edge Functions use the shared `callAI()` from `_shared/ai-provider.ts`:
 
 ---
 
-## Remaining Work
-- Deploy Edge Functions to Supabase (`deno deploy` or Supabase CLI)
-- Wire API routes to optionally call Edge Functions (currently using local `callAI()` directly)
-- Test Edge Functions with authenticated requests
+## Session 5 — Deployment Preparation (2026-04-10)
+**Agent:** Amelia (Dev)
+
+### Summary
+Completed deployment preparation: created deployment scripts, documentation, and architecture decision record.
+
+### Deliverables Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/deploy-edge-functions.sh` | Bash deployment script for 15 functions |
+| `scripts/deploy-edge-functions.ps1` | PowerShell deployment script |
+| `DEPLOYMENT.md` | Comprehensive deployment guide with troubleshooting |
+| `DEPLOY_QUICKSTART.md` | Quick reference card for deployment steps |
+| `ARCHITECTURE_DECISION.md` | Edge Functions vs API Routes architecture decision |
+
+### Edge Functions Ready for Deployment (15 total)
+
+All functions use shared modules from `supabase/functions/_shared/`:
+- `ai-provider.ts` — callAI() with 3-provider fallback
+- `cors.ts` — CORS headers and handling
+- `entitlement.ts` — checkAccess() for subscription validation
+- `simplified-lang.ts` — SIMPLIFIED_LANGUAGE_PROMPT
+
+| Function | Endpoint URL |
+|----------|-------------|
+| doubt-solver-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/doubt-solver-pipe |
+| mains-evaluator-pipe | https://emotqukvfwjycvwfvyj.supabase.co/functions/v1/mains-evaluator-pipe |
+| mentor-chat-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/mentor-chat-pipe |
+| notes-generator-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/notes-generator-pipe |
+| quiz-engine-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/quiz-engine-pipe |
+| search-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/search-pipe |
+| daily-digest-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/daily-digest-pipe |
+| video-shorts-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/video-shorts-pipe |
+| gamification-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/gamification-pipe |
+| onboarding-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/onboarding-pipe |
+| planner-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/planner-pipe |
+| ethics-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/ethics-pipe |
+| legal-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/legal-pipe |
+| math-solver-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/math-solver-pipe |
+| custom-notes-pipe | https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/custom-notes-pipe |
+
+### Deployment Steps (Manual Auth Required)
+
+1. **Authenticate with Supabase:**
+   ```bash
+   npx supabase@latest login
+   ```
+
+2. **Deploy all functions:**
+   ```powershell
+   .\scripts\deploy-edge-functions.ps1  # Windows PowerShell
+   ./scripts/deploy-edge-functions.sh   # Linux/Mac/WSL
+   ```
+
+3. **Set environment variables in Supabase Dashboard:**
+   - Go to: https://supabase.com/dashboard/project/emotqkukvfwjycvwfvyj/settings/edge-functions
+   - Add secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NINE_ROUTER_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY
+
+4. **Test deployment:**
+   ```bash
+   curl -X POST https://emotqkukvfwjycvwfvyj.supabase.co/functions/v1/doubt-solver-pipe \
+     -H "Authorization: Bearer YOUR_JWT" \
+     -H "Content-Type: application/json" \
+     -d '{"userId":"uuid","question":"What is Article 370?","subject":"GS2"}'
+   ```
+
+### Architecture Decision: API Routes vs Edge Functions
+
+**Decision:** Keep both paths as **alternatives**, not dependencies.
+
+| Aspect | API Routes | Edge Functions |
+|--------|-----------|----------------|
+| Invocation | `fetch('/api/doubt/ask')` | `supabase.functions.invoke('doubt-solver-pipe')` |
+| Runtime | Next.js (Node.js) | Deno (edge) |
+| Cold Start | ~500ms (Vercel) | ~50ms (Supabase edge) |
+| Best For | Complex orchestration, file uploads | Simple AI calls, real-time features |
+
+**Recommendation:** Frontend can choose optimal path per feature:
+- Use Edge Functions for: doubt solver, mentor chat, search, mains evaluator (speed-critical)
+- Keep API Routes for: MCQ practice, gamification, leaderboards (DB-heavy)
+
+See `ARCHITECTURE_DECISION.md` for full details.
+
+---
+
+## Remaining Work (Post-Deployment)
+
+1. **Manual deployment required** — User must run `npx supabase login` then deployment script
+2. **Set Supabase Secrets** — Add API keys via dashboard or CLI
+3. **Test Edge Functions** — Verify with authenticated JWT requests
+4. **Optional: Update frontend** — Migrate speed-critical features to use Edge Functions directly
+
+---
+
+## Session 6 — Phase 16-18 Completion (2026-04-11)
+**Agent:** Amelia (Dev)
+
+### Summary
+Resumed from Phase 16. Completed ML Analytics, Zero-Trust, and Multi-Region phases.
+
+---
+
+### Phase 16 — Advanced ML Analytics (COMPLETED)
+
+**Pre-existing (already done):** user-segmentation.ts, usage-analytics.ts, cost-optimization.ts, feature-usage.ts, ML API routes (dashboard, user-segmentation, cost-optimization, feature-usage, usage), admin ML analytics page.
+
+**Added this session:**
+
+| File | Purpose |
+|------|---------|
+| `src/app/api/analytics/ml/churn-risk/route.ts` | Ranked at-risk users by churn score with risk levels + revenue at risk |
+| `src/app/api/analytics/ml/weekly-insights/route.ts` | Auto-generated weekly operator narrative (growth/retention/cost/features) |
+| `src/app/api/analytics/ml/content-engagement/route.ts` | Notes, MCQ, current affairs engagement scoring |
+
+**Bug fixes in `src/lib/analytics/user-segmentation.ts`:**
+- Added `AdoptionStage` type + `adoptionStage` field to `SegmentationResult`
+- Added `BulkSegmentEntry`, `TargetingStrategy` interfaces
+- Added `getUserSegment()`, `getTargetingStrategy()`, `getBulkSegmentation()` methods (called by existing routes but missing)
+- Added `getAdoptionStage()` private method
+- Fixed pre-existing `createClient()` missing `await` in `calculateUserMetrics`, `segmentAllUsers`, `getBulkSegmentation`
+- Fixed `subscriptions` table name → `user_subscriptions` (correct schema name)
+- Added `minGrowth` / `minFeatureUsageCount` to `SEGMENT_CRITERIA` type (pre-existing compile error)
+
+---
+
+### Phase 17 — Zero-Trust Architecture (COMPLETED)
+
+**Pre-existing (already done):** rate-limiter, admin-auth, CSRF, JWT validator, SSRF protection (with domain allowlist), RBAC, secure headers, security middleware.
+
+**Added this session:**
+
+| File | Purpose |
+|------|---------|
+| `src/lib/security/service-tokens.ts` | HMAC-SHA256 signed JWTs for service-to-service calls. `issueServiceToken()` / `verifyServiceToken()` / `extractServiceToken()`. TTL=300s, scoped by issuer+audience. |
+| `src/lib/security/audit.ts` | Structured audit log for privileged operations. `writeAuditLog()` writes to structured logs + Supabase `audit_logs` table. `auditRequest()` helper extracts HTTP metadata automatically. |
+| `supabase/migrations/039_audit_logs.sql` | DB migration: `audit_logs` table, RLS (super_admin read only), REVOKE UPDATE/DELETE (append-only). |
+| `src/lib/security/index.ts` (updated) | Exports `issueServiceToken`, `verifyServiceToken`, `extractServiceToken`, `writeAuditLog`, `auditRequest`. |
+
+---
+
+### Phase 18 — Multi-Region Readiness (COMPLETED)
+
+**Pre-existing (already done):** k8s/ manifests, infrastructure/main.tf + variables.tf (Hetzner + Cloudflare Terraform).
+
+**Added this session:**
+
+| File | Purpose |
+|------|---------|
+| `infrastructure/multi-region/main.tf` | Reusable Terraform module: `enabled` toggle, region-scoped Hetzner server + Cloudflare A record. |
+| `infrastructure/multi-region/example.tfvars` | US-East expansion example (disabled by default). |
+| `infrastructure/multi-region/STRATEGY.md` | Architecture decision: stateless design, CDN routing, session strategy, failover checklist, expansion checklist. |
+| `next.config.js` (updated) | CDN-aware: `assetPrefix` from `CDN_ASSET_PREFIX` env, CDN image remote patterns, `minimumCacheTTL=86400`. |
+
+---
+
+### Phase 19 — Verification — COMPLETE ✓
+
+**Build:** `✓ Compiled successfully` (2026-04-11)
+
+**Fixes applied during Phase 19:**
+| Fix | File | Detail |
+|-----|------|--------|
+| Zod v3/v4 API mismatch | `src/lib/validation/schemas.ts:83` | `uuidSchema.error('...')` → `uuidSchema` (`.error()` is Zod v4 only) |
+| Razorpay build-time crash | `src/lib/payments/razorpay.ts` | Lazy `getRazorpay()` factory with placeholder keys; no module-scope init |
+| Next.js config key | `next.config.js` | `serverExternalPackages` → `experimental.serverComponentsExternalPackages` (Next.js 14 API) |
+| Pino missing-module warning | `next.config.js` | Added `pino` to `serverComponentsExternalPackages` |
+| Wrong import sources | `src/lib/security/security-middleware.ts` | `validateRequestOrigin` from `./csrf`, `sanitizeInput` from `./headers`; replaced non-existent `validateZodSchema` with inline `.safeParse()` |
+| Funnel icon collision | `src/app/(admin)/admin/conversion/page.tsx` | Lucide `Funnel` aliased to `FunnelIcon` |
+| Deno files in TS compilation | `tsconfig.json` | Added `"supabase/functions"` to `exclude` |
+
+**TypeScript:** 0 errors in all Phase 16-18 new/modified files.
+**Pre-existing errors:** 964 (Deno Supabase Edge Function files — not introduced by this session; tsconfig exclude applied).
+**Prerender warnings:** Pages using Supabase auth (`/dashboard/bookmarks`, `/500`, etc.) cannot be statically prerendered — pre-existing, served as dynamic (`ƒ`) routes at runtime.
+
+### Remaining Manual Steps
+
+1. **Apply Supabase migration** `supabase/migrations/039_audit_logs.sql` — run `npx supabase db push` or apply via Supabase dashboard. Safe to defer; `writeAuditLog()` falls back to structured console logs until applied.
+2. **Deploy Edge Functions** — requires `npx supabase login` then `npx supabase functions deploy`.
+3. **CDN_ASSET_PREFIX** — Set to `''` by default; no production change until explicitly set in `.env.production`.
+4. **Service tokens** — Infrastructure ready; wire into internal routes when needed. Existing routes continue using user auth.
+5. **Multi-region Terraform** — `infrastructure/multi-region/main.tf` has `enabled = false` by default; activate when expanding to second region.

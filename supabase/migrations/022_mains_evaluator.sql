@@ -25,6 +25,20 @@ EXCEPTION
 END $$;
 
 -- ================================================================
+-- TABLE: syllabus_nodes (Stub — created here if not already exists)
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS syllabus_nodes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_id uuid REFERENCES syllabus_nodes(id),
+  title text NOT NULL,
+  subject text,
+  paper text,
+  level integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+-- ================================================================
 -- TABLE: mains_questions (Question Bank)
 -- ================================================================
 
@@ -143,10 +157,26 @@ CREATE INDEX IF NOT EXISTS idx_mains_feedback_rating ON mains_feedback(rating);
 -- ================================================================
 
 -- Enable RLS
-ALTER TABLE mains_questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mains_answers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mains_evaluations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mains_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE syllabus_nodes     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mains_questions    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mains_answers      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mains_evaluations  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mains_feedback     ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies to allow idempotent re-runs
+DROP POLICY IF EXISTS "Anyone can view questions"              ON mains_questions;
+DROP POLICY IF EXISTS "Authenticated users can insert questions" ON mains_questions;
+DROP POLICY IF EXISTS "Admins can update questions"            ON mains_questions;
+DROP POLICY IF EXISTS "Admins can delete questions"            ON mains_questions;
+DROP POLICY IF EXISTS "Users can view own answers"             ON mains_answers;
+DROP POLICY IF EXISTS "Users can insert own answers"           ON mains_answers;
+DROP POLICY IF EXISTS "Users can update own answers"           ON mains_answers;
+DROP POLICY IF EXISTS "Users can delete own answers"           ON mains_answers;
+DROP POLICY IF EXISTS "Users can view own evaluations"         ON mains_evaluations;
+DROP POLICY IF EXISTS "System can insert evaluations"          ON mains_evaluations;
+DROP POLICY IF EXISTS "Users can view own feedback"            ON mains_feedback;
+DROP POLICY IF EXISTS "Users can insert own feedback"          ON mains_feedback;
+DROP POLICY IF EXISTS "Users can update own feedback"          ON mains_feedback;
 
 -- ================================================================
 -- POLICIES: mains_questions

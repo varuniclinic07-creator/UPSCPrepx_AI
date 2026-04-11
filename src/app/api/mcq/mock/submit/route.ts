@@ -14,6 +14,8 @@ import { createClient } from '@/lib/supabase/server';
 import { mockTest } from '@/lib/mcq/mock-test';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // VALIDATION SCHEMA
 // ============================================================================
@@ -35,7 +37,7 @@ const mockSubmitSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

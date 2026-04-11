@@ -10,6 +10,8 @@ import { verifyPaymentSignature, getPaymentDetails } from '@/lib/payments/razorp
 import { createSubscription } from '@/lib/payments/subscription-service';
 import { generateInvoice } from '@/lib/invoices/invoice-generator';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const session = await requireSession();
@@ -24,13 +26,23 @@ export async function POST(request: NextRequest) {
 
         const supabase = await createClient();
 
-        // Get payment record
-        const { data: payment } = await (supabase.from('payments') as any)
-            .select('*, subscription_plans(*)')
+        // Get payment record with plan details
+        const { data: payment, error: paymentError } = await (supabase.from('payments') as any)
+            .select(`
+                *,
+                subscription_plans (
+                    id,
+                    name,
+                    tier,
+                    duration_months,
+                    features
+                )
+            `)
             .eq('id', paymentId)
             .single();
 
-        if (!payment) {
+        if (paymentError || !payment) {
+            console.error('Payment fetch error:', paymentError);
             return NextResponse.json(
                 { error: 'Payment not found' },
                 { status: 404 }
@@ -45,7 +57,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Verify signature
+        // Verify signature (timing-safe)
         const isValid = verifyPaymentSignature(orderId, razorpayPaymentId, signature);
 
         if (!isValid) {
@@ -59,14 +71,33 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get payment details from Razorpay
+        // Get payment details from Razorpay for verification
         const paymentDetails = await getPaymentDetails(razorpayPaymentId);
+
+        // Verify amount matches
+        const expectedAmount = (payment as any).total_amount;
+        const actualAmount = paymentDetails.amount;
+
+        if (actualAmount !== expectedAmount) {
+            await (supabase.from('payments') as any)
+                .update({
+                    status: 'failed',
+                    error_message: `Amount mismatch: expected ${expectedAmount}, got ${actualAmount}`
+                })
+                .eq('id', paymentId);
+
+            return NextResponse.json(
+                { error: 'Payment amount mismatch' },
+                { status: 400 }
+            );
+        }
 
         // Update payment record
         await (supabase.from('payments') as any)
             .update({
                 status: 'completed',
                 razorpay_payment_id: razorpayPaymentId,
+                razorpay_signature: signature,
                 payment_method: paymentDetails.method,
                 completed_at: new Date().toISOString()
             })
@@ -80,19 +111,27 @@ export async function POST(request: NextRequest) {
         );
 
         // Generate invoice
-        const invoiceUrl = await generateInvoice(paymentId);
+        let invoiceUrl = '';
+        try {
+            invoiceUrl = await generateInvoice(paymentId);
+        } catch (invoiceError) {
+            console.error('Invoice generation error:', invoiceError);
+            // Continue without invoice - not critical
+        }
 
-        // Update payment with invoice
-        await (supabase.from('payments') as any)
-            .update({ invoice_url: invoiceUrl })
-            .eq('id', paymentId);
+        // Update payment with invoice URL if generated
+        if (invoiceUrl) {
+            await (supabase.from('payments') as any)
+                .update({ invoice_url: invoiceUrl })
+                .eq('id', paymentId);
+        }
 
         return NextResponse.json({
             success: true,
             payment: {
                 id: paymentId,
                 status: 'completed',
-                amount: (payment as any).amount,
+                amount: (payment as any).total_amount,
                 method: paymentDetails.method
             },
             subscription: {
@@ -114,7 +153,7 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json(
-            { error: 'Payment verification failed' },
+            { error: 'Payment verification failed', details: error.message },
             { status: 500 }
         );
     }

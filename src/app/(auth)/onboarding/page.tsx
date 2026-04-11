@@ -13,13 +13,13 @@
 import React, { useEffect, useState } from 'react';
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -33,13 +33,13 @@ export default function OnboardingPage() {
         }
 
         // Check if user already completed onboarding
-        const { data: profile } = await supabase
-          .from('user_profiles')
+        const { data: profile } = await (supabase
+          .from('user_profiles') as any)
           .select('onboarding_completed_at')
           .eq('id', session.user.id)
           .single();
 
-        if (profile?.onboarding_completed_at) {
+        if ((profile as any)?.onboarding_completed_at) {
           // Already completed, redirect to dashboard
           router.push('/dashboard');
           return;

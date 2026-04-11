@@ -2,10 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
 import { gradeAnswer, saveGradingResult, getGradingHistory } from '@/lib/grading/grader-service';
 import { errors } from '@/lib/security/error-sanitizer';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
         const session = await requireSession();
+
+        // Rate limit check
+        const rateLimit = await checkRateLimit(session.id, RATE_LIMITS.aiGenerate);
+        if (!rateLimit.success) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+                { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+            );
+        }
         const { question, answer, save } = await request.json();
 
         if (!question || !answer) {
@@ -23,7 +35,7 @@ export async function POST(request: NextRequest) {
         const result = await gradeAnswer(question, answer);
 
         if (save) {
-            await saveGradingResult((session as any).user.id, question, answer, result);
+            await saveGradingResult(session.id, question, answer, result);
         }
 
         return NextResponse.json({ result });
@@ -37,7 +49,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
     try {
         const session = await requireSession();
-        const history = await getGradingHistory((session as any).user.id);
+        const history = await getGradingHistory(session.id);
         return NextResponse.json({ history });
 
     } catch (error) {

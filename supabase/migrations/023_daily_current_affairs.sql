@@ -7,6 +7,18 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm; -- For fuzzy text matching
 
 -- ============================================================================
+-- STUB: user_profiles (created here if not already exists)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name text,
+  avatar_url text,
+  is_admin boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- ============================================================================
 -- TABLE 1: daily_ca_digest
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS daily_ca_digest (
@@ -24,8 +36,8 @@ CREATE TABLE IF NOT EXISTS daily_ca_digest (
 );
 
 -- Index for fast date queries
-CREATE INDEX idx_daily_ca_digest_date ON daily_ca_digest(date DESC);
-CREATE INDEX idx_daily_ca_digest_published ON daily_ca_digest(is_published) WHERE is_published = true;
+CREATE INDEX IF NOT EXISTS idx_daily_ca_digest_date ON daily_ca_digest(date DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_ca_digest_published ON daily_ca_digest(is_published) WHERE is_published = true;
 
 -- ============================================================================
 -- TABLE 2: ca_sources (Whitelisted sources)
@@ -180,13 +192,27 @@ CREATE INDEX idx_ca_quiz_attempts_attempted_at ON ca_quiz_attempts(attempted_at 
 -- ============================================================================
 
 -- Enable RLS on all tables
-ALTER TABLE daily_ca_digest ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ca_sources ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ca_articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_ca_digest    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ca_sources         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ca_articles        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ca_syllabus_mapping ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ca_mcqs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ca_user_reads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ca_quiz_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ca_mcqs            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ca_user_reads      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ca_quiz_attempts   ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies (idempotent re-runs)
+DROP POLICY IF EXISTS "Anyone can read published digests"   ON daily_ca_digest;
+DROP POLICY IF EXISTS "Anyone can read active sources"      ON ca_sources;
+DROP POLICY IF EXISTS "Admins can manage sources"           ON ca_sources;
+DROP POLICY IF EXISTS "Anyone can read published articles"  ON ca_articles;
+DROP POLICY IF EXISTS "Anyone can read syllabus mapping"    ON ca_syllabus_mapping;
+DROP POLICY IF EXISTS "Anyone can read active MCQs"         ON ca_mcqs;
+DROP POLICY IF EXISTS "Users can only see own reads"        ON ca_user_reads;
+DROP POLICY IF EXISTS "Users can insert own reads"          ON ca_user_reads;
+DROP POLICY IF EXISTS "Users can update own reads"          ON ca_user_reads;
+DROP POLICY IF EXISTS "Users can only see own attempts"     ON ca_quiz_attempts;
+DROP POLICY IF EXISTS "Users can insert own attempts"       ON ca_quiz_attempts;
 
 -- daily_ca_digest: Anyone can read published digests
 CREATE POLICY "Anyone can read published digests"
@@ -457,18 +483,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_daily_ca_digest_updated_at ON daily_ca_digest;
 CREATE TRIGGER update_daily_ca_digest_updated_at
   BEFORE UPDATE ON daily_ca_digest
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_ca_sources_updated_at ON ca_sources;
 CREATE TRIGGER update_ca_sources_updated_at
   BEFORE UPDATE ON ca_sources
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_ca_articles_updated_at ON ca_articles;
 CREATE TRIGGER update_ca_articles_updated_at
   BEFORE UPDATE ON ca_articles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_ca_user_reads_updated_at ON ca_user_reads;
 CREATE TRIGGER update_ca_user_reads_updated_at
   BEFORE UPDATE ON ca_user_reads
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

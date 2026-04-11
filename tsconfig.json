@@ -40,6 +40,8 @@
   ],
   "exclude": [
     "node_modules",
-    "magicui"
+    "magicui",
+    "UPSCPrepx_AI",
+    "supabase/functions"
   ]
 }

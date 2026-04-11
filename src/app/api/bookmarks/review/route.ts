@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { srsService } from '@/lib/bookmarks/srs-service';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { bookmarkId, quality } = await request.json(); // quality: 0-5

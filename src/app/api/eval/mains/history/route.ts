@@ -6,10 +6,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { getEvaluationHistory } from '@/lib/eval/mains-evaluator-service';
 import { z } from 'zod';
+
+export const dynamic = 'force-dynamic';
 
 // Query validation schema
 const historySchema = z.object({
@@ -23,7 +24,7 @@ const historySchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // Step 1: Authenticate user
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
     const { data: { session }, error: authError } = await supabase.auth.getSession();
 
     if (authError || !session) {
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: validation.error.errors },
+        { error: 'Invalid query parameters', details: validation.error.issues },
         { status: 400 }
       );
     }
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {

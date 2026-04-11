@@ -8,6 +8,8 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 const authOptions: NextAuthOptions = {
     providers: [
         // Google OAuth

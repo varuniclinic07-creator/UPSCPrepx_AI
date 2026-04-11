@@ -15,10 +15,9 @@ import { processArticlesForMCQs } from './mcq-generator';
 import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
 // INTERFACES
@@ -256,7 +255,7 @@ async function processArticle(article: {
  * Update article in database with processed content
  */
 async function updateArticle(article: ProcessedArticle): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('ca_articles')
     .update({
       title_hindi: article.titleHindi,
@@ -305,7 +304,7 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
 
     // Step 2: Get articles from database for processing
     console.log('Step 2: Loading articles for processing...');
-    const { data: articles, error: fetchError } = await supabase
+    const { data: articles, error: fetchError } = await getSupabase()
       .from('ca_articles')
       .select('id, title, full_content, url, image_url, category')
       .eq('digest_id', fetchResult.digestId)
@@ -364,7 +363,7 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
     // Step 6: Get syllabus distribution
     console.log('Step 6: Calculating subject distribution...');
     const articleIds = processedArticles.map(a => a.id);
-    const { data: mappings } = await supabase
+    const { data: mappings } = await getSupabase()
       .from('ca_syllabus_mapping')
       .select('subject')
       .in('article_id', articleIds);
@@ -381,7 +380,7 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
     // Step 7: Update digest metadata
     console.log('Step 7: Updating digest metadata...');
     const processingTimeSec = (Date.now() - startTime) / 1000;
-    await supabase
+    await getSupabase()
       .from('daily_ca_digest')
       .update({
         article_count: processedArticles.length,
@@ -432,7 +431,7 @@ export async function publishDigest(digestId: string): Promise<void> {
   const now = new Date().toISOString();
 
   // Update digest
-  await supabase
+  await getSupabase()
     .from('daily_ca_digest')
     .update({
       is_published: true,
@@ -441,7 +440,7 @@ export async function publishDigest(digestId: string): Promise<void> {
     .eq('id', digestId);
 
   // Update all articles in digest
-  await supabase
+  await getSupabase()
     .from('ca_articles')
     .update({
       is_published: true,
@@ -457,9 +456,9 @@ export async function publishDigest(digestId: string): Promise<void> {
 export async function generateDigestPDF(digestId: string): Promise<string> {
   // This would integrate with a PDF generation service
   // For now, return placeholder URL
-  const pdfUrl = `https://storage.supabase.co/ca-digests/digest-${digestId}.pdf`;
+  const pdfUrl = `https://storage.getSupabase().co/ca-digests/digest-${digestId}.pdf`;
   
-  await supabase
+  await getSupabase()
     .from('daily_ca_digest')
     .update({ pdf_url: pdfUrl })
     .eq('id', digestId);

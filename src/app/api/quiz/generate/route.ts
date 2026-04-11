@@ -5,6 +5,8 @@ import { getRateLimitHeaders, checkRateLimit } from '@/lib/ai/rate-limiter';
 import { SUBJECTS } from '@/types';
 import { errors } from '@/lib/security/error-sanitizer';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/quiz/generate
  * Generate AI-powered UPSC quiz on a topic

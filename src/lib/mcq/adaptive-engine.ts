@@ -74,10 +74,13 @@ const SPACED_REPETITION_INTERVALS = [1, 3, 7, 14, 30, 60, 90]; // days
 // ============================================================================
 
 export class AdaptiveEngineService {
-  private supabase;
+  
 
-  constructor() {
-    this.supabase = createClient();
+  constructor() {
+  }
+
+  private async getSupabase() {
+    return createClient();
   }
 
   /**
@@ -86,7 +89,7 @@ export class AdaptiveEngineService {
   async calculateUserAbility(userId: string): Promise<UserAbility> {
     try {
       // Fetch user's attempt history
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select(`
           *,
@@ -284,7 +287,7 @@ export class AdaptiveEngineService {
   ): Promise<SpacedRepetitionSchedule> {
     try {
       // Get current bookmark data
-      const { data: bookmark } = await this.supabase
+      const { data: bookmark } = await (await this.getSupabase())
         .from('mcq_bookmarks')
         .select('*')
         .eq('user_id', userId)
@@ -345,7 +348,7 @@ export class AdaptiveEngineService {
     try {
       const now = new Date().toISOString();
 
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from('mcq_bookmarks')
         .select('question_id')
         .eq('user_id', userId)
@@ -370,7 +373,7 @@ export class AdaptiveEngineService {
    */
   async getPerformanceHistory(userId: string): Promise<PerformanceHistory> {
     try {
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('*')
         .eq('user_id', userId)

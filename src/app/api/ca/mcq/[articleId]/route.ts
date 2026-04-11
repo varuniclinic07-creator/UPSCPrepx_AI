@@ -11,14 +11,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // SUPABASE CLIENT
 // ============================================================================
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -36,7 +37,7 @@ const submitAnswerSchema = z.object({
  * Get MCQs for article
  */
 async function getMCQs(articleId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('ca_mcqs')
     .select('*')
     .eq('article_id', articleId)
@@ -55,7 +56,7 @@ async function getMCQs(articleId: string) {
  * Get user's previous attempts for MCQs
  */
 async function getUserAttempts(mcqIds: string[], userId: string) {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('ca_user_quiz_attempts')
     .select('mcq_id, selected_answer, is_correct, attempted_at')
     .in('mcq_id', mcqIds)
@@ -118,7 +119,7 @@ async function saveQuizAttempt(
   selectedAnswer: string,
   isCorrect: boolean
 ) {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('ca_user_quiz_attempts')
     .insert({
       mcq_id: mcqId,
@@ -139,14 +140,14 @@ async function saveQuizAttempt(
  */
 async function updateUserStats(userId: string, isCorrect: boolean) {
   // Get or create user stats
-  const { data: stats } = await supabase
+  const { data: stats } = await getSupabase()
     .from('user_progress')
     .select('ca_mcqs_correct, ca_mcqs_incorrect')
     .eq('user_id', userId)
     .single();
 
   if (stats) {
-    await supabase
+    await getSupabase()
       .from('user_progress')
       .update({
         ca_mcqs_correct: stats.ca_mcqs_correct + (isCorrect ? 1 : 0),
@@ -155,7 +156,7 @@ async function updateUserStats(userId: string, isCorrect: boolean) {
       })
       .eq('user_id', userId);
   } else {
-    await supabase
+    await getSupabase()
       .from('user_progress')
       .insert({
         user_id: userId,
@@ -183,7 +184,7 @@ export async function GET(
 
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await supabase.auth.getUser(token);
+      const { data: { user } } = await getSupabase().auth.getUser(token);
       userId = user?.id || null;
     }
 
@@ -276,7 +277,7 @@ export async function POST(
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const { data: { user } } = await getSupabase().auth.getUser(token);
     const userId = user?.id;
 
     if (!userId) {

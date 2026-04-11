@@ -12,10 +12,11 @@ import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { generateDiagnosticQuiz } from '@/lib/onboarding/quiz-generator';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
  * Request validation schema
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { user_id } = quizRequestSchema.parse(body);
 
     // Fetch user profile for personalized quiz
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await getSupabase()
       .from('user_profiles')
       .select('target_year, attempt_number, is_working_professional, study_hours_per_day, optional_subject')
       .eq('user_id', user_id)
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     const quizId = `quiz-${user_id}-${Date.now()}`;
 
     // Store quiz questions temporarily (for validation on submit)
-    await supabase.from('jobs').insert({
+    await getSupabase().from('jobs').insert({
       job_type: 'diagnostic_quiz',
       user_id,
       payload: {
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log audit event
-    await supabase.from('audit_logs').insert({
+    await getSupabase().from('audit_logs').insert({
       user_id,
       action: 'diagnostic_quiz_generated',
       resource_type: 'quiz',

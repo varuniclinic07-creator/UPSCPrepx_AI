@@ -11,6 +11,8 @@ import {
     getHighRelevanceArticles
 } from '@/lib/legal/constitution-data';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/legal/articles
  * List all articles or search

@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
-import { getAIRouter } from '@/lib/ai/provider-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,25 +15,21 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const router = getAIRouter();
+        // Simple health check: attempt a minimal callAI invocation
+        const testResponse = await callAI('Respond with OK', {
+            maxTokens: 5,
+            temperature: 0,
+        });
 
-        // Get health status of all providers
-        const health = await router.checkHealth();
-
-        // Get usage statistics
-        const usage = await router.getUsageStats();
-
-        // Determine overall system health
-        const allHealthy = Object.values(health).every(h => h.isHealthy);
+        const isHealthy = testResponse && testResponse.length > 0;
 
         return NextResponse.json(
             {
-                status: allHealthy ? 'healthy' : 'degraded',
+                status: isHealthy ? 'healthy' : 'degraded',
                 timestamp: new Date().toISOString(),
-                providers: health,
-                usage,
+                provider: 'callAI',
             },
-            { status: allHealthy ? 200 : 503 }
+            { status: isHealthy ? 200 : 503 }
         );
     } catch (error) {
         console.error('Health check error:', error);

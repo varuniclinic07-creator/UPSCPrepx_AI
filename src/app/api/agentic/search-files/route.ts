@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth/session';
 import { withErrorHandler } from '@/lib/errors/error-handler';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const searchSchema = z.object({
   query: z.string().min(1).max(500),
   limit: z.number().min(1).max(50).optional(),

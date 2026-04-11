@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
 import { getTopperById } from '@/lib/content/topper-strategies';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/toppers/[id]
  */

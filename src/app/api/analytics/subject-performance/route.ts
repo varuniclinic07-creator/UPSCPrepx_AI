@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSubjectPerformance } from '@/lib/analytics/subject-performance';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');

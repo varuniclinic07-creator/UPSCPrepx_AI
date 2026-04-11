@@ -3,7 +3,7 @@
 // AI-powered explanations of constitutional articles
 // ═══════════════════════════════════════════════════════════════
 
-import { aiRouter } from '@/lib/ai/provider-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import { getArticleById, getArticleByNumber, type ConstitutionalArticle } from './constitution-data';
 
 export interface LegalExplanation {
@@ -52,23 +52,11 @@ Format your response as JSON:
   "upscTips": ["tip 1", "tip 2", ...]
 }`;
 
-    const response = await aiRouter.chat({
-        model: 'provider-8/claude-sonnet-4.5',
-        messages: [
-            {
-                role: 'system',
-                content: 'You are a constitutional law expert and UPSC mentor. Provide clear, accurate, exam-focused explanations.'
-            },
-            {
-                role: 'user',
-                content: prompt
-            }
-        ],
+    const content = await callAI(prompt, {
+        system: 'You are a constitutional law expert and UPSC mentor. Provide clear, accurate, exam-focused explanations.',
         temperature: 0.3,
-        max_tokens: 2048
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
+        maxTokens: 2048,
+    }) || '{}';
 
     try {
         const parsed = JSON.parse(content);
@@ -129,14 +117,10 @@ Provide a comparative analysis in JSON format:
   "differences": ["difference 1", "difference 2", ...]
 }`;
 
-    const response = await aiRouter.chat({
-        model: 'provider-8/claude-sonnet-4.5',
-        messages: [{ role: 'user', content: prompt }],
+    const content = await callAI(prompt, {
         temperature: 0.3,
-        max_tokens: 1024
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
+        maxTokens: 1024,
+    }) || '{}';
     const parsed = JSON.parse(content);
 
     return {
@@ -176,14 +160,10 @@ Provide in JSON format:
   "mnemonicTrick": "optional memory trick"
 }`;
 
-    const response = await aiRouter.chat({
-        model: 'provider-8/claude-sonnet-4.5',
-        messages: [{ role: 'user', content: prompt }],
+    const content = await callAI(prompt, {
         temperature: 0.2,
-        max_tokens: 512
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
+        maxTokens: 512,
+    }) || '{}';
     const parsed = JSON.parse(content);
 
     return {

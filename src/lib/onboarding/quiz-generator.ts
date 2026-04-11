@@ -17,10 +17,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { withSimplifiedLanguage } from './simplified-language-prompt';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 /**
  * Quiz question structure
@@ -111,7 +110,7 @@ FORMAT: Return valid JSON only, no markdown.
 export async function generateDiagnosticQuiz(config: QuizConfig): Promise<QuizQuestion[]> {
   try {
     // Check if user already has a quiz (prevent regeneration)
-    const { data: existingQuiz } = await supabase
+    const { data: existingQuiz } = await getSupabase()
       .from('quiz_attempts')
       .select('id, questions')
       .eq('user_id', config.user_id)
@@ -166,7 +165,7 @@ export async function generateDiagnosticQuiz(config: QuizConfig): Promise<QuizQu
     }
 
     // Store questions in database for reuse
-    await supabase.from('questions').upsert(
+    await getSupabase().from('questions').upsert(
       questions.map(q => ({
         question_type: 'mcq' as const,
         question_text: q.question_text,

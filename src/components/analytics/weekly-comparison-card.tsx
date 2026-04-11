@@ -113,7 +113,7 @@ export function WeeklyComparisonCard({ showHindi }: WeeklyComparisonCardProps) {
           <p className="text-sm text-center">
             {currentWeek.hours > prevWeek.hours
               ? showHindi
-                ? `🎉 ${showHindi ? 'बहुत बढ़िया!'} पिछले सप्ताह से ${currentWeek.hours - prevWeek.hours} घंटे अधिक पढ़ाई!`
+                ? `🎉 बहुत बढ़िया! पिछले सप्ताह से ${currentWeek.hours - prevWeek.hours} घंटे अधिक पढ़ाई!`
                 : `🎉 Great job! Studied ${currentWeek.hours - prevWeek.hours} more hours than last week!`
               : currentWeek.hours < prevWeek.hours
               ? showHindi

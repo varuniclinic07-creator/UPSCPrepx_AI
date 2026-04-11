@@ -12,6 +12,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { doubtService } from '@/lib/doubt/doubt-service';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // GET HANDLER - Get Thread Details
 // ============================================================================
@@ -22,7 +24,7 @@ export async function GET(
 ) {
   try {
     // Get authenticated user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -101,7 +103,7 @@ export async function DELETE(
 ) {
   try {
     // Get authenticated user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

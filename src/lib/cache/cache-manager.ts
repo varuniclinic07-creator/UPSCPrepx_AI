@@ -5,7 +5,11 @@
 
 import Redis from 'ioredis';
 
-const redis = new Redis(process.env.REDIS_URL!);
+let _redis: Redis | null = null;
+function getRedis(): Redis {
+  if (!_redis) _redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+  return _redis;
+}
 
 export interface CacheStats {
     hits: number;
@@ -24,7 +28,7 @@ export async function cacheResponse(
 ): Promise<void> {
     try {
         const serialized = JSON.stringify(data);
-        await redis.setex(`cache:${key}`, ttl, serialized);
+        await getRedis().setex(`cache:${key}`, ttl, serialized);
     } catch (error) {
         console.error('Cache write error:', error);
     }
@@ -35,7 +39,7 @@ export async function cacheResponse(
  */
 export async function getCachedResponse<T>(key: string): Promise<T | null> {
     try {
-        const data = await redis.get(`cache:${key}`);
+        const data = await getRedis().get(`cache:${key}`);
         if (!data) return null;
 
         return JSON.parse(data) as T;
@@ -50,10 +54,10 @@ export async function getCachedResponse<T>(key: string): Promise<T | null> {
  */
 export async function invalidateCache(pattern: string): Promise<number> {
     try {
-        const keys = await redis.keys(`cache:${pattern}*`);
+        const keys = await getRedis().keys(`cache:${pattern}*`);
         if (keys.length === 0) return 0;
 
-        await redis.del(...keys);
+        await getRedis().del(...keys);
         return keys.length;
     } catch (error) {
         console.error('Cache invalidation error:', error);
@@ -66,14 +70,14 @@ export async function invalidateCache(pattern: string): Promise<number> {
  */
 export async function getCacheStats(): Promise<CacheStats> {
     try {
-        const info = await redis.info('stats');
-        const _keyspace = await redis.info('keyspace');
+        const info = await getRedis().info('stats');
+        const _keyspace = await getRedis().info('keyspace');
 
         const hits = parseInt(info.match(/keyspace_hits:(\d+)/)?.[1] || '0');
         const misses = parseInt(info.match(/keyspace_misses:(\d+)/)?.[1] || '0');
         const memory = info.match(/used_memory_human:([^\r\n]+)/)?.[1] || '0B';
 
-        const keys = await redis.dbsize();
+        const keys = await getRedis().dbsize();
 
         return { hits, misses, keys, memory };
     } catch (error) {
@@ -87,9 +91,9 @@ export async function getCacheStats(): Promise<CacheStats> {
  */
 export async function clearCache(): Promise<void> {
     try {
-        const keys = await redis.keys('cache:*');
+        const keys = await getRedis().keys('cache:*');
         if (keys.length > 0) {
-            await redis.del(...keys);
+            await getRedis().del(...keys);
         }
     } catch (error) {
         console.error('Cache clear error:', error);

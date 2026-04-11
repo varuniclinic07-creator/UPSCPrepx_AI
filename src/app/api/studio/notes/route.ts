@@ -17,6 +17,8 @@ import { z } from 'zod';
 import { getAuthUser } from '@/lib/security/auth';
 import { checkSubscriptionAccess } from '@/lib/trial/subscription-checker';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
@@ -41,9 +43,9 @@ const NoteSchema = z.object({
   isPinned: z.boolean().default(false),
   wordLimit: z.number().int().positive().optional(),
   metadata: z.object({
-    source?: string;
-    linkedQuestionId?: string;
-    linkedLectureId?: string;
+    source: z.string().optional(),
+    linkedQuestionId: z.string().optional(),
+    linkedLectureId: z.string().optional(),
   }).optional(),
 });
 

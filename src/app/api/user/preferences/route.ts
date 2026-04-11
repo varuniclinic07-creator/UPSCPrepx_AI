@@ -3,6 +3,8 @@ import { requireUser } from '@/lib/auth/auth-config';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export interface UserPreferences {
   theme?: 'light' | 'dark' | 'system';
   language?: 'en' | 'hi';

@@ -8,6 +8,8 @@ import { requireSession } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { getLectureJobStatus } from '@/lib/queues/lecture-queue';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
     _request: NextRequest,
     { params }: { params: { id: string } }

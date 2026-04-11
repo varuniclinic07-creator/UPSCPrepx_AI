@@ -11,10 +11,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { milestoneManager } from '@/lib/planner/milestone-manager';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 // ============================================================================
 // GET - Get milestones
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     let targetPlanId = planId;
 
     if (!targetPlanId) {
-      const { data: plan } = await supabase
+      const { data: plan } = await getSupabase()
         .from('study_plans')
         .select('id')
         .eq('user_id', userId)
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify plan ownership
-    const { data: plan } = await supabase
+    const { data: plan } = await getSupabase()
       .from('study_plans')
       .select('user_id')
       .eq('id', targetPlanId)
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify plan ownership
-    const { data: plan } = await supabase
+    const { data: plan } = await getSupabase()
       .from('study_plans')
       .select('user_id')
       .eq('id', planId)

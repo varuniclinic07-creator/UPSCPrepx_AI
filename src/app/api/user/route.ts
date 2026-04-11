@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser, requireUser, getSubscriptionDaysRemaining } from '@/lib/auth/auth-config';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/user
  * Get current user profile

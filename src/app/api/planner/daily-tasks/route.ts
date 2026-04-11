@@ -11,10 +11,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { recommendationEngine } from '@/lib/planner/recommendation-engine';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 // ============================================================================
 // GET - Get daily tasks
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's active plan
-    const { data: plan } = await supabase
+    const { data: plan } = await getSupabase()
       .from('study_plans')
       .select('id')
       .eq('user_id', userId)
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get schedule for the date
-    const { data: schedule } = await supabase
+    const { data: schedule } = await getSupabase()
       .from('study_schedules')
       .select('*')
       .eq('plan_id', plan.id)
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get tasks for this schedule
-    const { data: tasks } = await supabase
+    const { data: tasks } = await getSupabase()
       .from('study_tasks')
       .select('*')
       .eq('schedule_id', schedule.id)

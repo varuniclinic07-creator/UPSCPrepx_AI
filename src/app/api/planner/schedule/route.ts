@@ -13,6 +13,8 @@ import { scheduleGenerator } from '@/lib/planner/schedule-generator';
 import { milestoneManager } from '@/lib/planner/milestone-manager';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // VALIDATION SCHEMAS
 // ============================================================================
@@ -33,10 +35,9 @@ const GetScheduleSchema = z.object({
 // SUPABASE CLIENT
 // ============================================================================
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 // ============================================================================
 // GET - Get study schedule
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const { data: plan } = await supabase
+      const { data: plan } = await getSupabase()
         .from('study_plans')
         .select('*')
         .eq('user_id', userId)
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get specific plan
-    const { data: plan } = await supabase
+    const { data: plan } = await getSupabase()
       .from('study_plans')
       .select('*')
       .eq('id', planId)
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get schedules for this plan
-    const { data: schedules } = await supabase
+    const { data: schedules } = await getSupabase()
       .from('study_schedules')
       .select('*, tasks:study_tasks(*)')
       .eq('plan_id', planId)
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: 'Invalid input',
           error_hi: 'अमान्य इनपुट',
-          details: validation.error.errors 
+          details: validation.error.issues 
         },
         { status: 400 }
       );
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
     const { exam_date, daily_study_hours, subjects, optional_subject, current_level } = validation.data;
 
     // Check if user already has an active plan
-    const { data: existingPlan } = await supabase
+    const { data: existingPlan } = await getSupabase()
       .from('study_plans')
       .select('id')
       .eq('user_id', userId)

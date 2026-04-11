@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS note_folders (
 );
 
 -- Index for fast folder lookups
-CREATE INDEX idx_note_folders_user_id ON note_folders(user_id);
-CREATE INDEX idx_note_folders_parent_id ON note_folders(parent_id);
+CREATE INDEX IF NOT EXISTS idx_note_folders_user_id ON note_folders(user_id);
+CREATE INDEX IF NOT EXISTS idx_note_folders_parent_id ON note_folders(parent_id);
 
 -- ============================================================================
 -- TABLE: user_notes
@@ -65,16 +65,16 @@ CREATE TABLE IF NOT EXISTS user_notes (
 );
 
 -- Indexes for fast queries
-CREATE INDEX idx_user_notes_user_id ON user_notes(user_id);
-CREATE INDEX idx_user_notes_subject ON user_notes(subject);
-CREATE INDEX idx_user_notes_folder_id ON user_notes(folder_id);
-CREATE INDEX idx_user_notes_tags ON user_notes USING GIN(tags);
-CREATE INDEX idx_user_notes_updated_at ON user_notes(updated_at DESC);
-CREATE INDEX idx_user_notes_is_pinned ON user_notes(is_pinned) WHERE is_pinned = true;
-CREATE INDEX idx_user_notes_is_archived ON user_notes(is_archived) WHERE is_archived = true;
+CREATE INDEX IF NOT EXISTS idx_user_notes_user_id ON user_notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_notes_subject ON user_notes(subject);
+CREATE INDEX IF NOT EXISTS idx_user_notes_folder_id ON user_notes(folder_id);
+CREATE INDEX IF NOT EXISTS idx_user_notes_tags ON user_notes USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_user_notes_updated_at ON user_notes(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_notes_is_pinned ON user_notes(is_pinned) WHERE is_pinned = true;
+CREATE INDEX IF NOT EXISTS idx_user_notes_is_archived ON user_notes(is_archived) WHERE is_archived = true;
 
 -- Full-text search index
-CREATE INDEX idx_user_notes_title_search ON user_notes USING GIN(
+CREATE INDEX IF NOT EXISTS idx_user_notes_title_search ON user_notes USING GIN(
   to_tsvector('english', title->>'en' || ' ' || COALESCE(title->>'hi', ''))
 );
 
@@ -112,10 +112,10 @@ CREATE TABLE IF NOT EXISTS user_answers (
 );
 
 -- Indexes
-CREATE INDEX idx_user_answers_user_id ON user_answers(user_id);
-CREATE INDEX idx_user_answers_status ON user_answers(status);
-CREATE INDEX idx_user_answers_question_id ON user_answers(question_id);
-CREATE INDEX idx_user_answers_submitted_at ON user_answers(submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_answers_user_id ON user_answers(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_answers_status ON user_answers(status);
+CREATE INDEX IF NOT EXISTS idx_user_answers_question_id ON user_answers(question_id);
+CREATE INDEX IF NOT EXISTS idx_user_answers_submitted_at ON user_answers(submitted_at DESC);
 
 -- ============================================================================
 -- TABLE: answer_templates
@@ -142,10 +142,10 @@ CREATE TABLE IF NOT EXISTS answer_templates (
 );
 
 -- Indexes
-CREATE INDEX idx_answer_templates_user_id ON answer_templates(user_id);
-CREATE INDEX idx_answer_templates_category ON answer_templates(category);
-CREATE INDEX idx_answer_templates_is_default ON answer_templates(is_default) WHERE is_default = true;
-CREATE INDEX idx_answer_templates_tags ON answer_templates USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_answer_templates_user_id ON answer_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_answer_templates_category ON answer_templates(category);
+CREATE INDEX IF NOT EXISTS idx_answer_templates_is_default ON answer_templates(is_default) WHERE is_default = true;
+CREATE INDEX IF NOT EXISTS idx_answer_templates_tags ON answer_templates USING GIN(tags);
 
 -- ============================================================================
 -- TABLE: note_exports
@@ -171,10 +171,10 @@ CREATE TABLE IF NOT EXISTS note_exports (
 );
 
 -- Indexes
-CREATE INDEX idx_note_exports_user_id ON note_exports(user_id);
-CREATE INDEX idx_note_exports_note_id ON note_exports(note_id);
-CREATE INDEX idx_note_exports_status ON note_exports(status);
-CREATE INDEX idx_note_exports_expires_at ON note_exports(expires_at) WHERE expires_at > NOW();
+CREATE INDEX IF NOT EXISTS idx_note_exports_user_id ON note_exports(user_id);
+CREATE INDEX IF NOT EXISTS idx_note_exports_note_id ON note_exports(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_exports_status ON note_exports(status);
+CREATE INDEX IF NOT EXISTS idx_note_exports_expires_at ON note_exports(expires_at);
 
 -- ============================================================================
 -- TABLE: note_collaborations (Future feature - shared notes)
@@ -193,8 +193,8 @@ CREATE TABLE IF NOT EXISTS note_collaborations (
 );
 
 -- Index
-CREATE INDEX idx_note_collaborations_note_id ON note_collaborations(note_id);
-CREATE INDEX idx_note_collaborations_user_id ON note_collaborations(user_id);
+CREATE INDEX IF NOT EXISTS idx_note_collaborations_note_id ON note_collaborations(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_collaborations_user_id ON note_collaborations(user_id);
 
 -- ============================================================================
 -- TABLE: note_versions (Auto-save versioning)
@@ -214,21 +214,48 @@ CREATE TABLE IF NOT EXISTS note_versions (
 );
 
 -- Indexes
-CREATE INDEX idx_note_versions_note_id ON note_versions(note_id);
-CREATE INDEX idx_note_versions_created_at ON note_versions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_note_versions_note_id ON note_versions(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(created_at DESC);
 
 -- ============================================================================
 -- RLS POLICIES
 -- ============================================================================
 
 -- Enable RLS on all tables
-ALTER TABLE note_folders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_answers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE answer_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE note_exports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE note_folders        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_notes          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_answers        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE answer_templates    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE note_exports        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE note_collaborations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE note_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE note_versions       ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies (idempotent re-runs)
+DROP POLICY IF EXISTS "Users can view own folders"                    ON note_folders;
+DROP POLICY IF EXISTS "Users can insert own folders"                  ON note_folders;
+DROP POLICY IF EXISTS "Users can update own folders"                  ON note_folders;
+DROP POLICY IF EXISTS "Users can delete own folders"                  ON note_folders;
+DROP POLICY IF EXISTS "Users can view own notes"                      ON user_notes;
+DROP POLICY IF EXISTS "Users can view public notes"                   ON user_notes;
+DROP POLICY IF EXISTS "Users can insert own notes"                    ON user_notes;
+DROP POLICY IF EXISTS "Users can update own notes"                    ON user_notes;
+DROP POLICY IF EXISTS "Users can delete own notes"                    ON user_notes;
+DROP POLICY IF EXISTS "Users can view own answers"                    ON user_answers;
+DROP POLICY IF EXISTS "Users can insert own answers"                  ON user_answers;
+DROP POLICY IF EXISTS "Users can update own answers"                  ON user_answers;
+DROP POLICY IF EXISTS "Users can delete own answers"                  ON user_answers;
+DROP POLICY IF EXISTS "Users can view all templates"                  ON answer_templates;
+DROP POLICY IF EXISTS "Users can insert own templates"                ON answer_templates;
+DROP POLICY IF EXISTS "Users can update own templates"                ON answer_templates;
+DROP POLICY IF EXISTS "Users can delete own templates"                ON answer_templates;
+DROP POLICY IF EXISTS "Users can view own exports"                    ON note_exports;
+DROP POLICY IF EXISTS "Users can insert own exports"                  ON note_exports;
+DROP POLICY IF EXISTS "Users can update own exports"                  ON note_exports;
+DROP POLICY IF EXISTS "Users can view collaborations on their notes"  ON note_collaborations;
+DROP POLICY IF EXISTS "Users can grant collaboration on own notes"    ON note_collaborations;
+DROP POLICY IF EXISTS "Users can revoke collaboration on own notes"   ON note_collaborations;
+DROP POLICY IF EXISTS "Users can view versions of own notes"          ON note_versions;
+DROP POLICY IF EXISTS "Users can insert versions of own notes"        ON note_versions;
 
 -- ============================================================================
 -- note_folders Policies
@@ -652,25 +679,25 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply trigger to all tables with updated_at
+DROP TRIGGER IF EXISTS update_note_folders_updated_at    ON note_folders;
 CREATE TRIGGER update_note_folders_updated_at
   BEFORE UPDATE ON note_folders
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_notes_updated_at       ON user_notes;
 CREATE TRIGGER update_user_notes_updated_at
   BEFORE UPDATE ON user_notes
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_answers_updated_at     ON user_answers;
 CREATE TRIGGER update_user_answers_updated_at
   BEFORE UPDATE ON user_answers
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_answer_templates_updated_at ON answer_templates;
 CREATE TRIGGER update_answer_templates_updated_at
   BEFORE UPDATE ON answer_templates
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to auto-increment version number
 CREATE OR REPLACE FUNCTION increment_version_number()
@@ -682,10 +709,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS before_insert_note_version ON note_versions;
 CREATE TRIGGER before_insert_note_version
   BEFORE INSERT ON note_versions
-  FOR EACH ROW
-  EXECUTE FUNCTION increment_version_number();
+  FOR EACH ROW EXECUTE FUNCTION increment_version_number();
 
 -- ============================================================================
 -- COMMENTS

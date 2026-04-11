@@ -6,6 +6,8 @@ import {
 } from '@/lib/services/current-affairs-service';
 import { requireAdmin } from '@/lib/auth/auth-config';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: { id: string };
 }

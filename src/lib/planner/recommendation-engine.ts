@@ -9,7 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { generateAIResponse } from '../ai/ai-provider';
+import { callAI } from '@/lib/ai/ai-provider-client';
 
 // ============================================================================
 // TYPES
@@ -122,7 +122,7 @@ export class RecommendationEngineService {
       .replace('{streak}', input.currentStreak.toString());
 
     // Generate recommendations using AI
-    const aiResponse = await generateAIResponse({
+    const aiResponse = await callAI({
       prompt,
       provider: '9router',
       temperature: 0.7,

@@ -6,9 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { getEvaluationById } from '@/lib/eval/mains-evaluator-service';
+
+export const dynamic = 'force-dynamic';
 
 interface RouteParams {
   params: { id: string };
@@ -20,7 +21,7 @@ export async function GET(
 ) {
   try {
     // Step 1: Authenticate user
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
     const { data: { session }, error: authError } = await supabase.auth.getSession();
 
     if (authError || !session) {
@@ -92,7 +93,7 @@ export async function POST(
   { params }: RouteParams
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {

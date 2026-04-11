@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════════
+# UPSC PREPX-AI - KUBERNETES NAMESPACE
+# Isolates all application resources
+# ═══════════════════════════════════════════════════════════════
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-prepx-ai
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: kustomize
+  annotations:
+    description: "UPSC PrepX-AI Production Namespace"
+    owner: "platform-team"

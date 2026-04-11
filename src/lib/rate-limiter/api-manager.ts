@@ -7,7 +7,11 @@
 import Redis from 'ioredis';
 import { Queue } from 'bullmq';
 
-const redis = new Redis(process.env.REDIS_URL!);
+let _redis: Redis | null = null;
+function getRedis(): Redis {
+  if (!_redis) _redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+  return _redis;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // RATE LIMITER - Sliding Window Algorithm
@@ -26,14 +30,14 @@ export class A4FRateLimiter {
         const windowStart = now - this.window;
 
         // Remove requests older than 1 minute
-        await redis.zremrangebyscore(this.key, 0, windowStart);
+        await getRedis().zremrangebyscore(this.key, 0, windowStart);
 
         // Count current requests in window
-        const count = await redis.zcard(this.key);
+        const count = await getRedis().zcard(this.key);
 
         if (count < this.limit) {
             // Add this request to the set
-            await redis.zadd(this.key, now, `${now}-${Math.random()}`);
+            await getRedis().zadd(this.key, now, `${now}-${Math.random()}`);
             return true;
         }
 
@@ -46,7 +50,7 @@ export class A4FRateLimiter {
     async waitForSlot(): Promise<void> {
         while (!(await this.canMakeRequest())) {
             // Get oldest request timestamp
-            const oldest = await redis.zrange(this.key, 0, 0, 'WITHSCORES');
+            const oldest = await getRedis().zrange(this.key, 0, 0, 'WITHSCORES');
 
             if (oldest.length >= 2) {
                 const oldestTimestamp = parseInt(oldest[1]);
@@ -75,8 +79,8 @@ export class A4FRateLimiter {
         const now = Date.now();
         const windowStart = now - this.window;
 
-        await redis.zremrangebyscore(this.key, 0, windowStart);
-        const count = await redis.zcard(this.key);
+        await getRedis().zremrangebyscore(this.key, 0, windowStart);
+        const count = await getRedis().zcard(this.key);
 
         const available = Math.max(0, this.limit - count);
         const queuePosition = Math.max(0, count - this.limit);
@@ -105,7 +109,7 @@ export class A4FRateLimiter {
      */
     async releaseSlot(): Promise<void> {
         // Remove the most recent request
-        await redis.zpopmax(this.key);
+        await getRedis().zpopmax(this.key);
     }
 }
 
@@ -302,11 +306,11 @@ export class UserRateLimiter {
         const window = isHourly ? 3600 : 86400; // 1 hour or 1 day in seconds
         const key = `user:${userId}:${feature}`;
 
-        const current = await redis.get(key);
+        const current = await getRedis().get(key);
         const count = parseInt(current || '0');
 
         if (count >= limit) {
-            const ttl = await redis.ttl(key);
+            const ttl = await getRedis().ttl(key);
             return {
                 allowed: false,
                 remaining: 0,
@@ -318,7 +322,7 @@ export class UserRateLimiter {
         return {
             allowed: true,
             remaining: limit - count,
-            resetIn: await redis.ttl(key) || window,
+            resetIn: await getRedis().ttl(key) || window,
             upgradeRequired: false
         };
     }
@@ -334,9 +338,9 @@ export class UserRateLimiter {
         const window = isHourly ? 3600 : 86400;
         const key = `user:${userId}:${feature}`;
 
-        const current = await redis.get(key);
+        const current = await getRedis().get(key);
 
-        const multi = redis.multi();
+        const multi = getRedis().multi();
         multi.incr(key);
 
         if (!current) {
@@ -355,7 +359,7 @@ export class UserRateLimiter {
 
         for (const feature of Object.keys(limits) as Array<keyof UserLimits>) {
             const key = `user:${userId}:${feature}`;
-            const current = await redis.get(key);
+            const current = await getRedis().get(key);
             const count = parseInt(current || '0');
             const limit = limits[feature];
 

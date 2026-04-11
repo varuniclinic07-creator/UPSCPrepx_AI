@@ -14,7 +14,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { embeddingService } from '@/lib/search/embedding-service';
-import { aiRouter } from '@/lib/ai/ai-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
+
+export const dynamic = 'force-dynamic';
 
 export interface SearchFilters {
   sources?: string[];
@@ -81,7 +83,7 @@ export async function POST(request: NextRequest) {
     const embedding = await embeddingService.generate(query);
 
     // Initialize Supabase client
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Build filter conditions
     const filterConditions: string[] = [];
@@ -324,14 +326,13 @@ async function generateAnswerSnippet(query: string, results: SearchResult[]): Pr
       return '';
     }
 
-    // Use AI router to generate concise answer
-    const response = await aiRouter.generate({
-      prompt: `Based on this context, provide a concise 2-3 sentence answer to: ${query}\n\nContext: ${context.substring(0, 1500)}`,
-      max_tokens: 150,
-      temperature: 0.3
-    });
+    // Use callAI to generate concise answer
+    const answer = await callAI(
+      `Based on this context, provide a concise 2-3 sentence answer to: ${query}\n\nContext: ${context.substring(0, 1500)}`,
+      { maxTokens: 150, temperature: 0.3 }
+    );
 
-    return response.text || '';
+    return answer || '';
   } catch (error) {
     console.error('Failed to generate answer snippet:', error);
     return '';
@@ -343,14 +344,10 @@ async function generateAnswerSnippet(query: string, results: SearchResult[]): Pr
  */
 async function generateRelatedQueries(query: string): Promise<string[]> {
   try {
-    const response = await aiRouter.generate({
-      prompt: `Generate exactly 5 related search queries for: "${query}". Return ONLY a JSON array of strings, nothing else. Example: ["related query 1", "related query 2"]`,
-      max_tokens: 100,
-      temperature: 0.7
-    });
-
-    // Parse JSON response
-    const text = response.text.trim();
+    const text = (await callAI(
+      `Generate exactly 5 related search queries for: "${query}". Return ONLY a JSON array of strings, nothing else. Example: ["related query 1", "related query 2"]`,
+      { maxTokens: 100, temperature: 0.7 }
+    )).trim();
     const jsonMatch = text.match(/\[.*\]/s);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

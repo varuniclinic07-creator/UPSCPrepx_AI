@@ -136,10 +136,13 @@ export const ratingSchema = z.object({
 // ============================================================================
 
 export class DoubtService {
-  private supabase;
+  
 
-  constructor() {
-    this.supabase = createClient();
+  constructor() {
+  }
+
+  private async getSupabase() {
+    return createClient();
   }
 
   // ============================================================================
@@ -162,7 +165,7 @@ export class DoubtService {
       }
 
       // Create thread
-      const { data: thread, error: threadError } = await this.supabase
+      const { data: thread, error: threadError } = await (await this.getSupabase())
         .from('doubt_threads')
         .insert({
           user_id: userId,
@@ -194,7 +197,7 @@ export class DoubtService {
         transcription: att.transcription,
       })) || [];
 
-      const { data: question, error: questionError } = await this.supabase
+      const { data: question, error: questionError } = await (await this.getSupabase())
         .from('doubt_questions')
         .insert({
           thread_id: thread.id,
@@ -211,7 +214,7 @@ export class DoubtService {
       if (questionError || !question) {
         console.error('Failed to create question:', questionError);
         // Rollback thread
-        await this.supabase.from('doubt_threads').delete().eq('id', thread.id);
+        await (await this.getSupabase()).from('doubt_threads').delete().eq('id', thread.id);
         return {
           threadId: '',
           questionId: '',
@@ -230,7 +233,7 @@ export class DoubtService {
           transcription: att.transcription,
         }));
 
-        await this.supabase.from('doubt_attachments').insert(attachmentRecords);
+        await (await this.getSupabase()).from('doubt_attachments').insert(attachmentRecords);
       }
 
       return {
@@ -259,7 +262,7 @@ export class DoubtService {
   }> {
     try {
       // Get thread
-      const { data: thread, error: threadError } = await this.supabase
+      const { data: thread, error: threadError } = await (await this.getSupabase())
         .from('doubt_threads')
         .select('*')
         .eq('id', threadId)
@@ -276,14 +279,14 @@ export class DoubtService {
       }
 
       // Get questions
-      const { data: questions } = await this.supabase
+      const { data: questions } = await (await this.getSupabase())
         .from('doubt_questions')
         .select('*')
         .eq('thread_id', threadId)
         .order('created_at', { ascending: true });
 
       // Get answers
-      const { data: answers } = await this.supabase
+      const { data: answers } = await (await this.getSupabase())
         .from('doubt_answers')
         .select('*')
         .eq('thread_id', threadId)
@@ -316,7 +319,7 @@ export class DoubtService {
   ): Promise<{ questionId: string; error?: string }> {
     try {
       // Verify thread exists and belongs to user
-      const { data: thread } = await this.supabase
+      const { data: thread } = await (await this.getSupabase())
         .from('doubt_threads')
         .select('id')
         .eq('id', threadId)
@@ -331,7 +334,7 @@ export class DoubtService {
       }
 
       // Get latest question for context
-      const { data: latestQuestion } = await this.supabase
+      const { data: latestQuestion } = await (await this.getSupabase())
         .from('doubt_questions')
         .select('id')
         .eq('thread_id', threadId)
@@ -347,7 +350,7 @@ export class DoubtService {
       }
 
       // Create follow-up question
-      const { data: questionRecord, error: questionError } = await this.supabase
+      const { data: questionRecord, error: questionError } = await (await this.getSupabase())
         .from('doubt_questions')
         .insert({
           thread_id: threadId,
@@ -393,7 +396,7 @@ export class DoubtService {
     sources: Array<{ title: string; url?: string; type: string }> = []
   ): Promise<{ answerId: string; error?: string }> {
     try {
-      const { data: answer, error: answerError } = await this.supabase
+      const { data: answer, error: answerError } = await (await this.getSupabase())
         .from('doubt_answers')
         .insert({
           thread_id: threadId,
@@ -441,7 +444,7 @@ export class DoubtService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if already rated
-      const { data: existing } = await this.supabase
+      const { data: existing } = await (await this.getSupabase())
         .from('doubt_ratings')
         .select('id')
         .eq('answer_id', answerId)
@@ -450,7 +453,7 @@ export class DoubtService {
 
       if (existing) {
         // Update existing rating
-        const { error: updateError } = await this.supabase
+        const { error: updateError } = await (await this.getSupabase())
           .from('doubt_ratings')
           .update({
             rating: data.rating,
@@ -468,7 +471,7 @@ export class DoubtService {
         }
       } else {
         // Insert new rating
-        const { error: insertError } = await this.supabase
+        const { error: insertError } = await (await this.getSupabase())
           .from('doubt_ratings')
           .insert({
             answer_id: answerId,
@@ -487,11 +490,11 @@ export class DoubtService {
 
       // If flagged, update thread status
       if (data.is_flagged) {
-        await this.supabase
+        await (await this.getSupabase())
           .from('doubt_threads')
           .update({ status: 'flagged' })
           .eq('id', answerId)
-          .in('id', this.supabase
+          .in('id', (await this.getSupabase())
             .from('doubt_answers')
             .select('thread_id')
             .eq('id', answerId)
@@ -514,7 +517,7 @@ export class DoubtService {
 
   async getUserUsage(userId: string): Promise<DoubtUsage> {
     try {
-      const { data, error } = await this.supabase.rpc('get_doubt_usage_for_user', {
+      const { data, error } = await (await this.getSupabase()).rpc('get_doubt_usage_for_user', {
         user_uuid: userId,
       });
 
@@ -567,7 +570,7 @@ export class DoubtService {
       const limit = options.limit || 20;
       const offset = (page - 1) * limit;
 
-      let query = this.supabase
+      let query = (await this.getSupabase())
         .from('doubt_threads')
         .select('*', { count: 'exact' })
         .eq('user_id', userId)
@@ -621,7 +624,7 @@ export class DoubtService {
   async deleteThread(threadId: string, userId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Verify ownership
-      const { data: thread } = await this.supabase
+      const { data: thread } = await (await this.getSupabase())
         .from('doubt_threads')
         .select('id')
         .eq('id', threadId)
@@ -633,7 +636,7 @@ export class DoubtService {
       }
 
       // Delete (cascade will handle related records)
-      const { error: deleteError } = await this.supabase
+      const { error: deleteError } = await (await this.getSupabase())
         .from('doubt_threads')
         .delete()
         .eq('id', threadId)
@@ -660,7 +663,7 @@ export class DoubtService {
   async toggleBookmark(threadId: string, userId: string): Promise<{ isBookmarked: boolean; error?: string }> {
     try {
       // Get current state
-      const { data: thread } = await this.supabase
+      const { data: thread } = await (await this.getSupabase())
         .from('doubt_threads')
         .select('is_bookmarked')
         .eq('id', threadId)
@@ -674,7 +677,7 @@ export class DoubtService {
       // Toggle
       const newBookmarkState = !thread.is_bookmarked;
 
-      const { error: updateError } = await this.supabase
+      const { error: updateError } = await (await this.getSupabase())
         .from('doubt_threads')
         .update({ is_bookmarked: newBookmarkState })
         .eq('id', threadId)

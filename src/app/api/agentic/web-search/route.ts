@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 const SERVICE_URL = process.env.AGENTIC_WEB_SEARCH_URL || 'http://localhost:8030';
 
 export async function POST(request: NextRequest) {

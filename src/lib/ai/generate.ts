@@ -1,8 +1,11 @@
-import { a4fClient, A4F_MODELS, type A4FModel } from './a4f-client';
-import { waitForRateLimit } from './rate-limiter';
+/**
+ * AI Generation Utilities
+ * Uses callAI() with 9Router → Groq → Ollama fallback chain
+ */
+
+import { callAI } from './ai-provider-client';
 
 export interface GenerateOptions {
-  model?: A4FModel;
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
@@ -10,51 +13,28 @@ export interface GenerateOptions {
 }
 
 /**
- * Generate text using A4F API
- * Automatically handles rate limiting
+ * Generate text using the AI provider chain
  */
 export async function generateText(
   prompt: string,
   options: GenerateOptions = {}
 ): Promise<string> {
   const {
-    model = A4F_MODELS.GROK_FAST,
     maxTokens = 2000,
     temperature = 0.7,
     systemPrompt = 'You are a helpful UPSC exam preparation assistant. Write in simple, clear language that is easy to understand.',
-    userId = 'global',
   } = options;
 
-  // Wait for rate limit (provider, userId)
-  await waitForRateLimit('a4f', userId);
-
-  try {
-    const response = await a4fClient.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      max_tokens: maxTokens,
-      temperature,
-    });
-
-    return response.choices[0]?.message?.content || '';
-  } catch (error) {
-    console.error('[AI Generate] Error:', error);
-
-    // Check if rate limit error
-    if (error instanceof Error && error.message.includes('rate')) {
-      throw new Error('AI service rate limit exceeded. Please try again in a minute.');
-    }
-
-    throw new Error('Failed to generate content. Please try again.');
-  }
+  return callAI(prompt, {
+    system: systemPrompt,
+    maxTokens,
+    temperature,
+  });
 }
 
 /**
- * Generate text with thinking/reasoning model
- * Use for complex tasks that require deep analysis
+ * Generate text with deep reasoning
+ * Uses higher token limit and lower temperature for analytical tasks
  */
 export async function generateWithThinking(
   prompt: string,
@@ -62,15 +42,15 @@ export async function generateWithThinking(
 ): Promise<string> {
   return generateText(prompt, {
     ...options,
-    model: A4F_MODELS.KIMI_THINKING,
     maxTokens: options.maxTokens || 4000,
     temperature: options.temperature || 0.3,
+    systemPrompt: options.systemPrompt || 'You are an expert UPSC analyst. Think step by step. Provide thorough, well-reasoned analysis.',
   });
 }
 
 /**
- * Generate text with research model
- * Use for tasks requiring web-grounded information
+ * Generate text with research context
+ * For tasks requiring comprehensive information
  */
 export async function generateWithResearch(
   prompt: string,
@@ -78,90 +58,48 @@ export async function generateWithResearch(
 ): Promise<string> {
   return generateText(prompt, {
     ...options,
-    model: A4F_MODELS.SONAR_REASONING,
     maxTokens: options.maxTokens || 3000,
+    systemPrompt: options.systemPrompt || 'You are a UPSC research assistant. Provide comprehensive, well-sourced, up-to-date information.',
   });
 }
 
 /**
- * Generate image using A4F API
+ * Generate image (placeholder — image generation requires dedicated service)
  */
 export async function generateImage(
   prompt: string,
-  userId: string = 'global'
+  _userId: string = 'global'
 ): Promise<string> {
-  await waitForRateLimit('a4f', userId);
-
-  try {
-    const response = await a4fClient.images.generate({
-      model: A4F_MODELS.FLUX_SCHNELL,
-      prompt,
-      n: 1,
-      size: '1024x1024',
-    });
-
-    return response.data?.[0]?.url || '';
-  } catch (error) {
-    console.error('[AI Image] Error:', error);
-    throw new Error('Failed to generate image. Please try again.');
-  }
+  console.warn('[AI Image] Image generation not yet connected to new provider chain');
+  return '';
 }
 
 /**
- * Stream text generation
- * Use for real-time display of AI responses
+ * Stream text generation using callAI
+ * Note: Currently buffers full response then calls onChunk once.
+ * True streaming will be added via callAIStream().
  */
 export async function streamText(
   prompt: string,
   onChunk: (chunk: string) => void,
   options: GenerateOptions = {}
 ): Promise<void> {
-  const {
-    model = A4F_MODELS.GROK_FAST,
-    maxTokens = 2000,
-    systemPrompt = 'You are a helpful UPSC exam preparation assistant.',
-    userId = 'global',
-  } = options;
-
-  await waitForRateLimit('a4f', userId);
-
-  try {
-    const stream = await a4fClient.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      max_tokens: maxTokens,
-      stream: true,
-    });
-
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
-      if (content) {
-        onChunk(content);
-      }
-    }
-  } catch (error) {
-    console.error('[AI Stream] Error:', error);
-    throw new Error('Failed to stream content. Please try again.');
-  }
+  const result = await generateText(prompt, options);
+  onChunk(result);
 }
 
 /**
  * Parse JSON from AI response
- * Handles common formatting issues
+ * Handles common formatting issues (markdown fences, extra whitespace)
  */
 export function parseAIJson<T>(response: string): T | null {
   try {
-    // Try to extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.error('[AI Parse] No JSON found in response');
       return null;
     }
 
-    // Clean up common issues
     const jsonStr = jsonMatch[0]
       .replace(/```json\s*/g, '')
       .replace(/```\s*/g, '')

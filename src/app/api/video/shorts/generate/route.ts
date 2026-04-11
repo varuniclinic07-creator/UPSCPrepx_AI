@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getVideoShortsGenerator } from '@/lib/video/shorts-generator';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 export interface GenerateVideoShortRequest {
   topic: string;
   subject?: 'GS1' | 'GS2' | 'GS3' | 'GS4' | 'CSAT' | 'Essay' | 'Prelims' | 'Current Affairs';

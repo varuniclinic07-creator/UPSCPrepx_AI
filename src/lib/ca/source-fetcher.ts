@@ -11,10 +11,9 @@
 import { createClient } from '@supabase/supabase-js';
 import Parser from 'rss-parser';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // RSS Parser instance
 const rssParser = new Parser({
@@ -261,7 +260,7 @@ export async function checkDuplicates(
   console.log('Checking for duplicates...');
 
   // Get existing article URLs from database (last 7 days)
-  const { data: existingArticles } = await supabase
+  const { data: existingArticles } = await getSupabase()
     .from('ca_articles')
     .select('url, title, id')
     .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
@@ -343,7 +342,7 @@ export async function getOrCreateDigest(date: string) {
   const dateObj = new Date(date);
   
   // Try to get existing digest
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from('daily_ca_digest')
     .select('*')
     .eq('date', dateObj.toISOString().split('T')[0])
@@ -354,7 +353,7 @@ export async function getOrCreateDigest(date: string) {
   }
 
   // Create new digest
-  const { data: newDigest, error } = await supabase
+  const { data: newDigest, error } = await getSupabase()
     .from('daily_ca_digest')
     .insert({
       date: dateObj.toISOString().split('T')[0],
@@ -381,11 +380,11 @@ export async function saveArticles(
   for (const article of articles) {
     if (article.isDuplicate) continue;
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('ca_articles')
       .insert({
         digest_id: digestId,
-        source_id: (await supabase.from('ca_sources').select('id').eq('name', article.sourceId === 'pib' ? 'Press Information Bureau' : article.sourceId).single()).data?.id,
+        source_id: (await getSupabase().from('ca_sources').select('id').eq('name', article.sourceId === 'pib' ? 'Press Information Bureau' : article.sourceId).single()).data?.id,
         title: article.title,
         url: article.url,
         full_content: article.content || '',
@@ -444,7 +443,7 @@ export async function fetchDailyArticles(date: string): Promise<{
   const savedIds = await saveArticles(digest.id, uniqueArticles);
 
   // Step 6: Update digest article count
-  await supabase
+  await getSupabase()
     .from('daily_ca_digest')
     .update({
       article_count: savedIds.length,

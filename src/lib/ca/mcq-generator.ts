@@ -12,10 +12,9 @@ import { createClient } from '@supabase/supabase-js';
 import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
 // INTERFACES
@@ -225,7 +224,7 @@ export async function saveMCQs(
       is_active: true,
     }));
 
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('ca_mcqs')
       .insert(mcqsToInsert);
 
@@ -436,7 +435,7 @@ Return improved MCQ in same JSON format, or return original if no improvements n
  * Get MCQs for a specific article from database
  */
 export async function getMCQsForArticle(articleId: string): Promise<MCQ[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('ca_mcqs')
     .select('*')
     .eq('article_id', articleId)

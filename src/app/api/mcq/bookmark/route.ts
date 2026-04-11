@@ -14,6 +14,8 @@ import { createClient } from '@/lib/supabase/server';
 import { adaptiveEngine } from '@/lib/mcq/adaptive-engine';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // VALIDATION SCHEMA
 // ============================================================================
@@ -33,7 +35,7 @@ const bookmarkSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -155,7 +157,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

@@ -347,3 +347,18 @@ export function getVideoShortsGenerator(): VideoShortsGenerator {
   }
   return shortsGeneratorInstance;
 }
+
+export async function createShort(userId: string, options: {
+  topic: string;
+  subject: string;
+  targetDuration?: number;
+  style?: string;
+}): Promise<GeneratedVideo> {
+  const generator = getVideoShortsGenerator();
+  return generator.generateVideo({
+    topic: options.topic,
+    subject: options.subject,
+    style: (options.style as VideoShortsOptions['style']) || 'educational',
+    userId,
+  });
+}

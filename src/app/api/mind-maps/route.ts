@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireSession } from '@/lib/auth/auth-config';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/mind-maps - Get user's mind maps
 export async function GET() {
     try {

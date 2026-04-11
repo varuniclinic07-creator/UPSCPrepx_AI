@@ -77,10 +77,13 @@ const MIN_QUESTIONS_PER_SESSION = 5;
 // ============================================================================
 
 export class QuestionBankService {
-  private supabase;
+  
 
-  constructor() {
-    this.supabase = createClient();
+  constructor() {
+  }
+
+  private async getSupabase() {
+    return createClient();
   }
 
   /**
@@ -88,7 +91,7 @@ export class QuestionBankService {
    */
   async getQuestions(filters: QuestionFilters, limit: number = 20): Promise<Question[]> {
     try {
-      let query = this.supabase
+      let query = (await this.getSupabase())
         .from('mcq_questions')
         .select('*')
         .eq('is_active', true);
@@ -237,7 +240,7 @@ export class QuestionBankService {
    */
   async getQuestionById(questionId: string): Promise<Question | null> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from('mcq_questions')
         .select('*')
         .eq('id', questionId)
@@ -260,7 +263,7 @@ export class QuestionBankService {
    */
   async getTopics(subject: McqSubject): Promise<string[]> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from('mcq_questions')
         .select('topic')
         .eq('subject', subject)
@@ -283,7 +286,7 @@ export class QuestionBankService {
    */
   async getQuestionCount(filters: QuestionFilters): Promise<number> {
     try {
-      let query = this.supabase.from('mcq_questions').select('*', { count: 'exact', head: true });
+      let query = (await this.getSupabase()).from('mcq_questions').select('*', { count: 'exact', head: true });
 
       if (filters.subject) {
         query = query.eq('subject', filters.subject);

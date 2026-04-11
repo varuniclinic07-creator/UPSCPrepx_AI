@@ -11,14 +11,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // SUPABASE CLIENT
 // ============================================================================
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -36,7 +37,7 @@ const queryParamsSchema = z.object({
  * Get user subscription status
  */
 async function getUserSubscription(userId: string) {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('user_subscriptions')
     .select('status, plan_id, trial_ends_at, current_period_end')
     .eq('user_id', userId)
@@ -63,7 +64,7 @@ function hasAccess(subscription: any): boolean {
  * Get digest for a specific date
  */
 async function getDigest(date: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('daily_ca_digest')
     .select(`
       *,
@@ -106,7 +107,7 @@ async function getDigest(date: string) {
  * Get latest published digest (if no date specified)
  */
 async function getLatestDigest() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('daily_ca_digest')
     .select(`
       *,
@@ -231,7 +232,7 @@ export async function GET(request: NextRequest) {
     if (authHeader) {
       // Extract user ID from token (simplified - in production use proper JWT verification)
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await supabase.auth.getUser(token);
+      const { data: { user } } = await getSupabase().auth.getUser(token);
       userId = user?.id || null;
 
       if (userId) {
@@ -279,7 +280,7 @@ export async function GET(request: NextRequest) {
     const articles = (digest.articles || []).map(transformArticle);
 
     // Sort by importance (highest first)
-    articles.sort((a, b) => b.importance - a.importance);
+    articles.sort((a: any, b: any) => b.importance - a.importance);
 
     // Calculate subject distribution
     const subjectDistribution = calculateSubjectDistribution(articles);

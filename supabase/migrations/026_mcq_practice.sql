@@ -78,7 +78,32 @@ CREATE INDEX IF NOT EXISTS idx_mcq_questions_tags ON mcq_questions USING gin(tag
 CREATE INDEX IF NOT EXISTS idx_mcq_questions_composite ON mcq_questions(subject, difficulty, topic);
 
 -- ============================================================================
--- TABLE: mcq_attempts
+-- TABLE: mcq_mock_tests  (must be created BEFORE mcq_attempts which FK-references it)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS mcq_mock_tests (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title jsonb NOT NULL, -- {"en": "...", "hi": "..."}
+    description jsonb, -- {"en": "...", "hi": "..."}
+    total_questions int NOT NULL DEFAULT 100,
+    total_marks int NOT NULL DEFAULT 200,
+    duration_min int NOT NULL DEFAULT 120,
+    subject_distribution jsonb NOT NULL, -- {"GS": 80, "CSAT": 20}
+    difficulty_distribution jsonb NOT NULL, -- {"Easy": 20, "Medium": 60, "Hard": 20}
+    is_active boolean NOT NULL DEFAULT true,
+    is_premium boolean NOT NULL DEFAULT false,
+    attempt_count int NOT NULL DEFAULT 0,
+    avg_score decimal,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Indexes for mcq_mock_tests
+CREATE INDEX IF NOT EXISTS idx_mcq_mock_tests_active ON mcq_mock_tests(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_mcq_mock_tests_premium ON mcq_mock_tests(is_premium);
+
+-- ============================================================================
+-- TABLE: mcq_attempts  (references mcq_mock_tests — created above)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS mcq_attempts (
@@ -160,31 +185,6 @@ CREATE INDEX IF NOT EXISTS idx_mcq_bookmarks_question ON mcq_bookmarks(question_
 CREATE INDEX IF NOT EXISTS idx_mcq_bookmarks_review ON mcq_bookmarks(next_review_at) WHERE next_review_at IS NOT NULL;
 
 -- ============================================================================
--- TABLE: mcq_mock_tests
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS mcq_mock_tests (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title jsonb NOT NULL, -- {"en": "...", "hi": "..."}
-    description jsonb, -- {"en": "...", "hi": "..."}
-    total_questions int NOT NULL DEFAULT 100,
-    total_marks int NOT NULL DEFAULT 200,
-    duration_min int NOT NULL DEFAULT 120,
-    subject_distribution jsonb NOT NULL, -- {"GS": 80, "CSAT": 20}
-    difficulty_distribution jsonb NOT NULL, -- {"Easy": 20, "Medium": 60, "Hard": 20}
-    is_active boolean NOT NULL DEFAULT true,
-    is_premium boolean NOT NULL DEFAULT false,
-    attempt_count int NOT NULL DEFAULT 0,
-    avg_score decimal,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now()
-);
-
--- Indexes for mcq_mock_tests
-CREATE INDEX IF NOT EXISTS idx_mcq_mock_tests_active ON mcq_mock_tests(is_active) WHERE is_active = true;
-CREATE INDEX IF NOT EXISTS idx_mcq_mock_tests_premium ON mcq_mock_tests(is_premium);
-
--- ============================================================================
 -- TABLE: mcq_mock_questions (Junction)
 -- ============================================================================
 
@@ -243,23 +243,29 @@ ALTER TABLE mcq_mock_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mcq_analytics ENABLE ROW LEVEL SECURITY;
 
 -- mcq_questions: Public read, admin write
+DROP POLICY IF EXISTS "mcq_questions_public_read" ON mcq_questions;
 CREATE POLICY "mcq_questions_public_read" ON mcq_questions
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "mcq_questions_admin_write" ON mcq_questions;
 CREATE POLICY "mcq_questions_admin_write" ON mcq_questions
     FOR ALL USING (auth.jwt()->>'role' = 'admin');
 
 -- mcq_attempts: User can see own attempts
+DROP POLICY IF EXISTS "mcq_attempts_user_read" ON mcq_attempts;
 CREATE POLICY "mcq_attempts_user_read" ON mcq_attempts
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "mcq_attempts_user_insert" ON mcq_attempts;
 CREATE POLICY "mcq_attempts_user_insert" ON mcq_attempts
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "mcq_attempts_user_update" ON mcq_attempts;
 CREATE POLICY "mcq_attempts_user_update" ON mcq_attempts
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- mcq_answers: User can see own answers
+DROP POLICY IF EXISTS "mcq_answers_user_read" ON mcq_answers;
 CREATE POLICY "mcq_answers_user_read" ON mcq_answers
     FOR SELECT USING (
         EXISTS (
@@ -269,6 +275,7 @@ CREATE POLICY "mcq_answers_user_read" ON mcq_answers
         )
     );
 
+DROP POLICY IF EXISTS "mcq_answers_user_insert" ON mcq_answers;
 CREATE POLICY "mcq_answers_user_insert" ON mcq_answers
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -279,39 +286,50 @@ CREATE POLICY "mcq_answers_user_insert" ON mcq_answers
     );
 
 -- mcq_bookmarks: User can manage own bookmarks
+DROP POLICY IF EXISTS "mcq_bookmarks_user_read" ON mcq_bookmarks;
 CREATE POLICY "mcq_bookmarks_user_read" ON mcq_bookmarks
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "mcq_bookmarks_user_insert" ON mcq_bookmarks;
 CREATE POLICY "mcq_bookmarks_user_insert" ON mcq_bookmarks
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "mcq_bookmarks_user_update" ON mcq_bookmarks;
 CREATE POLICY "mcq_bookmarks_user_update" ON mcq_bookmarks
     FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "mcq_bookmarks_user_delete" ON mcq_bookmarks;
 CREATE POLICY "mcq_bookmarks_user_delete" ON mcq_bookmarks
     FOR DELETE USING (auth.uid() = user_id);
 
 -- mcq_mock_tests: Public read, admin write
+DROP POLICY IF EXISTS "mcq_mock_tests_public_read" ON mcq_mock_tests;
 CREATE POLICY "mcq_mock_tests_public_read" ON mcq_mock_tests
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "mcq_mock_tests_admin_write" ON mcq_mock_tests;
 CREATE POLICY "mcq_mock_tests_admin_write" ON mcq_mock_tests
     FOR ALL USING (auth.jwt()->>'role' = 'admin');
 
 -- mcq_mock_questions: Public read, admin write
+DROP POLICY IF EXISTS "mcq_mock_questions_public_read" ON mcq_mock_questions;
 CREATE POLICY "mcq_mock_questions_public_read" ON mcq_mock_questions
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "mcq_mock_questions_admin_write" ON mcq_mock_questions;
 CREATE POLICY "mcq_mock_questions_admin_write" ON mcq_mock_questions
     FOR ALL USING (auth.jwt()->>'role' = 'admin');
 
 -- mcq_analytics: User can see own analytics
+DROP POLICY IF EXISTS "mcq_analytics_user_read" ON mcq_analytics;
 CREATE POLICY "mcq_analytics_user_read" ON mcq_analytics
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "mcq_analytics_user_insert" ON mcq_analytics;
 CREATE POLICY "mcq_analytics_user_insert" ON mcq_analytics
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "mcq_analytics_user_update" ON mcq_analytics;
 CREATE POLICY "mcq_analytics_user_update" ON mcq_analytics
     FOR UPDATE USING (auth.uid() = user_id);
 
@@ -327,16 +345,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_mcq_questions_updated_at ON mcq_questions;
 CREATE TRIGGER update_mcq_questions_updated_at
     BEFORE UPDATE ON mcq_questions
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_mcq_mock_tests_updated_at ON mcq_mock_tests;
 CREATE TRIGGER update_mcq_mock_tests_updated_at
     BEFORE UPDATE ON mcq_mock_tests
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_mcq_analytics_updated_at ON mcq_analytics;
 CREATE TRIGGER update_mcq_analytics_updated_at
     BEFORE UPDATE ON mcq_analytics
     FOR EACH ROW
@@ -350,7 +371,7 @@ CREATE OR REPLACE FUNCTION update_attempt_stats()
 RETURNS TRIGGER AS $$
 BEGIN
     UPDATE mcq_attempts
-    SET 
+    SET
         attempted_questions = (
             SELECT COUNT(*) FROM mcq_answers WHERE attempt_id = NEW.attempt_id
         ),
@@ -364,26 +385,26 @@ BEGIN
             SELECT COUNT(*) FROM mcq_answers WHERE attempt_id = NEW.attempt_id AND is_skipped = true
         ),
         total_marks = (
-            SELECT SUM(marks) FROM mcq_answers 
+            SELECT SUM(marks) FROM mcq_answers
             JOIN mcq_questions ON mcq_questions.id = mcq_answers.question_id
             WHERE attempt_id = NEW.attempt_id AND is_correct = true
         ),
         negative_marks = (
-            SELECT SUM(negative_marks) FROM mcq_answers 
+            SELECT SUM(negative_marks) FROM mcq_answers
             JOIN mcq_questions ON mcq_questions.id = mcq_answers.question_id
             WHERE attempt_id = NEW.attempt_id AND is_correct = false
         ),
         net_marks = (
-            SELECT 
+            SELECT
                 COALESCE(SUM(marks) FILTER (WHERE is_correct = true), 0) -
                 COALESCE(SUM(negative_marks) FILTER (WHERE is_correct = false), 0)
-            FROM mcq_answers 
+            FROM mcq_answers
             JOIN mcq_questions ON mcq_questions.id = mcq_answers.question_id
             WHERE attempt_id = NEW.attempt_id
         ),
         accuracy_percent = (
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN COUNT(*) = 0 THEN 0
                     ELSE (COUNT(*) FILTER (WHERE is_correct = true)::decimal / COUNT(*) * 100)
                 END
@@ -393,19 +414,20 @@ BEGIN
             SELECT COALESCE(SUM(time_spent_sec), 0) FROM mcq_answers WHERE attempt_id = NEW.attempt_id
         ),
         avg_time_per_question = (
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN COUNT(*) = 0 THEN 0
                     ELSE AVG(time_spent_sec)
                 END
             FROM mcq_answers WHERE attempt_id = NEW.attempt_id
         )
     WHERE id = NEW.attempt_id;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_attempt_stats ON mcq_answers;
 CREATE TRIGGER trigger_update_attempt_stats
     AFTER INSERT OR UPDATE ON mcq_answers
     FOR EACH ROW
@@ -422,34 +444,38 @@ INSERT INTO mcq_questions (question_text, options, correct_option, explanation, 
  2,
  '{"en": "The Indus Valley Civilization (3300-1300 BCE) was characterized by well-planned urban centers like Harappa and Mohenjo-daro with grid-pattern streets, drainage systems, and standardized brick sizes.", "hi": "सिंधु घाटी सभ्यता (3300-1300 ईसा पूर्व) हड़प्पा और मोहनजोदड़ो जैसे अच्छी तरह से नियोजित शहरी केंद्रों की विशेषता थी, जिनमें ग्रिड-पैटर्न वाली सड़कें, जल निकासी प्रणाली और मानकीकृत ईंट के आकार थे।", "key_points": ["Urban planning", "Grid streets", "Drainage system", "Standardized bricks"]}',
  'GS1', 'History', 'Ancient India', 'Medium', 'Understand', 2023, true,
- ARRAY['PYQ', 'Ancient India', 'Indus Valley']);
+ ARRAY['PYQ', 'Ancient India', 'Indus Valley'])
+ON CONFLICT DO NOTHING;
 
 -- GS2 Polity PYQ
 INSERT INTO mcq_questions (question_text, options, correct_option, explanation, subject, topic, subtopic, difficulty, bloom_level, year, is_pyy, tags) VALUES
 ('{"en": "Which Article of the Indian Constitution deals with the Right to Constitutional Remedies?", "hi": "भारतीय संविधान का कौन सा अनुच्छेद संवैधानिक उपचारों के अधिकार से संबंधित है?"}',
  '[{"text": {"en": "Article 19", "hi": "अनुच्छेद 19"}}, {"text": {"en": "Article 21", "hi": "अनुच्छेद 21"}}, {"text": {"en": "Article 32", "hi": "अनुच्छेद 32"}}, {"text": {"en": "Article 370", "hi": "अनुच्छेद 370"}}]',
  3,
- '{"en": "Article 32 provides the Right to Constitutional Remedies, allowing citizens to approach the Supreme Court for enforcement of Fundamental Rights. Dr. Ambedkar called it the 'heart and soul' of the Constitution.", "hi": "अनुच्छेद 32 संवैधानिक उपचारों का अधिकार प्रदान करता है, जो नागरिकों को मौलिक अधिकारों के प्रवर्तन के लिए सुप्रीम कोर्ट जाने की अनुमति देता है। डॉ. अंबेडकर ने इसे संविधान की 'आत्मा और हृदय' कहा था।", "key_points": ["Article 32", "Fundamental Rights", "Supreme Court", "Dr. Ambedkar"]}',
+ '{"en": "Article 32 provides the Right to Constitutional Remedies, allowing citizens to approach the Supreme Court for enforcement of Fundamental Rights. Dr. Ambedkar called it the ''heart and soul'' of the Constitution.", "hi": "अनुच्छेद 32 संवैधानिक उपचारों का अधिकार प्रदान करता है, जो नागरिकों को मौलिक अधिकारों के प्रवर्तन के लिए सुप्रीम कोर्ट जाने की अनुमति देता है। डॉ. अंबेडकर ने इसे संविधान की ''आत्मा और हृदय'' कहा था।", "key_points": ["Article 32", "Fundamental Rights", "Supreme Court", "Dr. Ambedkar"]}',
  'GS2', 'Polity', 'Fundamental Rights', 'Easy', 'Remember', 2024, true,
- ARRAY['PYQ', 'Polity', 'Fundamental Rights']);
+ ARRAY['PYQ', 'Polity', 'Fundamental Rights'])
+ON CONFLICT DO NOTHING;
 
 -- GS3 Economy PYQ
 INSERT INTO mcq_questions (question_text, options, correct_option, explanation, subject, topic, subtopic, difficulty, bloom_level, year, is_pyy, tags) VALUES
 ('{"en": "What is the primary objective of the Monetary Policy Committee (MPC) of the Reserve Bank of India?", "hi": "भारतीय रिजर्व बैंक की मौद्रिक नीति समिति (MPC) का प्राथमिक उद्देश्य क्या है?"}',
  '[{"text": {"en": "Maximizing economic growth", "hi": "आर्थिक विकास को अधिकतम करना"}}, {"text": {"en": "Maintaining price stability while keeping growth in mind", "hi": "विकास को ध्यान में रखते हुए मूल्य स्थिरता बनाए रखना"}}, {"text": {"en": "Managing fiscal deficit", "hi": "राजकोषीय घाटे का प्रबंधन"}}, {"text": {"en": "Regulating foreign exchange rates", "hi": "विदेशी विनिमय दरों को विनियमित करना"}}]',
  2,
- '{"en": "The MPC's primary objective is to maintain price stability (inflation target of 4% ± 2%) while keeping economic growth in mind. This flexible inflation targeting framework was adopted in 2016.", "hi": "MPC का प्राथमिक उद्देश्य आर्थिक विकास को ध्यान में रखते हुए मूल्य स्थिरता (4% ± 2% की मुद्रास्फीति लक्ष्य) बनाए रखना है। यह लचीला मुद्रास्फीति लक्ष्यीकरण ढांचा 2016 में अपनाया गया था।", "key_points": ["Price stability", "4% inflation target", "Flexible targeting", "2016 framework"]}',
+ '{"en": "The MPC''s primary objective is to maintain price stability (inflation target of 4% ± 2%) while keeping economic growth in mind. This flexible inflation targeting framework was adopted in 2016.", "hi": "MPC का प्राथमिक उद्देश्य आर्थिक विकास को ध्यान में रखते हुए मूल्य स्थिरता (4% ± 2% की मुद्रास्फीति लक्ष्य) बनाए रखना है। यह लचीला मुद्रास्फीति लक्ष्यीकरण ढांचा 2016 में अपनाया गया था।", "key_points": ["Price stability", "4% inflation target", "Flexible targeting", "2016 framework"]}',
  'GS3', 'Economy', 'Monetary Policy', 'Medium', 'Understand', 2024, true,
- ARRAY['PYQ', 'Economy', 'RBI', 'Monetary Policy']);
+ ARRAY['PYQ', 'Economy', 'RBI', 'Monetary Policy'])
+ON CONFLICT DO NOTHING;
 
 -- GS4 Ethics PYQ
 INSERT INTO mcq_questions (question_text, options, correct_option, explanation, subject, topic, subtopic, difficulty, bloom_level, year, is_pyy, tags) VALUES
-('{"en": "Which of the following best describes the concept of 'Probity' in public service?", "hi": "निम्नलिखित में से कौन सा लोक सेवा में 'प्रोबिटी' की अवधारणा का सबसे अच्छा वर्णन करता है?"}',
+('{"en": "Which of the following best describes the concept of ''Probity'' in public service?", "hi": "निम्नलिखित में से कौन सा लोक सेवा में ''प्रोबिटी'' की अवधारणा का सबसे अच्छा वर्णन करता है?"}',
  '[{"text": {"en": "Efficiency in administration", "hi": "प्रशासन में दक्षता"}}, {"text": {"en": "Integrity and uprightness in conduct", "hi": "आचरण में अखंडता और ईमानदारी"}}, {"text": {"en": "Speed in decision making", "hi": "निर्णय लेने में गति"}}, {"text": {"en": "Popularity among citizens", "hi": "नागरिकों में लोकप्रियता"}}]',
  2,
  '{"en": "Probity refers to integrity, uprightness, and honesty in public service. It goes beyond mere honesty to include adherence to ethical principles and moral values in governance.", "hi": "प्रोबिटी लोक सेवा में अखंडता, ईमानदारी और सच्चाई को संदर्भित करती है। यह शासन में नैतिक सिद्धांतों और मूल्यों के पालन सहित केवल ईमानदारी से आगे जाती है।", "key_points": ["Integrity", "Uprightness", "Ethical governance", "Moral values"]}',
  'GS4', 'Ethics', 'Public Service Values', 'Easy', 'Understand', 2023, true,
- ARRAY['PYQ', 'Ethics', 'Probity']);
+ ARRAY['PYQ', 'Ethics', 'Probity'])
+ON CONFLICT DO NOTHING;
 
 -- CSAT PYQ
 INSERT INTO mcq_questions (question_text, options, correct_option, explanation, subject, topic, subtopic, difficulty, bloom_level, year, is_pyy, tags) VALUES
@@ -458,7 +484,8 @@ INSERT INTO mcq_questions (question_text, options, correct_option, explanation, 
  1,
  '{"en": "If price increases by 25% (1/4), consumption should decrease by 1/(4+1) = 1/5 = 20% to keep expenditure constant. Formula: Reduction% = (Increase%/(100+Increase%)) × 100 = (25/125) × 100 = 20%.", "hi": "यदि कीमत में 25% (1/4) की वृद्धि होती है, तो व्यय को स्थिर रखने के लिए खपत में 1/(4+1) = 1/5 = 20% की कमी होनी चाहिए। सूत्र: कमी% = (वृद्धि%/(100+वृद्धि%)) × 100 = (25/125) × 100 = 20%।", "key_points": ["25% increase = 1/4", "Reduction = 1/5 = 20%", "Expenditure constant"]}',
  'CSAT', 'Mathematics', 'Percentage', 'Medium', 'Apply', 2024, true,
- ARRAY['PYQ', 'CSAT', 'Mathematics', 'Percentage']);
+ ARRAY['PYQ', 'CSAT', 'Mathematics', 'Percentage'])
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- SEED DATA: Mock Tests
@@ -469,14 +496,15 @@ INSERT INTO mcq_mock_tests (title, description, total_questions, total_marks, du
  '{"en": "Full-length mock test simulating actual UPSC Prelims exam pattern", "hi": "वास्तविक UPSC प्रीलिम्स परीक्षा पैटर्न का अनुकरण करने वाला पूर्ण-लंबाई का मॉक टेस्ट"}',
  100, 200, 120,
  '{"GS": 80, "CSAT": 20}',
- '{"Easy": 20, "Medium": 60, "Hard": 20}');
+ '{"Easy": 20, "Medium": 60, "Hard": 20}')
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- VIEWS: Analytics helpers
 -- ============================================================================
 
 CREATE OR REPLACE VIEW user_mcq_stats AS
-SELECT 
+SELECT
     user_id,
     COUNT(*) as total_attempts,
     AVG(accuracy_percent) as avg_accuracy,
@@ -499,12 +527,19 @@ COMMENT ON TABLE mcq_mock_questions IS 'Junction table linking questions to mock
 COMMENT ON TABLE mcq_analytics IS 'Daily analytics aggregation for user performance tracking';
 
 -- ============================================================================
--- COMPLETION MESSAGE
+-- MIGRATION METADATA
 -- ============================================================================
 
--- Migration 026 Complete: MCQ Practice System
--- Tables: 7 (mcq_questions, mcq_attempts, mcq_answers, mcq_bookmarks, mcq_mock_tests, mcq_mock_questions, mcq_analytics)
--- Indexes: 20+ for optimal query performance
--- RLS Policies: Full row-level security
--- Triggers: Auto-update stats, timestamps
--- Seed Data: 5 PYQs (2023-2025), 1 Mock Test
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version TEXT PRIMARY KEY,
+  name TEXT,
+  applied_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO schema_migrations (version, name, applied_at)
+VALUES ('026', 'MCQ Practice System', NOW())
+ON CONFLICT (version) DO NOTHING;
+
+-- ============================================================================
+-- END OF MIGRATION 026
+-- ============================================================================

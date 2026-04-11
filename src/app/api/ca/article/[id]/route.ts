@@ -10,14 +10,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // SUPABASE CLIENT
 // ============================================================================
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -27,7 +28,7 @@ const supabase = createClient(
  * Get article by ID with all related data
  */
 async function getArticle(articleId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('ca_articles')
     .select(`
       *,
@@ -69,7 +70,7 @@ async function getArticle(articleId: string) {
  * Get MCQs for article
  */
 async function getArticleMCQs(articleId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('ca_mcqs')
     .select('*')
     .eq('article_id', articleId)
@@ -100,7 +101,7 @@ async function findRelatedNotes(syllabusMappings: any[]) {
     return [];
   }
 
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('content_library')
     .select('id, title, summary, syllabus_node_id')
     .in('syllabus_node_id', syllabusNodeIds)
@@ -117,7 +118,7 @@ async function trackArticleRead(articleId: string, userId: string | null) {
   if (!userId) return; // Don't track anonymous reads
 
   try {
-    await supabase
+    await getSupabase()
       .from('ca_user_reads')
       .insert({
         article_id: articleId,
@@ -217,7 +218,7 @@ export async function GET(
 
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await supabase.auth.getUser(token);
+      const { data: { user } } = await getSupabase().auth.getUser(token);
       userId = user?.id || null;
     }
 

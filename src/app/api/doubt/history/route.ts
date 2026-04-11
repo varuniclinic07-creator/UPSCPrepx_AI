@@ -13,6 +13,8 @@ import { createClient } from '@/lib/supabase/server';
 import { doubtService } from '@/lib/doubt/doubt-service';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // QUERY SCHEMA
 // ============================================================================
@@ -35,7 +37,7 @@ const historyQuerySchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // Get authenticated user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
         { 
           success: false, 
           error: 'Invalid query parameters',
-          details: validation.error.errors 
+          details: validation.error.issues 
         },
         { status: 400 }
       );

@@ -1,0 +1,143 @@
+# ═══════════════════════════════════════════════════════════════
+# UPSC PREPX-AI - KUBERNETES INGRESS
+# TLS-enabled routing with nginx-ingress
+# ═══════════════════════════════════════════════════════════════
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: upsc-ingress
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-ingress
+    app.kubernetes.io/component: ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "60s"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - upscbyvarunsh.aimasteryedu.in
+        - www.upscbyvarunsh.aimasteryedu.in
+        - api.upscbyvarunsh.aimasteryedu.in
+        - admin.upscbyvarunsh.aimasteryedu.in
+      secretName: upsc-tls-secret
+  rules:
+    # Main Application
+    - host: upscbyvarunsh.aimasteryedu.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-web
+                port:
+                  number: 80
+    # WWW redirect to main
+    - host: www.upscbyvarunsh.aimasteryedu.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-web
+                port:
+                  number: 80
+    # API Routes
+    - host: api.upscbyvarunsh.aimasteryedu.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-api
+                port:
+                  number: 80
+    # Admin Dashboard
+    - host: admin.upscbyvarunsh.aimasteryedu.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-admin
+                port:
+                  number: 80
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-admin
+                port:
+                  number: 80
+
+---
+# ═══════════════════════════════════════════════════════════════
+# ALTERNATIVE: Single Domain with Path-Based Routing
+# Use this if you don't have separate subdomains
+# ═══════════════════════════════════════════════════════════════
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: upsc-ingress-path-based
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-ingress-path
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - upscbyvarunsh.aimasteryedu.in
+      secretName: upsc-tls-secret
+  rules:
+    - host: upscbyvarunsh.aimasteryedu.in
+      http:
+        paths:
+          # API routes
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-api
+                port:
+                  number: 80
+          # Admin routes
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-web
+                port:
+                  number: 80
+          # Everything else goes to web
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: upsc-web
+                port:
+                  number: 80

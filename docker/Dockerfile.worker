@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════════════
+# UPSC CSE MASTER - WORKER DOCKERFILE
+# BullMQ worker for async job processing (email, AI, invoices, etc.)
+# ═══════════════════════════════════════════════════════════════
+
+# Stage 1: Dependencies
+FROM node:20.11-alpine AS deps
+LABEL maintainer="UPSC CSE Master Team"
+
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including dev for TypeScript)
+RUN npm ci
+
+# Stage 2: Builder
+FROM node:20.11-alpine AS builder
+LABEL maintainer="UPSC CSE Master Team"
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/.npm* ./
+
+# Copy source code
+COPY . .
+
+# Set build environment
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Compile TypeScript
+RUN npx tsc --project tsconfig.json
+
+# Stage 3: Runner (Production)
+FROM node:20.11-alpine AS runner
+LABEL maintainer="UPSC CSE Master Team"
+
+WORKDIR /app
+
+ENV NODE_ENV production
+
+# Install runtime dependencies for job processing
+RUN apk add --no-cache \
+    ffmpeg \
+    chromium \
+    font-noto \
+    font-noto-cjk \
+    curl
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 worker && \
+    adduser --system --uid 1001 worker
+
+# Copy package files
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/package-lock.json ./package-lock.json
+
+# Install only production dependencies
+RUN npm ci --only=production --ignore-scripts
+
+# Copy compiled JavaScript from builder
+COPY --from=builder --chown=worker:worker /app/dist ./dist
+COPY --from=builder --chown=worker:worker /app/src/lib ./src/lib
+
+# Copy worker entry point
+COPY --from=builder --chown=worker:worker /app/src/workers ./src/workers
+
+# Set correct ownership
+RUN chown -R worker:worker /app
+
+USER worker
+
+# Environment variables
+ENV PORT 3002
+ENV HOSTNAME "0.0.0.0"
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3002/health || exit 1
+
+EXPOSE 3002
+
+# Start worker
+CMD ["node", "dist/src/workers/bullmq-worker.js"]

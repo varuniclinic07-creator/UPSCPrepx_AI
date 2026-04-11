@@ -11,10 +11,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
  * Request validation schema
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { user_id, email } = startOnboardingSchema.parse(body);
 
     // Check if user already has onboarding in progress
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile } = await getSupabase()
       .from('user_profiles')
       .select('user_id, onboarding_completed')
       .eq('user_id', user_id)
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update user profile
-    const { error: profileError } = await supabase
+    const { error: profileError } = await getSupabase()
       .from('user_profiles')
       .upsert({
         user_id,
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if trial subscription exists
-    const { data: existingSubscription } = await supabase
+    const { data: existingSubscription } = await getSupabase()
       .from('subscriptions')
       .select('id, status, trial_expires_at')
       .eq('user_id', user_id)
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       trial_expires_at = existingSubscription.trial_expires_at;
     } else {
       // Create trial subscription
-      const { data: freePlan } = await supabase
+      const { data: freePlan } = await getSupabase()
         .from('plans')
         .select('id')
         .eq('slug', 'free')
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       const trialExpiresAt = new Date();
       trialExpiresAt.setDate(trialExpiresAt.getDate() + 3);
 
-      const { data: newSubscription, error: subError } = await supabase
+      const { data: newSubscription, error: subError } = await getSupabase()
         .from('subscriptions')
         .insert({
           user_id,
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log audit event
-    await supabase.from('audit_logs').insert({
+    await getSupabase().from('audit_logs').insert({
       user_id,
       action: 'onboarding_started',
       resource_type: 'user_profile',

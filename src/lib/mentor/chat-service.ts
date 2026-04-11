@@ -9,12 +9,11 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { generateAIResponse } from '../ai/ai-provider';
+import { callAI } from '@/lib/ai/ai-provider-client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface MentorMessage {
   id?: string;
@@ -38,7 +37,7 @@ export class MentorChatService {
     const timestamp = new Date().toISOString();
     
     // Save user message
-    await supabase.from('mentor_messages').insert({
+    await getSupabase().from('mentor_messages').insert({
       session_id: sessionId,
       role: 'user',
       content,
@@ -47,9 +46,10 @@ export class MentorChatService {
 
     // Build context prompt
     let contextText = '';
-    if (context) {yllabus Coverage: ${context.coverage}%}
-${context.weakSubjects?.length ? '- Weakest subjects: ' + context.weakSubjects.join(', ') : ''}yllabus Coverage: ${context.coverage}%}
-${context.weakSubjects?.length ? '- Weakest subjects: ' + context.weakSubjects.join(', ') : ''}- MCQ Accuracy: ${context.accuracy}%
+    if (context) {
+      contextText = `- Syllabus Coverage: ${context.coverage}%
+${context.weakSubjects?.length ? '- Weakest subjects: ' + context.weakSubjects.join(', ') : ''}
+- MCQ Accuracy: ${context.accuracy}%
 - Study Streak: ${context.streak} days
 - Exam Date: ${context.examDate || 'Not set'}
 `;
@@ -72,14 +72,14 @@ RULES:
 
 RESPONSE:`;
 
-    const reply = await generateAIResponse({
+    const reply = await callAI({
       prompt,
       provider: '9router',
       maxTokens: 1500,
     });
 
     // Save assistant message
-    const { data: msgData } = await supabase
+    const { data: msgData } = await getSupabase()
       .from('mentor_messages')
       .insert({ session_id: sessionId, role: 'assistant', content: reply })
       .select()
@@ -89,7 +89,7 @@ RESPONSE:`;
   }
 
   async getMessages(sessionId: string): Promise<MentorMessage[]> {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('mentor_messages')
       .select('*')
       .eq('session_id', sessionId)
@@ -98,7 +98,7 @@ RESPONSE:`;
   }
 
   async getSessions(userId: string) {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('mentor_sessions')
       .select(`*, messages:mentor_messages(count)`) // Note: complex count might need view
       .eq('user_id', userId)
@@ -107,7 +107,7 @@ RESPONSE:`;
   }
 
   async createSession(userId: string, title: string, topic: string) {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('mentor_sessions')
       .insert({ user_id: userId, title, topic })
       .select()

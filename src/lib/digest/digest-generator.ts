@@ -3,7 +3,7 @@
 // Personalized daily news digests
 // ═══════════════════════════════════════════════════════════════
 
-import { aiRouter } from '@/lib/ai/provider-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import { createClient } from '@/lib/supabase/server';
 
 export interface DigestConfig {
@@ -64,20 +64,11 @@ Respond in JSON:
   "practiceQuestions": ["Q1", "Q2", "Q3"]
 }`;
 
-    const response = await aiRouter.chat({
-        model: 'provider-8/claude-sonnet-4.5',
-        messages: [
-            {
-                role: 'system',
-                content: 'You are a UPSC current affairs expert. Create concise, exam-focused news digests.'
-            },
-            { role: 'user', content: prompt }
-        ],
+    const content = await callAI(prompt, {
+        system: 'You are a UPSC current affairs expert. Create concise, exam-focused news digests.',
         temperature: 0.3,
-        max_tokens: 3000
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
+        maxTokens: 3000,
+    }) || '{}';
     const parsed = JSON.parse(content);
 
     const supabase = await createClient();

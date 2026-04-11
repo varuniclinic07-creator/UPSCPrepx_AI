@@ -150,3 +150,28 @@ export function getAutodocClient(): AutodocClient {
   }
   return autodocInstance;
 }
+
+/**
+ * Check if the autodoc service URL is configured
+ */
+export function isAutodocAvailable(): boolean {
+  return !!process.env.AGENTIC_AUTODOC_URL;
+}
+
+/**
+ * Generate an explanation for content using the autodoc service
+ */
+export async function generateExplanation(
+  content: string,
+  context?: string
+): Promise<string | null> {
+  const client = getAutodocClient();
+  const result = await client.analyze({
+    query: context ? `Explain: ${content}\nContext: ${context}` : `Explain: ${content}`,
+    maxResults: 1,
+  });
+  if (result.results.length > 0) {
+    return result.results[0].content;
+  }
+  return null;
+}

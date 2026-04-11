@@ -9,6 +9,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
+import Hls from 'hls.js';
 import { Play, Pause, Volume2, VolumeX, Settings, Maximize, PictureInPicture, SkipBack, SkipForward } from 'lucide-react';
 
 interface CustomVideoPlayerProps {
@@ -30,6 +31,48 @@ export function CustomVideoPlayer({ src, thumbnail, showHindi = false, onTimeUpd
     const [playbackRate, setPlaybackRate] = useState(1);
     const [showControls, setShowControls] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [hlsError, setHlsError] = useState<string | null>(null);
+    const [hlsRetryKey, setHlsRetryKey] = useState(0);
+
+    // HLS.js support for .m3u8 streams
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !src) return;
+
+        let hls: Hls | null = null;
+
+        if (src.endsWith('.m3u8')) {
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(src);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    if (initialTime > 0) video.currentTime = initialTime;
+                });
+                hls.on(Hls.Events.ERROR, (_event, data) => {
+                    if (data.fatal) {
+                        console.error('Fatal HLS error:', data);
+                        setHlsError('Video playback error. Please try again.');
+                        hls?.destroy();
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Safari native HLS
+                video.src = src;
+                if (initialTime > 0) video.currentTime = initialTime;
+            }
+        } else {
+            // MP4 or other formats — default behavior
+            video.src = src;
+            if (initialTime > 0) video.currentTime = initialTime;
+        }
+
+        return () => {
+            if (hls) {
+                hls.destroy();
+            }
+        };
+    }, [src, initialTime, hlsRetryKey]);
 
     useEffect(() => {
         if (videoRef.current) {
@@ -37,17 +80,18 @@ export function CustomVideoPlayer({ src, thumbnail, showHindi = false, onTimeUpd
         }
     }, [playbackRate]);
 
-    useEffect(() => {
-        if (videoRef.current && initialTime > 0) {
-            videoRef.current.currentTime = initialTime;
-        }
-    }, []);
-
     const togglePlay = () => {
         if (videoRef.current) {
-            if (isPlaying) videoRef.current.pause();
-            else videoRef.current.play();
-            setIsPlaying(!isPlaying);
+            if (isPlaying) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+            } else {
+                videoRef.current.play().catch((err) => {
+                    console.warn('Autoplay blocked or play failed:', err);
+                    setIsPlaying(false);
+                });
+                setIsPlaying(true);
+            }
         }
     };
 
@@ -97,6 +141,7 @@ export function CustomVideoPlayer({ src, thumbnail, showHindi = false, onTimeUpd
     };
 
     const formatTime = (seconds: number) => {
+        if (!isFinite(seconds)) return '0:00';
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s < 10 ? '0' : ''}${s}`;
@@ -111,13 +156,28 @@ export function CustomVideoPlayer({ src, thumbnail, showHindi = false, onTimeUpd
         >
             <video
                 ref={videoRef}
-                src={src}
                 className="w-full h-full object-contain cursor-pointer"
                 onClick={togglePlay}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 poster={thumbnail}
             />
+
+            {/* HLS Error Overlay */}
+            {hlsError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10">
+                    <div className="text-center text-white p-4">
+                        <p className="text-lg font-semibold mb-2">Playback Error</p>
+                        <p className="text-sm text-gray-300">{hlsError}</p>
+                        <button
+                            onClick={() => { setHlsError(null); setHlsRetryKey(k => k + 1); }}
+                            className="mt-3 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-sm"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Play/Pause Overlay (Center) */}
             {!isPlaying && (
@@ -136,7 +196,7 @@ export function CustomVideoPlayer({ src, thumbnail, showHindi = false, onTimeUpd
                     const percent = (e.clientX - rect.left) / rect.width;
                     seek(duration * percent);
                 }}>
-                    <div className="h-full bg-saffron-500 rounded-full relative" style={{ width: `${(currentTime / duration) * 100}%` }}>
+                    <div className="h-full bg-saffron-500 rounded-full relative" style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}>
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow opacity-0 group-hover/progress:opacity-100 transition-opacity" />
                     </div>
                 </div>
@@ -186,8 +246,8 @@ export function CustomVideoPlayer({ src, thumbnail, showHindi = false, onTimeUpd
                             {playbackRate}x
                         </button>
                         <button onClick={() => {
-                            if (document.pictureInPictureElement) document.exitPictureInPicture();
-                             else if (videoRef.current) videoRef.current.requestPictureInPicture();
+                            if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
+                             else if (videoRef.current) videoRef.current.requestPictureInPicture().catch(() => {});
                         }} className="hover:text-saffron-400 transition-colors">
                             <PictureInPicture className="w-5 h-5" />
                         </button>

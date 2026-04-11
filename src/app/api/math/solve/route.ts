@@ -3,6 +3,8 @@ import { requireSession } from '@/lib/auth/session';
 import { solveEquation } from '@/lib/math/equation-solver';
 import { errors } from '@/lib/security/error-sanitizer';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const session = await requireSession();

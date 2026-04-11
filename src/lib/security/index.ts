@@ -84,3 +84,20 @@ export {
     secureCompare,
     generateSecureToken,
 } from '../../middleware/security';
+
+// Phase 17: Service-to-Service Token Signing (Zero-Trust)
+export {
+    issueServiceToken,
+    verifyServiceToken,
+    extractServiceToken,
+    type ServiceName,
+    type ServiceTokenPayload,
+} from './service-tokens';
+
+// Phase 17: Structured Privileged Action Audit Log (Zero-Trust)
+export {
+    writeAuditLog,
+    auditRequest,
+    type AuditAction,
+    type AuditEntry,
+} from './audit';

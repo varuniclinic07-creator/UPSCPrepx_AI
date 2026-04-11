@@ -1,0 +1,219 @@
+# ═══════════════════════════════════════════════════════════════
+# UPSC PREPX-AI - NETWORK POLICIES
+# Zero-trust network isolation between services
+# ═══════════════════════════════════════════════════════════════
+
+# Default Deny All Ingress Traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: upsc-prepx-ai
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# Default Deny All Egress Traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: upsc-prepx-ai
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+
+---
+# Allow Ingress from Ingress Controller to Web
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-web
+  namespace: upsc-prepx-ai
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-web
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+
+---
+# Allow Ingress from Ingress Controller to API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-api
+  namespace: upsc-prepx-ai
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3001
+
+---
+# Allow Web to communicate with API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-to-api
+  namespace: upsc-prepx-ai
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: upsc-web
+      ports:
+        - protocol: TCP
+          port: 3001
+
+---
+# Allow Worker to communicate with API and Redis
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-worker-egress
+  namespace: upsc-prepx-ai
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-worker
+  policyTypes:
+    - Egress
+  egress:
+    # Allow to API
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: upsc-api
+      ports:
+        - protocol: TCP
+          port: 3001
+    # Allow to Redis (external)
+    - to:
+        - ipBlock:
+            cidr: 89.117.60.144/32
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow to Supabase (external)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Allow API to communicate with external services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-egress
+  namespace: upsc-prepx-ai
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-api
+  policyTypes:
+    - Egress
+  egress:
+    # Allow to Redis
+    - to:
+        - ipBlock:
+            cidr: 89.117.60.144/32
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow to Supabase
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow to AI providers
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Allow Prometheus to scrape metrics
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: upsc-prepx-ai
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-prepx-ai
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 3001
+        - protocol: TCP
+          port: 3002

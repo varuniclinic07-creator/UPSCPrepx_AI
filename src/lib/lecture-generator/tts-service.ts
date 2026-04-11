@@ -8,10 +8,14 @@ import { rateLimiter } from '@/lib/rate-limiter/api-manager';
 import fs from 'fs/promises';
 import path from 'path';
 
-const client = new OpenAI({
+let _openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI {
+  if (!_openaiClient) _openaiClient = new OpenAI({
     apiKey: process.env.A4F_API_KEY,
     baseURL: process.env.A4F_BASE_URL || 'https://api.a4f.co/v1'
 });
+  return _openaiClient;
+}
 
 /**
  * Generate TTS audio from script
@@ -25,7 +29,7 @@ export async function generateTTS(
     await rateLimiter.waitForSlot();
 
     try {
-        const response = await client.audio.speech.create({
+        const response = await getOpenAIClient().audio.speech.create({
             model: 'provider-3/gemini-2.5-flash-preview-tts',
             input: script,
             voice: 'alloy', // Professional voice
@@ -92,7 +96,7 @@ export async function generateLongTTS(
         await rateLimiter.waitForSlot();
 
         try {
-            const response = await client.audio.speech.create({
+            const response = await getOpenAIClient().audio.speech.create({
                 model: 'provider-3/gemini-2.5-flash-preview-tts',
                 input: chunks[i],
                 voice: 'alloy',

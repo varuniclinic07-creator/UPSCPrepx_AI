@@ -6,10 +6,14 @@
 import { OpenAI } from 'openai';
 import { rateLimiter } from '@/lib/rate-limiter/api-manager';
 
-const client = new OpenAI({
+let _openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI {
+  if (!_openaiClient) _openaiClient = new OpenAI({
     apiKey: process.env.A4F_API_KEY,
     baseURL: process.env.A4F_BASE_URL || 'https://api.a4f.co/v1'
 });
+  return _openaiClient;
+}
 
 export interface Chapter {
     number: number;
@@ -75,7 +79,7 @@ Return a JSON object with this EXACT structure:
 CRITICAL: Return ONLY the JSON object, no markdown, no explanations.`;
 
     try {
-        const response = await client.chat.completions.create({
+        const response = await getOpenAIClient().chat.completions.create({
             model: 'provider-2/tongyi-deepresearch-30b-a3b',
             messages: [
                 {

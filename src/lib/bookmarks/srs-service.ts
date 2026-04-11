@@ -8,10 +8,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 interface SRSStats {
     interval_days: number;
@@ -65,7 +64,7 @@ export async function submitReview(
     quality: number
 ) {
     // 1. Get current stats
-    const { data: current } = await supabase
+    const { data: current } = await getSupabase()
         .from('srs_stats')
         .select('*')
         .eq('bookmark_id', bookmarkId)
@@ -84,7 +83,7 @@ export async function submitReview(
     nextDate.setDate(nextDate.getDate() + interval_days);
 
     // 4. Update Database
-    await supabase
+    await getSupabase()
         .from('srs_stats')
         .update({
             interval_days,
@@ -100,7 +99,7 @@ export async function submitReview(
 export async function getDueBookmarks(userId: string) {
     const now = new Date().toISOString();
     
-    const { data } = await supabase
+    const { data } = await getSupabase()
         .from('bookmarks')
         .select('*, srs_stats(*)')
         .eq('user_id', userId)

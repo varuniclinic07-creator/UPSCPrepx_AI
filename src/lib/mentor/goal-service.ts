@@ -8,10 +8,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface MentorGoal {
   id?: string;
@@ -24,7 +23,7 @@ export interface MentorGoal {
 
 export class MentorGoalService {
   async createGoal(userId: string, goal: MentorGoal) {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('mentor_goals')
       .insert({ user_id: userId, ...goal })
       .select()
@@ -33,7 +32,7 @@ export class MentorGoalService {
   }
 
   async getActiveGoals(userId: string) {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('mentor_goals')
       .select('*')
       .eq('user_id', userId)
@@ -43,7 +42,7 @@ export class MentorGoalService {
   }
 
   async completeGoal(goalId: string) {
-    await supabase
+    await getSupabase()
       .from('mentor_goals')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq('id', goalId);

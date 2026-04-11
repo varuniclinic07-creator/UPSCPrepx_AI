@@ -63,10 +63,13 @@ const SOURCE_WEIGHTS = {
 // ============================================================================
 
 export class RAGSearchService {
-  private supabase;
+  
 
-  constructor() {
-    this.supabase = createClient();
+  constructor() {
+  }
+
+  private async getSupabase() {
+    return createClient();
   }
 
   /**
@@ -151,7 +154,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      let query = this.supabase.rpc('match_content_library', {
+      let query = (await this.getSupabase()).rpc('match_content_library', {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -199,7 +202,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      const { data, error } = await this.supabase.rpc('match_user_notes', {
+      const { data, error } = await (await this.getSupabase()).rpc('match_user_notes', {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -239,7 +242,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      const { data, error } = await this.supabase.rpc('match_ca_articles', {
+      const { data, error } = await (await this.getSupabase()).rpc('match_ca_articles', {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -280,7 +283,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      const { data, error } = await this.supabase.rpc('match_ncert_content', {
+      const { data, error } = await (await this.getSupabase()).rpc('match_ncert_content', {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -387,7 +390,7 @@ export class RAGSearchService {
       }
 
       // Simple keyword search using ILIKE
-      const { data, error } = await this.supabase
+      const { data, error } = await (await this.getSupabase())
         .from(tableName)
         .select(`*, ${contentColumn}`)
         .or(`${contentColumn}.ilike.%${options.query}%,${titleColumn}.ilike.%${options.query}%`)

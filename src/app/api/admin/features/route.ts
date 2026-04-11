@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/auth-config';
 import { getFeatures, updateFeature } from '@/lib/admin/admin-service';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Admin Features API route
  */

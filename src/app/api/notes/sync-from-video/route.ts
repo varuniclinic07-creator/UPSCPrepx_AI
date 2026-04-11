@@ -9,10 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     // 1. Get Video Topic for Title if not provided
     let videoTitle = title;
     if (!videoTitle) {
-      const { data: vidData } = await supabase
+      const { data: vidData } = await getSupabase()
         .from('video_requests')
         .select('topic')
         .eq('id', video_id)
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Insert into user_notes
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('user_notes')
       .insert({
         user_id: userId,

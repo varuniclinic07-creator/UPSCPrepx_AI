@@ -184,3 +184,34 @@ export function getWebSearchClient(): WebSearchClient {
   }
   return webSearchInstance;
 }
+
+/**
+ * Check if the web search service URL is configured
+ */
+export function isWebSearchAvailable(): boolean {
+  return !!process.env.AGENTIC_WEB_SEARCH_URL;
+}
+
+/**
+ * Search web for UPSC content
+ */
+export async function searchWeb(
+  query: string,
+  limit?: number
+): Promise<WebSearchResult[]> {
+  const client = getWebSearchClient();
+  const result = await client.search({ query, maxResults: limit || 10 });
+  return result.results;
+}
+
+/**
+ * Search news/current affairs
+ */
+export async function searchNews(
+  query: string,
+  limit?: number
+): Promise<WebSearchResult[]> {
+  const client = getWebSearchClient();
+  const result = await client.searchCurrentAffairs(query);
+  return result.results.slice(0, limit || 10);
+}

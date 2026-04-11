@@ -3,7 +3,7 @@
 // Automated answer grading with rubrics
 // ═══════════════════════════════════════════════════════════════
 
-import { aiRouter } from '@/lib/ai/provider-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import { createClient } from '@/lib/supabase/server';
 
 export interface GradingRubric {
@@ -76,20 +76,11 @@ Respond in JSON format:
   "improvements": ["improvement 1", "improvement 2"]
 }`;
 
-    const response = await aiRouter.chat({
-        model: 'provider-8/claude-sonnet-4.5',
-        messages: [
-            {
-                role: 'system',
-                content: 'You are an experienced UPSC Mains examiner. Grade answers fairly and provide constructive feedback.'
-            },
-            { role: 'user', content: prompt }
-        ],
+    const content = await callAI(prompt, {
+        system: 'You are an experienced UPSC Mains examiner. Grade answers fairly and provide constructive feedback.',
         temperature: 0.2,
-        max_tokens: 2048
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
+        maxTokens: 2048,
+    }) || '{}';
     const parsed = JSON.parse(content);
 
     const totalScore = parsed.criteriaScores?.reduce((sum: number, cs: CriteriaScore) => sum + cs.score, 0) || 0;

@@ -14,6 +14,8 @@ import { createClient } from '@/lib/supabase/server';
 import { analytics } from '@/lib/mcq/analytics';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // VALIDATION SCHEMA
 // ============================================================================
@@ -30,7 +32,7 @@ const analyticsQuerySchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

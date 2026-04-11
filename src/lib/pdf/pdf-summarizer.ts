@@ -6,7 +6,7 @@
  * - 9Router -> Groq -> Ollama fallback
  */
 
-import { generateAIResponse } from '../ai/ai-provider';
+import { callAI } from '@/lib/ai/ai-provider-client';
 
 export interface Highlight {
   text_content: string;
@@ -33,7 +33,7 @@ ${text}
 
 SUMMARY:`;
 
-  return await generateAIResponse({
+  return await callAI({
     prompt,
     provider: '9router',
     temperature: 0.3,

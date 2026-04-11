@@ -6,10 +6,14 @@
 import { OpenAI } from 'openai';
 import { rateLimiter } from '@/lib/rate-limiter/api-manager';
 
-const client = new OpenAI({
+let _openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI {
+  if (!_openaiClient) _openaiClient = new OpenAI({
     apiKey: process.env.A4F_API_KEY,
     baseURL: process.env.A4F_BASE_URL || 'https://api.a4f.co/v1'
 });
+  return _openaiClient;
+}
 
 export interface GeneratedVisual {
     url: string;
@@ -36,7 +40,7 @@ export async function generateVisual(
     const prompt = buildImagePrompt(type, description, context);
 
     try {
-        const response = await client.images.generate({
+        const response = await getOpenAIClient().images.generate({
             model,
             prompt,
             n: 1,

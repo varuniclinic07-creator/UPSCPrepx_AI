@@ -9,7 +9,20 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { autoSaveNote } from './content-service';
+
+// Client-side auto-save via API (avoids importing server-only code)
+async function autoSaveNote(noteId: string, userId: string, content: any): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notes/${noteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'auto_save', content }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 // ============================================================================
 // TYPES

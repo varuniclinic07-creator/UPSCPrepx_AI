@@ -340,25 +340,25 @@ BEGIN
   END IF;
   
   RETURN QUERY
-  SELECT 
+  SELECT
     COALESCE(du.month, current_month) AS month,
-    COALESCE(du.text_doubts, 0) AS text_doubts,
-    COALESCE(du.image_doubts, 0) AS image_doubts,
-    COALESCE(du.voice_doubts, 0) AS voice_doubts,
-    COALESCE(du.total_doubts, 0) AS total_doubts,
-    GREATEST(0, monthly_limit - COALESCE(du.total_doubts, 0)) AS limit_remaining;
+    COALESCE(du.text_doubts, 0)::INTEGER AS text_doubts,
+    COALESCE(du.image_doubts, 0)::INTEGER AS image_doubts,
+    COALESCE(du.voice_doubts, 0)::INTEGER AS voice_doubts,
+    COALESCE(du.total_doubts, 0)::INTEGER AS total_doubts,
+    GREATEST(0, monthly_limit - COALESCE(du.total_doubts, 0))::INTEGER AS limit_remaining
   FROM doubt_usage du
   WHERE du.user_id = user_uuid AND du.month = current_month;
-  
+
   -- If no record exists, return zeros
   IF NOT FOUND THEN
-    month := current_month;
-    text_doubts := 0;
-    image_doubts := 0;
-    voice_doubts := 0;
-    total_doubts := 0;
-    limit_remaining := monthly_limit;
-    RETURN NEXT;
+    RETURN QUERY SELECT
+      current_month,
+      0::INTEGER,
+      0::INTEGER,
+      0::INTEGER,
+      0::INTEGER,
+      monthly_limit::INTEGER;
   END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -378,6 +378,13 @@ $$ LANGUAGE plpgsql;
 -- ============================================================================
 -- MIGRATION METADATA
 -- ============================================================================
+
+-- schema_migrations stub (safe if already exists)
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version TEXT PRIMARY KEY,
+  name TEXT,
+  applied_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 INSERT INTO schema_migrations (version, name, applied_at)
 VALUES ('025', 'AI Doubt Solver', NOW())

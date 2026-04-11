@@ -10,10 +10,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
  * UPSC Optional Subjects List (48 subjects)
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert user profile
-    const { error: profileError } = await supabase
+    const { error: profileError } = await getSupabase()
       .from('user_profiles')
       .upsert({
         user_id,
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log audit event
-    await supabase.from('audit_logs').insert({
+    await getSupabase().from('audit_logs').insert({
       user_id,
       action: 'onboarding_profile_saved',
       resource_type: 'user_profile',

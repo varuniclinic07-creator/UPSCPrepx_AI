@@ -1,35 +1,39 @@
-import { Sparkles } from 'lucide-react';
+import { Skeleton, CardSkeleton } from '@/components/ui/skeleton';
 
 /**
- * App-level loading page
+ * App-level loading page - skeleton dashboard layout
  */
 export default function Loading() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-            <div className="text-center space-y-6 animate-in fade-in duration-500">
-                {/* Logo */}
-                <div className="flex justify-center">
-                    <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center animate-pulse">
-                        <Sparkles className="w-10 h-10 text-white" />
+        <div className="min-h-screen bg-background p-6 md:p-8 space-y-6 animate-in fade-in duration-500">
+            {/* Header skeleton */}
+            <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-4 w-72" />
+                </div>
+                <Skeleton className="h-10 w-32 rounded-full" />
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded-2xl border border-border/50 p-4 space-y-3">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-3 w-24" />
                     </div>
-                </div>
+                ))}
+            </div>
 
-                {/* App Name */}
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground mb-1">
-                        UPSC CSE Master
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Loading your learning dashboard...
-                    </p>
-                </div>
-
-                {/* Loading Spinner */}
-                <div className="flex items-center justify-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
+            {/* Content cards grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
             </div>
         </div>
     );

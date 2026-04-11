@@ -19,19 +19,40 @@ export function FeedbackWidget({ userId, context }: FeedbackWidgetProps) {
     const [rating, setRating] = useState<number | null>(null);
     const [submitted, setSubmitted] = useState(false);
 
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSubmitting(true);
+        setError(null);
 
-        // TODO: Send to API
-        console.log({ type, message, rating, userId, context });
+        try {
+            const res = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, message, rating, userId, context }),
+            });
 
-        setSubmitted(true);
-        setTimeout(() => {
-            setIsOpen(false);
-            setSubmitted(false);
-            setMessage('');
-            setRating(null);
-        }, 2000);
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Feedback submission failed:', text);
+                setError('Failed to send feedback. Please try again.');
+            } else {
+                setSubmitted(true);
+                setTimeout(() => {
+                    setIsOpen(false);
+                    setSubmitted(false);
+                    setMessage('');
+                    setRating(null);
+                }, 2000);
+            }
+        } catch (err) {
+            console.error('Feedback submission error:', err);
+            setError('Network error. Please check your connection and try again.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     if (!isOpen) {
@@ -117,12 +138,18 @@ export function FeedbackWidget({ userId, context }: FeedbackWidgetProps) {
                         required
                     />
 
+                    {/* Error Display */}
+                    {error && (
+                        <p className="text-red-500 text-sm mt-2">{error}</p>
+                    )}
+
                     {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full mt-3 bg-primary text-white py-2 rounded-lg font-semibold"
+                        disabled={submitting}
+                        className="w-full mt-3 bg-primary text-white py-2 rounded-lg font-semibold disabled:opacity-50"
                     >
-                        Send Feedback
+                        {submitting ? 'Sending...' : 'Send Feedback'}
                     </button>
                 </form>
             )}

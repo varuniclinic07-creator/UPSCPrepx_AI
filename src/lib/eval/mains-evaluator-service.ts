@@ -17,7 +17,8 @@ import { calculateScores, validateScore, generateImprovementSuggestions } from '
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(supabaseUrl, supabaseServiceKey); return _sb; }
 
 /**
  * Evaluation request interface
@@ -199,7 +200,7 @@ export async function evaluateAnswer(request: EvaluationRequest): Promise<Evalua
  * Fetch question details from database
  */
 async function fetchQuestion(questionId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('mains_questions')
     .select('*')
     .eq('id', questionId)
@@ -300,7 +301,7 @@ function validateEvaluation(evaluation: any) {
  * Save answer to database
  */
 async function saveAnswer(request: EvaluationRequest): Promise<string> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('mains_answers')
     .insert({
       user_id: request.user_id,
@@ -325,7 +326,7 @@ async function saveAnswer(request: EvaluationRequest): Promise<string> {
  * Save evaluation to database
  */
 async function saveEvaluation(answerId: string, evaluation: any) {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('mains_evaluations')
     .insert({
       answer_id: answerId,
@@ -454,7 +455,7 @@ function calculateStats(evaluations: any[]) {
  * Get single evaluation by ID
  */
 export async function getEvaluationById(evaluationId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('mains_evaluations')
     .select(`
       *,
@@ -492,7 +493,7 @@ export async function submitFeedback(evaluationId: string, userId: string, feedb
   was_helpful?: boolean;
   feedback_text?: string;
 }) {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('mains_feedback')
     .insert({
       evaluation_id: evaluationId,

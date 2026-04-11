@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { aiRouter } from '@/lib/ai/ai-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import type { McqSubject } from './question-bank';
 
 // ============================================================================
@@ -132,12 +132,13 @@ Provide 3-5 prioritized recommendations with:
 // ============================================================================
 
 export class AnalyticsService {
-  private supabase;
-  private aiRouter;
-
+  
   constructor() {
-    this.supabase = createClient();
-    this.aiRouter = aiRouter;
+    // callAI is used directly as a module-level function
+  }
+
+  private async getSupabase() {
+    return createClient();
   }
 
   /**
@@ -176,7 +177,7 @@ export class AnalyticsService {
    */
   private async getAnalyticsOverview(userId: string): Promise<AnalyticsOverview> {
     try {
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('*')
         .eq('user_id', userId)
@@ -233,7 +234,7 @@ export class AnalyticsService {
    */
   private async getSubjectBreakdown(userId: string): Promise<SubjectAnalytics[]> {
     try {
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('*')
         .eq('user_id', userId)
@@ -265,7 +266,7 @@ export class AnalyticsService {
    */
   private async getTopicBreakdown(userId: string): Promise<TopicAnalytics[]> {
     try {
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select(`
           *,
@@ -335,7 +336,7 @@ export class AnalyticsService {
    */
   private async getAccuracyTrend(userId: string, days: number = 30): Promise<TrendData[]> {
     try {
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('completed_at, accuracy_percent')
         .eq('user_id', userId)
@@ -377,7 +378,7 @@ export class AnalyticsService {
    */
   private async getSpeedTrend(userId: string, days: number = 30): Promise<TrendData[]> {
     try {
-      const { data: attempts } = await this.supabase
+      const { data: attempts } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('completed_at, avg_time_per_question')
         .eq('user_id', userId)
@@ -451,9 +452,8 @@ export class AnalyticsService {
     try {
       const prompt = this.buildRecommendationPrompt(overview, weakAreas);
 
-      const response = await this.aiRouter.generate({
-        systemPrompt: ANALYTICS_SYSTEM_PROMPT,
-        userPrompt: prompt,
+      const response = await callAI(prompt, {
+        system: ANALYTICS_SYSTEM_PROMPT,
         temperature: 0.3,
         maxTokens: 1000,
       });

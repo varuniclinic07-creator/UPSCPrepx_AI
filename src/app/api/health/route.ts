@@ -3,6 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Redis from 'ioredis';
 import { getCircuitBreakerStatus } from '@/lib/resilience/circuit-breaker';
 
+export const dynamic = 'force-dynamic';
+
 interface HealthCheck {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;

@@ -112,7 +112,7 @@ export function GlassSidebar({
                         </div>
                         <div className="flex gap-2">
                             <Link
-                                href="/profile"
+                                href="/dashboard/profile"
                                 className="flex-1 py-2 flex items-center justify-center gap-2 rounded-lg bg-muted/50 hover:bg-muted border border-border/50 text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <Settings className="w-4 h-4" />

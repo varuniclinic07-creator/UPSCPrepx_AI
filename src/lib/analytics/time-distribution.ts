@@ -8,17 +8,16 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export async function getTimeDistribution(userId: string, range: '7d' | '30d' = '7d') {
   const days = range === '7d' ? 7 : 30;
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('study_completions')
     .select(`
       time_spent_minutes,

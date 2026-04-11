@@ -375,7 +375,7 @@ export function ShortsGenerator({ userId, isPremium }: ShortsGeneratorProps) {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-white">
-                Video preview coming soon...
+                Video is being processed. Preview will appear here once ready.
               </div>
             )}
           </div>

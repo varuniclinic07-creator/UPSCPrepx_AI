@@ -274,7 +274,7 @@ export function SearchInterface() {
                         <span className="flex items-center gap-2">✅ Vector Search</span>
                         <span className="flex items-center gap-2">✅ Source Citations</span>
                         <span className="flex items-center gap-2">✅ AI Answer Snippets</span>
-                        <span className="flex items-center gap-2">✅ <1s Response</span>
+                        <span className="flex items-center gap-2">✅ &lt;1s Response</span>
                     </div>
                 </div>
             )}

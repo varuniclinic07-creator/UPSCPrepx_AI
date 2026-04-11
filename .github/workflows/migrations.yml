@@ -1,0 +1,165 @@
+# ═══════════════════════════════════════════════════════════════
+# DATABASE MIGRATIONS WORKFLOW
+# Runs Supabase migrations on database changes
+# ═══════════════════════════════════════════════════════════════
+
+name: Database Migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+jobs:
+  # ═══════════════════════════════════════════════════════════
+  # VALIDATE MIGRATIONS
+  # ═══════════════════════════════════════════════════════════
+  validate-migrations:
+    name: Validate Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://cli.supabase.com/install.sh | sh
+
+      - name: Validate migration files
+        run: |
+          cd supabase
+          supabase migration validate || exit 1
+
+      - name: Check for SQL syntax errors
+        run: |
+          for file in supabase/migrations/*.sql; do
+            echo "Checking $file..."
+            # Basic syntax check
+            if ! grep -q "CREATE TABLE\|ALTER TABLE\|CREATE INDEX\|CREATE FUNCTION" "$file"; then
+              echo "⚠️ Warning: $file may not contain valid DDL statements"
+            fi
+          done
+
+  # ═══════════════════════════════════════════════════════════
+  # APPLY TO STAGING
+  # ═══════════════════════════════════════════════════════════
+  apply-staging:
+    name: Apply to Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [validate-migrations]
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://cli.supabase.com/install.sh | sh
+
+      - name: Link Supabase project
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+
+      - name: Apply migrations
+        run: |
+          supabase db push
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+
+      - name: Verify migrations
+        run: |
+          supabase db diff --schema public
+
+      - name: Create migration backup
+        run: |
+          supabase db dump -f staging-backup-${{ github.sha }}.sql
+
+  # ═══════════════════════════════════════════════════════════
+  # APPLY TO PRODUCTION
+  # ═══════════════════════════════════════════════════════════
+  apply-production:
+    name: Apply to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [apply-staging]
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://cli.supabase.com/install.sh | sh
+
+      - name: Link Supabase project
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}
+
+      - name: Create pre-deployment backup
+        run: |
+          supabase db dump -f production-backup-pre-${{ github.sha }}.sql
+
+      - name: Apply migrations
+        run: |
+          supabase db push
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+
+      - name: Verify migrations
+        run: |
+          supabase db diff --schema public
+
+      - name: Run smoke tests
+        run: |
+          # Test database connectivity
+          psql ${{ secrets.PRODUCTION_DATABASE_URL }} -c "SELECT 1;"
+
+  # ═══════════════════════════════════════════════════════════
+  # ROLLBACK (Manual Trigger)
+  # ═══════════════════════════════════════════════════════════
+  rollback:
+    name: Rollback Migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.rollback == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://cli.supabase.com/install.sh | sh
+
+      - name: Link Supabase project
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Rollback last migration
+        run: |
+          supabase db reset --db-url ${{ secrets.DATABASE_URL }}

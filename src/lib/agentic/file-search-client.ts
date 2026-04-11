@@ -154,3 +154,22 @@ export function getFileSearchClient(): FileSearchClient {
   }
   return fileSearchInstance;
 }
+
+/**
+ * Check if the file search service URL is configured
+ */
+export function isFileSearchAvailable(): boolean {
+  return !!process.env.AGENTIC_FILE_SEARCH_URL;
+}
+
+/**
+ * Search files using the file search service
+ */
+export async function searchFiles(
+  query: string,
+  limit?: number
+): Promise<FileSearchResult[]> {
+  const client = getFileSearchClient();
+  const result = await client.search({ query, maxResults: limit || 10 });
+  return result.results;
+}

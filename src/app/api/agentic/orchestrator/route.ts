@@ -5,6 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
+
 
 const SERVICE_URLS = {
     webSearch: process.env.AGENTIC_WEB_SEARCH_URL || 'http://89.117.60.144:8030',
@@ -54,7 +58,17 @@ function analyzeIntent(query: string): 'web-search' | 'doc-chat' | 'file-search'
  */
 export async function POST(request: NextRequest) {
     try {
-        await requireSession();  // Auth check
+        const session = await requireSession();  // Auth check
+
+        // Rate limit check using authenticated user ID
+        const rateLimit = await checkRateLimit(session.id, RATE_LIMITS.agenticQuery);
+        if (!rateLimit.success) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+                { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+            );
+        }
+
         const body: OrchestrationRequest = await request.json();
 
         const { query, context, forceService } = body;

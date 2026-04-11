@@ -8,12 +8,25 @@ import { requireSession } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { addLectureJob } from '@/lib/queues/lecture-queue';
 import { v4 as uuidv4 } from 'uuid';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
     try {
         // 1. Require authentication
         const session = await requireSession();
         const userId = (session as any).user.id;
+
+        // Rate limit check
+        const rateLimit = await checkRateLimit(userId, RATE_LIMITS.lectureGen);
+        if (!rateLimit.success) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+                { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+            );
+        }
 
         const { topic, subject, language = 'english' } = await request.json();
 

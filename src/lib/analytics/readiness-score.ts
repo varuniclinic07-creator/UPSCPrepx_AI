@@ -9,10 +9,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export interface ReadinessResult {
   score: number;
@@ -29,7 +31,7 @@ export interface ReadinessResult {
 export class ReadinessScoreService {
   async calculate(userId: string): Promise<ReadinessResult> {
     // Fetch readiness factors from view
-    const { data: factors } = await supabase
+    const { data: factors } = await getSupabase()
       .from('v_readiness_factors')
       .select('*')
       .single();

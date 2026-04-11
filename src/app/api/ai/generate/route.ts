@@ -4,9 +4,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAIRouter } from '@/lib/ai/provider-router';
-import type { AIRequest } from '@/lib/ai/providers/provider-types';
-
+import { callAI } from '@/lib/ai/ai-provider-client';
+import { requireSession } from '@/lib/auth/session';
+import { checkAccess } from '@/lib/auth/check-access';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,29 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
+        // Auth check
+        const session = await requireSession();
+        const userId = session.id;
+
         const body = await req.json();
+
+        // Rate limit check
+        const rateLimit = await checkRateLimit(userId, RATE_LIMITS.aiGenerate);
+        if (!rateLimit.success) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+                { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+            );
+        }
+
+        // Check entitlement
+        const access = await checkAccess(userId, 'ai_chat');
+        if (!access.allowed) {
+            return NextResponse.json(
+                { error: access.reason, remaining: access.remaining },
+                { status: 403 }
+            );
+        }
 
         // Validate request
         if (!body.prompt) {
@@ -26,52 +49,34 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Build AI request from simple prompt
-        const aiRequest: AIRequest = {
-            model: body.model || 'provider-8/claude-sonnet-4.5',
-            messages: [
-                {
-                    role: 'system',
-                    content: body.systemPrompt || 'You are a helpful AI assistant for UPSC CSE preparation.',
-                },
-                {
-                    role: 'user',
-                    content: body.prompt,
-                },
-            ],
+        // Generate response using callAI
+        const generatedText = await callAI(body.prompt, {
+            system: body.systemPrompt || 'You are a helpful AI assistant for UPSC CSE preparation.',
             temperature: body.temperature ?? 0.7,
-            max_tokens: body.max_tokens ?? 4096,
-            userId: body.userId,
-            taskType: body.taskType,
-        };
-
-        // Get router instance
-        const router = getAIRouter();
-
-        // Generate response
-        const response = await router.chat(aiRequest);
-
-        // Extract generated text
-        const generatedText = response.choices[0]?.message?.content || '';
+            maxTokens: body.max_tokens ?? 4096,
+        });
 
         return NextResponse.json(
             {
                 text: generatedText,
-                model: response.model,
-                provider: response.provider,
-                usage: response.usage,
-                fallback_used: response.fallback_used,
+                provider: 'callAI',
             },
             {
                 status: 200,
                 headers: {
-                    'X-Provider': response.provider || 'unknown',
-                    'X-Fallback-Used': response.fallback_used ? 'true' : 'false',
+                    'X-Provider': 'callAI',
                 },
             }
         );
     } catch (error: any) {
         console.error('AI Generation API Error:', error);
+
+        if (error.message === 'Unauthorized') {
+            return NextResponse.json(
+                { error: 'Authentication required' },
+                { status: 401 }
+            );
+        }
 
         return NextResponse.json(
             {

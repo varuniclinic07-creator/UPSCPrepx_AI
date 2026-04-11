@@ -14,10 +14,11 @@ import { progressTracker } from '@/lib/planner/progress-tracker';
 import { milestoneManager } from '@/lib/planner/milestone-manager';
 import { z } from 'zod';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: 'Invalid input',
           error_hi: 'अमान्य इनपुट',
-          details: validation.error.errors 
+          details: validation.error.issues 
         },
         { status: 400 }
       );
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     const { task_id, time_spent_minutes, quality_rating, notes } = validation.data;
 
     // Verify task belongs to user
-    const { data: task } = await supabase
+    const { data: task } = await getSupabase()
       .from('study_tasks')
       .select('*, schedules:study_schedules(plan_id)')
       .eq('id', task_id)
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     // Verify plan ownership
     const planId = (task.schedules as any)?.plan_id;
-    const { data: plan } = await supabase
+    const { data: plan } = await getSupabase()
       .from('study_plans')
       .select('user_id')
       .eq('id', planId)

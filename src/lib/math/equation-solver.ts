@@ -3,7 +3,7 @@
 // AI-powered math equation solver
 // ═══════════════════════════════════════════════════════════════
 
-import { aiRouter } from '@/lib/ai/provider-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import { createClient } from '@/lib/supabase/server';
 
 export interface MathSolution {
@@ -37,20 +37,11 @@ Provide detailed solution in JSON format:
   "verification": "verify the answer"
 }`;
 
-    const response = await aiRouter.chat({
-        model: 'provider-8/claude-sonnet-4.5',
-        messages: [
-            {
-                role: 'system',
-                content: 'You are a mathematics tutor. Provide clear step-by-step solutions.'
-            },
-            { role: 'user', content: prompt }
-        ],
+    const content = await callAI(prompt, {
+        system: 'You are a mathematics tutor. Provide clear step-by-step solutions.',
         temperature: 0.1,
-        max_tokens: 2048
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
+        maxTokens: 2048,
+    }) || '{}';
     const parsed = JSON.parse(content);
 
     return {

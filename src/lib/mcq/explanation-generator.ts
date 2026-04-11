@@ -11,7 +11,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { aiRouter } from '@/lib/ai/ai-router';
+import { callAI } from '@/lib/ai/ai-provider-client';
 import type { Question } from './question-bank';
 
 // ============================================================================
@@ -97,19 +97,19 @@ TONE:
 - Friendly and encouraging
 - Like a helpful teacher
 - Never condescending
-- Build confidence`;n
+- Build confidence`;
 
 // ============================================================================
 // EXPLANATION GENERATOR SERVICE
 // ============================================================================
 
 export class ExplanationGeneratorService {
-  private supabase;
-  private aiRouter;
-
   constructor() {
-    this.supabase = createClient();
-    this.aiRouter = aiRouter;
+    // callAI is used directly as a module-level function
+  }
+
+  private async getSupabase() {
+    return createClient();
   }
 
   /**
@@ -149,9 +149,8 @@ export class ExplanationGeneratorService {
     try {
       const prompt = this.buildExplanationPrompt(question, selectedOption, isCorrect);
 
-      const response = await this.aiRouter.generate({
-        systemPrompt: SIMPLIFIED_LANGUAGE_SYSTEM_PROMPT,
-        userPrompt: prompt,
+      const response = await callAI(prompt, {
+        system: SIMPLIFIED_LANGUAGE_SYSTEM_PROMPT,
         temperature: 0.3,
         maxTokens: 800,
       });
@@ -247,8 +246,10 @@ KEY_POINTS:
     videos: Array<{ title: string; id: string }>;
   }> {
     try {
+      const supabase = await this.getSupabase();
+
       // Search notes library
-      const { data: notes } = await this.supabase
+      const { data: notes } = await supabase
         .from('user_notes')
         .select('id, title')
         .eq('user_id', userId)
@@ -256,14 +257,14 @@ KEY_POINTS:
         .limit(3);
 
       // Search current affairs
-      const { data: ca } = await this.supabase
+      const { data: ca } = await supabase
         .from('ca_articles')
         .select('id, title')
         .ilike('title', `%${question.topic}%`)
         .limit(3);
 
       // Search videos
-      const { data: videos } = await this.supabase
+      const { data: videos } = await supabase
         .from('videos')
         .select('id, title')
         .ilike('title', `%${question.topic}%`)

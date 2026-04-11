@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { scrapeCurrentAffairs, NEWS_SOURCES } from '@/lib/scraping/crawl4ai-client';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * CRON job to scrape current affairs from various sources
  * Triggered via HTTP request (protected by secret)

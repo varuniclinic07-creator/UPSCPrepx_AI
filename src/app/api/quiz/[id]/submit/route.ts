@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { submitQuizAttempt } from '@/lib/services/quiz-service';
 import { requireUser } from '@/lib/auth/auth-config';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: { id: string };
 }

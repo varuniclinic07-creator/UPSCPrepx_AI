@@ -7,10 +7,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface XPEvent {
   userId: string;
@@ -24,7 +23,7 @@ export class GamificationService {
   async awardXP(event: XPEvent): Promise<number> {
     try {
       // 1. Log Transaction
-      await supabase.from('xp_transactions').insert({
+      await getSupabase().from('xp_transactions').insert({
         user_id: event.userId,
         amount: event.amount,
         source: event.source,
@@ -32,7 +31,7 @@ export class GamificationService {
       });
 
       // 2. Update Stats
-      const { data: stats } = await supabase
+      const { data: stats } = await getSupabase()
         .from('user_xp_stats')
         .select('*')
         .eq('user_id', event.userId)
@@ -42,7 +41,7 @@ export class GamificationService {
       const newTotal = (stats?.total_earned || 0) + event.amount;
       const newLevel = Math.floor(newTotal / 500) + 1; // Level up every 500 XP
 
-      const { data: updatedStats } = await supabase
+      const { data: updatedStats } = await getSupabase()
         .from('user_xp_stats')
         .upsert({
           user_id: event.userId,
@@ -64,7 +63,7 @@ export class GamificationService {
   // Spend XP from balance
   async spendXP(userId: string, amount: number, description: string): Promise<boolean> {
     try {
-      const { data: stats } = await supabase
+      const { data: stats } = await getSupabase()
         .from('user_xp_stats')
         .select('current_balance')
         .eq('user_id', userId)
@@ -73,7 +72,7 @@ export class GamificationService {
       if (!stats || stats.current_balance < amount) return false;
 
       // Log negative transaction
-      await supabase.from('xp_transactions').insert({
+      await getSupabase().from('xp_transactions').insert({
         user_id: userId,
         amount: -amount,
         source: 'shop',
@@ -81,7 +80,7 @@ export class GamificationService {
       });
 
       // Update balance
-      await supabase
+      await getSupabase()
         .from('user_xp_stats')
         .update({ current_balance: stats.current_balance - amount })
         .eq('user_id', userId);
@@ -95,7 +94,7 @@ export class GamificationService {
 
   // Get User Stats
   async getStats(userId: string) {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('user_xp_stats')
       .select('*')
       .eq('user_id', userId)

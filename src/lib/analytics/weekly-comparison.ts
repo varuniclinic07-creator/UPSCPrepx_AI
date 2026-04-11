@@ -8,10 +8,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface WeekMetrics {
   hours: number;
@@ -29,13 +28,13 @@ export async function getWeeklyComparison(userId: string): Promise<{ current: We
   previousWeekStart.setDate(previousWeekStart.getDate() - 7);
 
   // Current week data
-  const { data: currentCompletions } = await supabase
+  const { data: currentCompletions } = await getSupabase()
     .from('study_completions')
     .select('time_spent_minutes, completed_at')
     .eq('user_id', userId)
     .gte('completed_at', currentWeekStart.toISOString());
 
-  const { data: previousCompletions } = await supabase
+  const { data: previousCompletions } = await getSupabase()
     .from('study_completions')
     .select('time_spent_minutes, completed_at')
     .eq('user_id', userId)
@@ -43,13 +42,13 @@ export async function getWeeklyComparison(userId: string): Promise<{ current: We
     .lt('completed_at', currentWeekStart.toISOString());
 
   // MCQ accuracy for both weeks
-  const { data: currentMCQ } = await supabase
+  const { data: currentMCQ } = await getSupabase()
     .from('mcq_attempts')
     .select('is_correct')
     .eq('user_id', userId)
     .gte('created_at', currentWeekStart.toISOString());
 
-  const { data: previousMCQ } = await supabase
+  const { data: previousMCQ } = await getSupabase()
     .from('mcq_attempts')
     .select('is_correct')
     .eq('user_id', userId)
@@ -57,14 +56,14 @@ export async function getWeeklyComparison(userId: string): Promise<{ current: We
     .lt('created_at', currentWeekStart.toISOString());
 
   // Mock tests
-  const { data: currentMocks } = await supabase
+  const { data: currentMocks } = await getSupabase()
     .from('study_tasks')
     .select('id')
     .eq('task_type', 'mock_test')
     .eq('status', 'completed')
     .gte('created_at', currentWeekStart.toISOString());
 
-  const { data: previousMocks } = await supabase
+  const { data: previousMocks } = await getSupabase()
     .from('study_tasks')
     .select('id')
     .eq('task_type', 'mock_test')
@@ -99,7 +98,7 @@ export async function getWeeklyComparison(userId: string): Promise<{ current: We
 }
 
 export async function getCurrentStreak(userId: string): Promise<number> {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('study_completions')
     .select('completed_at')
     .eq('user_id', userId)

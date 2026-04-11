@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTimeDistribution } from '@/lib/analytics/time-distribution';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');

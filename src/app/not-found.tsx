@@ -36,7 +36,7 @@ export default function NotFound() {
                     {/* Suggestions */}
                     <div className="grid grid-cols-2 gap-3 mb-8">
                         <Link
-                            href="/notes"
+                            href="/dashboard/notes"
                             className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left"
                         >
                             <div className="text-2xl mb-2">📚</div>
@@ -44,7 +44,7 @@ export default function NotFound() {
                             <div className="text-xs text-muted-foreground">Browse your notes</div>
                         </Link>
                         <Link
-                            href="/quiz"
+                            href="/dashboard/quiz"
                             className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left"
                         >
                             <div className="text-2xl mb-2">🧠</div>
@@ -52,7 +52,7 @@ export default function NotFound() {
                             <div className="text-xs text-muted-foreground">Test your knowledge</div>
                         </Link>
                         <Link
-                            href="/current-affairs"
+                            href="/dashboard/current-affairs"
                             className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left"
                         >
                             <div className="text-2xl mb-2">📰</div>
@@ -60,7 +60,7 @@ export default function NotFound() {
                             <div className="text-xs text-muted-foreground">Daily updates</div>
                         </Link>
                         <Link
-                            href="/profile"
+                            href="/dashboard/profile"
                             className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left"
                         >
                             <div className="text-2xl mb-2">👤</div>

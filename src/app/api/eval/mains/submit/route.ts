@@ -8,10 +8,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { evaluateAnswer } from '@/lib/eval/mains-evaluator-service';
 import { z } from 'zod';
+import { checkAccess } from '@/lib/auth/check-access';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
 
 // Request validation schema
 const submitSchema = z.object({
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
   
   try {
     // Step 1: Authenticate user
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
     const { data: { session }, error: authError } = await supabase.auth.getSession();
 
     if (authError || !session) {
@@ -36,20 +39,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Rate limit check
+    const rateLimit = await checkRateLimit(session.user.id, RATE_LIMITS.aiGenerate);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
+    }
+
     // Step 2: Validate request body
     const body = await request.json();
     const validation = submitSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid request', details: validation.error.errors },
+        { error: 'Invalid request', details: validation.error.issues },
         { status: 400 }
       );
     }
 
     const { question_id, answer_text, word_count, time_taken_sec } = validation.data;
 
-    // Step 3: Check subscription access (Free users get 3 evaluations/month)
+    // Step 3: Check entitlement (free: 1 mains eval/day)
+    const access = await checkAccess(session.user.id, 'mains_eval');
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: access.reason, remaining: access.remaining },
+        { status: 403 }
+      );
+    }
+
     const { data: subscription } = await supabase
       .from('user_subscriptions')
       .select('status, plan_id')
@@ -63,18 +83,25 @@ export async function POST(request: NextRequest) {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { count } = await supabase
-        .from('mains_evaluations')
-        .select('*', { count: 'exact', head: true })
-        .eq('answer_id', in (
-          supabase
-            .from('mains_answers')
-            .select('id')
-            .eq('user_id', session.user.id)
-            .gte('created_at', startOfMonth.toISOString())
-        ));
+      // First get the user's answer IDs for this month
+      const { data: answerIds } = await supabase
+        .from('mains_answers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .gte('created_at', startOfMonth.toISOString());
 
-      if ((count || 0) >= 3) {
+      const ids = (answerIds || []).map((a: any) => a.id);
+
+      let count = 0;
+      if (ids.length > 0) {
+        const { count: evalCount } = await supabase
+          .from('mains_evaluations')
+          .select('*', { count: 'exact', head: true })
+          .in('answer_id', ids);
+        count = evalCount || 0;
+      }
+
+      if (count >= 3) {
         return NextResponse.json(
           {
             error: 'Monthly limit reached',

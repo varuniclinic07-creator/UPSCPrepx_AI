@@ -39,22 +39,22 @@ interface DashboardShellProps {
 
 const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-    { icon: BookOpen, label: 'Study Notes', href: '/notes' },
-    { icon: Brain, label: 'Practice Quiz', href: '/quiz' },
-    { icon: Newspaper, label: 'Current Affairs', href: '/current-affairs' },
-    { icon: Video, label: 'Video Lectures', href: '/videos' },
-    { icon: FileText, label: 'Materials', href: '/materials' },
-    { icon: Calendar, label: 'Study Planner', href: '/planner' },
-    { icon: Star, label: 'Bookmarks', href: '/bookmarks' },
-    { icon: Map, label: 'Mind Maps', href: '/mind-maps' },
-    { icon: RotateCcw, label: 'Revision', href: '/revision' },
+    { icon: BookOpen, label: 'Study Notes', href: '/dashboard/notes' },
+    { icon: Brain, label: 'Practice Quiz', href: '/dashboard/quiz' },
+    { icon: Newspaper, label: 'Current Affairs', href: '/dashboard/current-affairs' },
+    { icon: Video, label: 'Video Lectures', href: '/dashboard/videos' },
+    { icon: FileText, label: 'Materials', href: '/dashboard/materials' },
+    { icon: Calendar, label: 'Study Planner', href: '/dashboard/planner' },
+    { icon: Star, label: 'Bookmarks', href: '/dashboard/bookmarks' },
+    { icon: Map, label: 'Mind Maps', href: '/dashboard/mindmaps' },
+    { icon: RotateCcw, label: 'Revision', href: '/dashboard/revision' },
 ];
 
 const dockItems = [
     { icon: LayoutDashboard, label: 'Home', href: '/dashboard' },
-    { icon: BookOpen, label: 'Notes', href: '/notes' },
-    { icon: Calendar, label: 'Schedule', href: '/planner' },
-    { icon: User, label: 'Profile', href: '/profile' },
+    { icon: BookOpen, label: 'Notes', href: '/dashboard/notes' },
+    { icon: Calendar, label: 'Schedule', href: '/dashboard/planner' },
+    { icon: User, label: 'Profile', href: '/dashboard/profile' },
 ];
 
 /**
@@ -72,18 +72,18 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
 // Helper to map pathname to TutorialKey
 function getTutorialKey(pathname: string): TutorialKey {
     if (pathname === '/dashboard') return 'dashboard';
-    if (pathname === '/notes/new') return 'notes-new';
-    if (pathname.startsWith('/notes')) return 'notes';
-    if (pathname.startsWith('/quiz')) return 'quiz';
-    if (pathname.startsWith('/current-affairs')) return 'current-affairs';
-    if (pathname.startsWith('/videos')) return 'videos';
-    if (pathname.startsWith('/materials')) return 'materials';
-    if (pathname.startsWith('/planner')) return 'planner';
-    if (pathname.startsWith('/bookmarks')) return 'bookmarks';
-    if (pathname.startsWith('/mind-maps')) return 'mind-maps';
-    if (pathname.startsWith('/revision')) return 'revision';
-    if (pathname.startsWith('/profile')) return 'profile';
-    if (pathname.startsWith('/leaderboard')) return 'leaderboard';
+    if (pathname === '/dashboard/notes/new') return 'notes-new';
+    if (pathname.startsWith('/dashboard/notes')) return 'notes';
+    if (pathname.startsWith('/dashboard/quiz')) return 'quiz';
+    if (pathname.startsWith('/dashboard/current-affairs')) return 'current-affairs';
+    if (pathname.startsWith('/dashboard/videos')) return 'videos';
+    if (pathname.startsWith('/dashboard/materials')) return 'materials';
+    if (pathname.startsWith('/dashboard/planner')) return 'planner';
+    if (pathname.startsWith('/dashboard/bookmarks')) return 'bookmarks';
+    if (pathname.startsWith('/dashboard/mindmaps')) return 'mind-maps';
+    if (pathname.startsWith('/dashboard/revision')) return 'revision';
+    if (pathname.startsWith('/dashboard/profile')) return 'profile';
+    if (pathname.startsWith('/dashboard/leaderboard')) return 'leaderboard';
     return 'dashboard';
 }
 
@@ -170,7 +170,7 @@ function DashboardShellInner({ children, user }: DashboardShellProps) {
                             </div>
                             <div className="flex gap-2">
                                 <Link
-                                    href="/profile"
+                                    href="/dashboard/profile"
                                     className="flex-1 py-2 flex items-center justify-center gap-2 rounded-lg bg-muted/50 hover:bg-muted border border-border/50 text-xs text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     <Settings className="w-4 h-4" />
@@ -206,7 +206,7 @@ function DashboardShellInner({ children, user }: DashboardShellProps) {
                         centerItem={{
                             icon: Sparkles,
                             label: 'AI Tutor',
-                            href: '/notes/new',
+                            href: '/dashboard/notes/new',
                             highlight: true,
                         }}
                     />

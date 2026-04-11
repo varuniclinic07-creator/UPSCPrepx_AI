@@ -7,6 +7,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAgenticNotesGenerator, NotesGenerationOptions } from '@/lib/notes/agentic-notes-generator';
 import { createClient } from '@supabase/supabase-js';
+import { requireSession } from '@/lib/auth/session';
+import { checkAccess } from '@/lib/auth/check-access';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+
+export const dynamic = 'force-dynamic';
 
 export interface GenerateNotesRequest {
   topic: string;
@@ -42,6 +47,10 @@ export interface GenerateNotesResponse {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Auth check
+    const session = await requireSession();
+    const userId = session.id;
+
     const body: GenerateNotesRequest = await request.json();
 
     // Validate required fields
@@ -52,9 +61,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get user from auth header
-    const authHeader = request.headers.get('authorization');
-    const userId = authHeader?.replace('Bearer ', '') || 'anonymous';
+    // Rate limit check
+    const rateLimit = await checkRateLimit(userId, RATE_LIMITS.notesGen);
+    if (!rateLimit.success) {
+      return NextResponse.json<GenerateNotesResponse>(
+        { success: false, error: 'Rate limit exceeded' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
+    }
+
+    // Check entitlement (free: 2 notes/day)
+    const access = await checkAccess(userId, 'notes_generate');
+    if (!access.allowed) {
+      return NextResponse.json<GenerateNotesResponse>(
+        { success: false, error: access.reason },
+        { status: 403 }
+      );
+    }
 
     // Generate notes using Agentic Intelligence
     const notesGenerator = getAgenticNotesGenerator();
@@ -132,9 +155,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Notes generation error:', error);
-    
+
+    if ((error as Error).message === 'Unauthorized') {
+      return NextResponse.json<GenerateNotesResponse>(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate notes';
-    
+
     return NextResponse.json<GenerateNotesResponse>({
       success: false,
       error: errorMessage,
@@ -148,12 +178,15 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Auth check
+    const session = await requireSession();
+    const userId = session.id;
+
     const searchParams = request.nextUrl.searchParams;
     const noteId = searchParams.get('id');
-    const userId = searchParams.get('user_id');
 
     if (noteId) {
-      // Get specific note
+      // Get specific note - scoped to authenticated user
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -163,6 +196,7 @@ export async function GET(request: NextRequest) {
         .from('user_generated_notes')
         .select('*')
         .eq('id', noteId)
+        .eq('user_id', userId)
         .single();
 
       if (error || !data) {
@@ -172,31 +206,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, note: data });
     }
 
-    if (userId) {
-      // Get user's notes
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      );
+    // Get authenticated user's notes
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-      const { data, error } = await supabase
-        .from('user_generated_notes')
-        .select('id, topic, subject, brevity_level, word_count, status, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20);
+    const { data, error } = await supabase
+      .from('user_generated_notes')
+      .select('id, topic, subject, brevity_level, word_count, status, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
 
-      if (error) {
-        return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true, notes: data });
+    if (error) {
+      return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
     }
 
-    return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    return NextResponse.json({ success: true, notes: data });
 
   } catch (error) {
     console.error('Get notes error:', error);
+
+    if ((error as Error).message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     return NextResponse.json({ error: 'Failed to get notes' }, { status: 500 });
   }
 }

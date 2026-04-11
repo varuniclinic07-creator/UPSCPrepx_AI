@@ -12,10 +12,11 @@ import { createClient } from '@supabase/supabase-js';
 import { adaptiveAdjuster } from '@/lib/planner/adaptive-adjuster';
 import { z } from 'zod';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     if (!planId) {
       // Get user's active plan
-      const { data: plan } = await supabase
+      const { data: plan } = await getSupabase()
         .from('study_plans')
         .select('id')
         .eq('user_id', userId)
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify plan ownership
-    const { data: plan } = await supabase
+    const { data: plan } = await getSupabase()
       .from('study_plans')
       .select('user_id')
       .eq('id', planId)
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: 'Invalid input',
           error_hi: 'अमान्य इनपुट',
-          details: validation.error.errors 
+          details: validation.error.issues 
         },
         { status: 400 }
       );
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
     const { plan_id, adjustment_type, options } = validation.data;
 
     // Verify plan ownership
-    const { data: plan } = await supabase
+    const { data: plan } = await getSupabase()
       .from('study_plans')
       .select('user_id')
       .eq('id', plan_id)

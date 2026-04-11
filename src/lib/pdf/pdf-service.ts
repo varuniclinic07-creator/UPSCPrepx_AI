@@ -9,10 +9,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _sb: ReturnType<typeof createClient> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface PdfDocument {
   id?: string;
@@ -38,7 +37,7 @@ export async function uploadDocument(userId: string, title: string, filePath: st
   // For now, we simulate document creation
   const doc: PdfDocument = { title, storage_path: filePath, total_pages: totalPages };
   
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('pdf_documents')
     .insert([{ ...doc, user_id: userId }])
     .select()
@@ -49,7 +48,7 @@ export async function uploadDocument(userId: string, title: string, filePath: st
 }
 
 export async function getAnnotations(documentId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('pdf_annotations')
     .select('*')
     .eq('document_id', documentId)
@@ -61,7 +60,7 @@ export async function getAnnotations(documentId: string) {
 }
 
 export async function saveAnnotation(userId: string, annotation: PdfAnnotation) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('pdf_annotations')
     .insert([{ ...annotation, user_id: userId }])
     .select()
@@ -72,7 +71,7 @@ export async function saveAnnotation(userId: string, annotation: PdfAnnotation) 
 }
 
 export async function updateProgress(userId: string, documentId: string, progress: { last_page: number; percentage: number }) {
-  await supabase.from('pdf_progress').upsert({
+  await getSupabase().from('pdf_progress').upsert({
     user_id: userId,
     document_id: documentId,
     last_page: progress.last_page,

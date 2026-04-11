@@ -1,0 +1,51 @@
+# ═══════════════════════════════════════════════════════════════
+# UPSC PREPX-AI - POD DISRUPTION BUDGETS
+# Ensure high availability during voluntary disruptions
+# ═══════════════════════════════════════════════════════════════
+
+# Web PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: upsc-web-pdb
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-web-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-web
+      app.kubernetes.io/component: frontend
+
+---
+# API PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: upsc-api-pdb
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-api-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-api
+      app.kubernetes.io/component: backend
+
+---
+# Worker PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: upsc-worker-pdb
+  namespace: upsc-prepx-ai
+  labels:
+    app.kubernetes.io/name: upsc-worker-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: upsc-worker
+      app.kubernetes.io/component: worker
