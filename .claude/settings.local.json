@@ -73,7 +73,21 @@
       "Bash(tasklist)",
       "Bash(taskkill /F /IM git.exe)",
       "Bash(rm -f C:/Users/DR-VARUNI/Desktop/upsc_ai/.git/index.lock)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(grep -rl \"gsk_[A-Za-z0-9]\\\\{20,\\\\}\" C:/Users/DR-VARUNI/Desktop/upsc_ai --include=\"*.yaml\" --include=\"*.yml\" --include=\"*.env*\" --include=\"*.json\")",
+      "Bash(git filter-repo:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(find /c/Users/DR-VARUNI/Desktop/upsc_ai/src/app/api -type f -name \"route.ts\" -exec sh -c 'grep -l \"export async function\" \"$1\" | xargs -I {} grep \"export async function\" {} | sort -u' _ {} \\\\;)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(grep -r \"{\\\\s*params\\\\s*,\" /c/Users/DR-VARUNI/Desktop/upsc_ai/src/app --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(find /c/Users/DR-VARUNI/Desktop/upsc_ai/src/app -name \"page.tsx\" -exec grep -l \"SearchParams\\\\|params\\\\|async\" {} \\\\;)",
+      "WebSearch",
+      "Bash(rm -rf \"src/app/api/auth/[...nextauth]\")",
+      "Bash(rm -f src/lib/auth/auth-guards.tsx)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

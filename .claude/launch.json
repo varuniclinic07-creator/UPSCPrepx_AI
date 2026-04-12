@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Next.js Dev Server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "Next.js Production Server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "port": 3000
+    },
+    {
+      "name": "Remotion Video Service",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["remotion-service/server.js"],
+      "port": 8034
+    },
+    {
+      "name": "React Native (Mobile App)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--prefix", "mobile-app"],
+      "port": 8081
+    },
+    {
+      "name": "Docker Compose (All Services)",
+      "runtimeExecutable": "docker-compose",
+      "runtimeArgs": ["up", "-d"],
+      "port": 0
+    }
+  ]
+}
