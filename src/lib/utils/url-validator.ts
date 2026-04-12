@@ -8,28 +8,27 @@
  */
 function isValidProductionUrl(url: string | undefined): boolean {
   if (!url) return false;
-  
-  // Reject common placeholder patterns
+
   const placeholderPatterns = [
     'your-production-domain',
     'yourdomain',
     'example.com',
-    'localhost',
     'placeholder',
   ];
-  
+
   const lowerUrl = url.toLowerCase();
   for (const pattern of placeholderPatterns) {
     if (lowerUrl.includes(pattern)) {
       return false;
     }
   }
-  
-  // Must start with https:// for production
-  if (process.env.NODE_ENV === 'production' && !url.startsWith('https://')) {
-    return false;
+
+  // In production, must start with https:// and NOT be localhost
+  if (process.env.NODE_ENV === 'production') {
+    if (!url.startsWith('https://')) return false;
+    if (lowerUrl.includes('localhost')) return false;
   }
-  
+
   return true;
 }
 
@@ -41,7 +40,9 @@ function isValidProductionUrl(url: string | undefined): boolean {
 export function getAppUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL;
   const nextAuthUrl = process.env.NEXTAUTH_URL;
-  
+  // Coolify injects these automatically into containers
+  const coolifyUrl = process.env.COOLIFY_URL;
+
   // Server-side: use environment variables (with validation)
   if (typeof window === 'undefined') {
     if (isValidProductionUrl(envUrl)) {
@@ -50,29 +51,24 @@ export function getAppUrl(): string {
     if (isValidProductionUrl(nextAuthUrl)) {
       return nextAuthUrl!;
     }
+    if (isValidProductionUrl(coolifyUrl)) {
+      return coolifyUrl!;
+    }
     return 'http://localhost:3000';
   }
 
-  // Client-side: prefer env var (if valid), fallback to current origin
-  
-  // If env var is set, valid, and we're in production, use it
-  if (isValidProductionUrl(envUrl) && process.env.NODE_ENV === 'production') {
+  // Client-side: prefer valid env var
+  if (isValidProductionUrl(envUrl)) {
     return envUrl!;
   }
-  
-  // In development, use current origin for flexibility
-  if (process.env.NODE_ENV === 'development') {
+
+  // In production, always use window.location.origin as the most reliable source
+  // This handles the case where NEXT_PUBLIC_APP_URL was missing at build time
+  if (process.env.NODE_ENV === 'production') {
     return window.location.origin;
   }
-  
-  // Production fallback: use origin if env var is invalid/missing
-  // This prevents redirects to placeholder domains
-  if (!isValidProductionUrl(envUrl)) {
-    console.warn('[URL Validator] Invalid NEXT_PUBLIC_APP_URL detected, using window.location.origin');
-    return window.location.origin;
-  }
-  
-  return envUrl || window.location.origin;
+
+  return window.location.origin;
 }
 
 /**
