@@ -15,3 +15,17 @@ dist
 build
 *.md
 !README.md
+__tests__
+_bmad
+.claude
+docker
+k8s
+scripts
+supabase
+*.test.ts
+*.test.tsx
+*.spec.ts
+jest.config.*
+tsconfig.jest.json
+apikey-upsc.txt
+docker-compose*.yml
