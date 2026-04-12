@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
@@ -34,7 +34,7 @@ export async function GET(
       );
     }
 
-    const threadId = params.id;
+    const { id: threadId } = await params;
 
     if (!threadId) {
       return NextResponse.json(
@@ -99,7 +99,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
@@ -113,7 +113,7 @@ export async function DELETE(
       );
     }
 
-    const threadId = params.id;
+    const { id: threadId } = await params;
 
     if (!threadId) {
       return NextResponse.json(

@@ -206,10 +206,10 @@ function transformMCQ(mcq: any) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const startTime = Date.now();
-  const articleId = params.id;
+  const { id: articleId } = await params;
 
   try {
     // Get user from auth header (optional)

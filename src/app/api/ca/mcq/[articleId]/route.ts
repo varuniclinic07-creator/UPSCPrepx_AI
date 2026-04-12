@@ -172,10 +172,10 @@ async function updateUserStats(userId: string, isCorrect: boolean) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { articleId: string } }
+  { params }: { params: Promise<{ articleId: string }> }
 ) {
   const startTime = Date.now();
-  const articleId = params.articleId;
+  const { articleId } = await params;
 
   try {
     // Get user from auth header (optional)
@@ -257,10 +257,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { articleId: string } }
+  { params }: { params: Promise<{ articleId: string }> }
 ) {
   const startTime = Date.now();
-  const articleId = params.articleId;
+  const { articleId } = await params;
 
   try {
     // Get user from auth header (required for submission)

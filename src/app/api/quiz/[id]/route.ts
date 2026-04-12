@@ -5,7 +5,7 @@ import { requireUser } from '@/lib/auth/auth-config';
 export const dynamic = 'force-dynamic';
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -15,7 +15,7 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const user = await requireUser();
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -61,7 +61,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const user = await requireUser();
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(

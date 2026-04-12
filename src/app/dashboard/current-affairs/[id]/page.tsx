@@ -9,18 +9,20 @@ import { Button } from '@/components/ui/button';
 import { getCurrentAffairById } from '@/lib/services/current-affairs-service';
 
 interface CurrentAffairPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: CurrentAffairPageProps) {
-  const affair = await getCurrentAffairById(params.id);
+  const { id } = await params;
+  const affair = await getCurrentAffairById(id);
   return {
     title: affair?.topic || 'Article Not Found',
   };
 }
 
 export default async function CurrentAffairPage({ params }: CurrentAffairPageProps) {
-  const affair = await getCurrentAffairById(params.id);
+  const { id } = await params;
+  const affair = await getCurrentAffairById(id);
 
   if (!affair) {
     notFound();

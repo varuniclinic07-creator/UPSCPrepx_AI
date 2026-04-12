@@ -5,7 +5,7 @@ import { requireUser } from '@/lib/auth/auth-config';
 export const dynamic = 'force-dynamic';
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -15,7 +15,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await requireUser();
-    const { id: quizId } = params;
+    const { id: quizId } = await params;
 
     if (!quizId) {
       return NextResponse.json(

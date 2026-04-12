@@ -6,15 +6,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
     _request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await requireSession();
         const supabase = await createClient();
+        const { id } = await params;
 
         const { data: messages, error } = await (supabase.from('group_messages') as any)
             .select('*, sender:users(name, avatar_url)')
-            .eq('group_id', params.id)
+            .eq('group_id', id)
             .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -30,11 +31,12 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await requireSession();
         const supabase = await createClient();
+        const { id } = await params;
         const { content } = await request.json();
 
         if (!content?.trim()) {
@@ -43,7 +45,7 @@ export async function POST(
 
         const { data: message, error } = await (supabase.from('group_messages') as any)
             .insert({
-                group_id: params.id,
+                group_id: id,
                 sender_id: (session as any).user.id,
                 content: content.trim(),
             })

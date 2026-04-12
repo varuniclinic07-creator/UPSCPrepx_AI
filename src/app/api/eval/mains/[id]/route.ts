@@ -12,7 +12,7 @@ import { getEvaluationById } from '@/lib/eval/mains-evaluator-service';
 export const dynamic = 'force-dynamic';
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(
@@ -31,7 +31,7 @@ export async function GET(
       );
     }
 
-    const evaluationId = params.id;
+    const { id: evaluationId } = await params;
 
     if (!evaluationId) {
       return NextResponse.json(
@@ -100,7 +100,7 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const evaluationId = params.id;
+    const { id: evaluationId } = await params;
     const body = await request.json();
 
     const { rating, was_helpful, feedback_text } = body;

@@ -14,12 +14,13 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         await requireSession();
 
-        const topper = getTopperById(params.id);
+        const { id } = await params;
+        const topper = getTopperById(id);
 
         if (!topper) {
             return NextResponse.json(

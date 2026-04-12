@@ -9,18 +9,20 @@ import { Button } from '@/components/ui/button';
 import { getNoteById } from '@/lib/services/notes-service';
 
 interface NotePageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: NotePageProps) {
-  const note = await getNoteById(params.id);
+  const { id } = await params;
+  const note = await getNoteById(id);
   return {
     title: note?.title || 'Note Not Found',
   };
 }
 
 export default async function NotePage({ params }: NotePageProps) {
-  const note = await getNoteById(params.id);
+  const { id } = await params;
+  const note = await getNoteById(id);
 
   if (!note) {
     notFound();

@@ -17,7 +17,7 @@ function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SU
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = request.headers.get('x-user-id');
@@ -25,13 +25,14 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    const { id } = await params;
     const { timestamp_seconds, content } = await request.json();
 
     const { data, error } = await getSupabase()
       .from('video_notes')
       .insert({
         user_id: userId,
-        video_request_id: params.id,
+        video_request_id: id,
         timestamp_seconds,
         content
       })
@@ -49,7 +50,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = request.headers.get('x-user-id');
@@ -57,11 +58,13 @@ export async function GET(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const { data, error } = await getSupabase()
       .from('video_notes')
       .select('*')
       .eq('user_id', userId)
-      .eq('video_request_id', params.id)
+      .eq('video_request_id', id)
       .order('timestamp_seconds', { ascending: true });
 
     if (error) throw error;
