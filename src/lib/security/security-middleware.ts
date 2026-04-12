@@ -467,7 +467,7 @@ export async function withSecurity(
 
     // Log completion
     const duration = Date.now() - startTime;
-    console.log(`[SECURITY] Request completed: ${request.method} ${request.nextUrl.pathname} (${duration}ms)`);
+    console.debug(`[SECURITY] Request completed: ${request.method} ${request.nextUrl.pathname} (${duration}ms)`);
 
     return response;
 

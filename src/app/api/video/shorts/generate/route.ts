@@ -212,7 +212,7 @@ async function generateVideoAsync(
       })
       .eq('id', queueId);
 
-    console.log(`Video ${queueId} generation completed successfully`);
+    console.debug(`Video ${queueId} generation completed successfully`);
 
   } catch (error) {
     console.error(`Video ${queueId} generation failed:`, error);

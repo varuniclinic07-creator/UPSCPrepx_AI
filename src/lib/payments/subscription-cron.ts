@@ -22,7 +22,7 @@ export async function expireSubscriptions() {
             .lt('ends_at', now);
 
         if (!expiredSubs || expiredSubs.length === 0) {
-            console.log('No subscriptions to expire');
+            console.debug('No subscriptions to expire');
             return 0;
         }
 
@@ -44,10 +44,10 @@ export async function expireSubscriptions() {
                 })
                 .eq('id', sub.user_id);
 
-            console.log(`Expired subscription ${sub.id} for user ${sub.user_id}`);
+            console.debug(`Expired subscription ${sub.id} for user ${sub.user_id}`);
         }
 
-        console.log(`✅ Expired ${expiredSubs.length} subscriptions`);
+        console.debug(`✅ Expired ${expiredSubs.length} subscriptions`);
         return expiredSubs.length;
     } catch (error) {
         console.error('Subscription expiry error:', error);
@@ -79,7 +79,7 @@ export async function sendRenewalReminders() {
             .lte('ends_at', sevenDaysLater.toISOString());
 
         if (!expiringSubs || expiringSubs.length === 0) {
-            console.log('No subscriptions expiring soon');
+            console.debug('No subscriptions expiring soon');
             return 0;
         }
 
@@ -90,7 +90,7 @@ export async function sendRenewalReminders() {
             const planName = sub.subscription_plans?.name || sub.tier;
             const expiryDate = new Date(sub.ends_at).toLocaleDateString('en-IN');
 
-            console.log(`📧 Reminder: ${userName} (${userEmail}) - ${planName} expires on ${expiryDate}`);
+            console.debug(`📧 Reminder: ${userName} (${userEmail}) - ${planName} expires on ${expiryDate}`);
 
             // TODO: Send actual email via SendGrid/SES/Resend
             // In production, integrate with email service:
@@ -107,7 +107,7 @@ export async function sendRenewalReminders() {
             // });
         }
 
-        console.log(`✅ Sent ${expiringSubs.length} renewal reminders`);
+        console.debug(`✅ Sent ${expiringSubs.length} renewal reminders`);
         return expiringSubs.length;
 
     } catch (error) {
@@ -141,7 +141,7 @@ export async function resetDailyUsageLimits() {
             return 0;
         }
 
-        console.log('✅ Reset daily usage limits');
+        console.debug('✅ Reset daily usage limits');
         return 1;
     } catch (error) {
         console.error('Usage limit reset error:', error);
@@ -153,13 +153,13 @@ export async function resetDailyUsageLimits() {
  * Run all subscription maintenance tasks
  */
 export async function runSubscriptionMaintenance() {
-    console.log('🔄 Running subscription maintenance...');
+    console.debug('🔄 Running subscription maintenance...');
 
     const expiredCount = await expireSubscriptions();
     const remindersCount = await sendRenewalReminders();
     await resetDailyUsageLimits();
 
-    console.log(`✅ Maintenance complete - ${expiredCount} expired, ${remindersCount} reminders sent`);
+    console.debug(`✅ Maintenance complete - ${expiredCount} expired, ${remindersCount} reminders sent`);
 }
 
 // Export for cron job

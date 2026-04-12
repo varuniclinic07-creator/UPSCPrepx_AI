@@ -1,4 +1,4 @@
-const MAUTIC_URL = process.env.MAUTIC_URL || 'http://89.117.60.144:8083';
+const MAUTIC_URL = process.env.MAUTIC_URL || '';
 const MAUTIC_USERNAME = process.env.MAUTIC_USERNAME;
 const MAUTIC_PASSWORD = process.env.MAUTIC_PASSWORD;
 

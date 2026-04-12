@@ -138,7 +138,7 @@ export async function generateMCQsForArticle(
   fullContent: string,
   count: number = 3
 ): Promise<MCQ[]> {
-  console.log(`Generating ${count} MCQs for article: ${title.substring(0, 50)}...`);
+  console.debug(`Generating ${count} MCQs for article: ${title.substring(0, 50)}...`);
 
   try {
     // Build AI prompt
@@ -189,7 +189,7 @@ export async function generateMCQsForArticle(
       return true;
     });
 
-    console.log(`Generated ${validMcqs.length} valid MCQs out of ${mcqs.length}`);
+    console.debug(`Generated ${validMcqs.length} valid MCQs out of ${mcqs.length}`);
 
     return validMcqs;
   } catch (error) {
@@ -206,7 +206,7 @@ export async function saveMCQs(
   mcqs: MCQ[]
 ): Promise<void> {
   if (mcqs.length === 0) {
-    console.log('No MCQs to save');
+    console.debug('No MCQs to save');
     return;
   }
 
@@ -230,7 +230,7 @@ export async function saveMCQs(
 
     if (error) throw error;
 
-    console.log(`Saved ${mcqs.length} MCQs for article ${articleId}`);
+    console.debug(`Saved ${mcqs.length} MCQs for article ${articleId}`);
   } catch (error) {
     console.error('Failed to save MCQs:', error);
     throw error;
@@ -249,7 +249,7 @@ export async function processArticlesForMCQs(
   }>,
   mcqsPerArticle: number = 3
 ): Promise<number> {
-  console.log(`Processing ${articles.length} articles for MCQ generation...`);
+  console.debug(`Processing ${articles.length} articles for MCQ generation...`);
 
   let totalMcqs = 0;
   let successCount = 0;
@@ -272,9 +272,9 @@ export async function processArticlesForMCQs(
         totalMcqs += mcqs.length;
         successCount++;
 
-        console.log(`✓ Article ${article.id}: ${mcqs.length} MCQs`);
+        console.debug(`✓ Article ${article.id}: ${mcqs.length} MCQs`);
       } else {
-        console.log(`⚠ Article ${article.id}: No valid MCQs generated`);
+        console.debug(`⚠ Article ${article.id}: No valid MCQs generated`);
       }
     } catch (error) {
       console.error(`✗ Article ${article.id} failed:`, error);
@@ -285,7 +285,7 @@ export async function processArticlesForMCQs(
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
-  console.log(
+  console.debug(
     `\n=== MCQ Generation Complete ===
 Success: ${successCount}/${articles.length}
 Errors: ${errorCount}

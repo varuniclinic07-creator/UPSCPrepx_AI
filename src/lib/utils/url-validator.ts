@@ -137,7 +137,7 @@ export function isProduction(): boolean {
 export function logUrlConfig(): void {
   if (process.env.NODE_ENV !== 'development') return;
   
-  console.log('[URL Config]', {
+  console.debug('[URL Config]', {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NODE_ENV: process.env.NODE_ENV,

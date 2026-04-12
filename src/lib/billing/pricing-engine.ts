@@ -385,7 +385,7 @@ export class PricingEngine {
       this.currentSurgeMultiplier = newMultiplier;
       this.lastSurgeAdjustment = now;
 
-      console.log(`[PricingEngine] Surge multiplier updated to ${newMultiplier.toFixed(2)}x`);
+      console.debug(`[PricingEngine] Surge multiplier updated to ${newMultiplier.toFixed(2)}x`);
     }
   }
 

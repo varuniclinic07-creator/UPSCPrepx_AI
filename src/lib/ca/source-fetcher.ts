@@ -133,7 +133,7 @@ async function fetchFromRSS(source: SourceConfig): Promise<RawArticle[]> {
   }
 
   try {
-    console.log(`Fetching from RSS: ${source.name} (${source.rssFeedUrl})`);
+    console.debug(`Fetching from RSS: ${source.name} (${source.rssFeedUrl})`);
     
     const feed = await rssParser.parseURL(source.rssFeedUrl);
     
@@ -148,7 +148,7 @@ async function fetchFromRSS(source: SourceConfig): Promise<RawArticle[]> {
       author: item.creator || undefined,
     }));
 
-    console.log(`Fetched ${articles.length} articles from ${source.name} RSS`);
+    console.debug(`Fetched ${articles.length} articles from ${source.name} RSS`);
     return articles;
   } catch (error) {
     console.error(`RSS fetch failed for ${source.name}:`, error);
@@ -165,7 +165,7 @@ async function fetchFromAPI(source: SourceConfig): Promise<RawArticle[]> {
   }
 
   try {
-    console.log(`Fetching from API: ${source.name}`);
+    console.debug(`Fetching from API: ${source.name}`);
     
     const response = await fetch(source.apiEndpoint, {
       method: 'GET',
@@ -193,7 +193,7 @@ async function fetchFromAPI(source: SourceConfig): Promise<RawArticle[]> {
       author: item.author || undefined,
     }));
 
-    console.log(`Fetched ${articles.length} articles from ${source.name} API`);
+    console.debug(`Fetched ${articles.length} articles from ${source.name} API`);
     return articles;
   } catch (error) {
     console.error(`API fetch failed for ${source.name}:`, error);
@@ -205,7 +205,7 @@ async function fetchFromAPI(source: SourceConfig): Promise<RawArticle[]> {
  * Fetch articles from all active sources
  */
 export async function fetchFromAllSources(): Promise<FetchedArticle[]> {
-  console.log('Fetching from all sources...');
+  console.debug('Fetching from all sources...');
   
   const allArticles: FetchedArticle[] = [];
   const errors: { source: string; error: string }[] = [];
@@ -229,7 +229,7 @@ export async function fetchFromAllSources(): Promise<FetchedArticle[]> {
       }));
 
       allArticles.push(...fetchedArticles);
-      console.log(`✓ ${source.name}: ${fetchedArticles.length} articles`);
+      console.debug(`✓ ${source.name}: ${fetchedArticles.length} articles`);
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -238,7 +238,7 @@ export async function fetchFromAllSources(): Promise<FetchedArticle[]> {
     }
   }
 
-  console.log(`Total fetched: ${allArticles.length} articles from ${WHITELISTED_SOURCES.length - errors.length} sources`);
+  console.debug(`Total fetched: ${allArticles.length} articles from ${WHITELISTED_SOURCES.length - errors.length} sources`);
   
   if (errors.length > 0) {
     console.warn('Fetch errors:', errors);
@@ -257,7 +257,7 @@ export async function fetchFromAllSources(): Promise<FetchedArticle[]> {
 export async function checkDuplicates(
   articles: FetchedArticle[]
 ): Promise<FetchedArticle[]> {
-  console.log('Checking for duplicates...');
+  console.debug('Checking for duplicates...');
 
   // Get existing article URLs from database (last 7 days)
   const { data: existingArticles } = await getSupabase()
@@ -266,7 +266,7 @@ export async function checkDuplicates(
     .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   if (!existingArticles) {
-    console.log('No existing articles found, skipping deduplication');
+    console.debug('No existing articles found, skipping deduplication');
     return articles;
   }
 
@@ -299,7 +299,7 @@ export async function checkDuplicates(
   const duplicates = deduplicatedArticles.filter(a => a.isDuplicate);
   const unique = deduplicatedArticles.filter(a => !a.isDuplicate);
 
-  console.log(`Duplicates found: ${duplicates.length}, Unique: ${unique.length}`);
+  console.debug(`Duplicates found: ${duplicates.length}, Unique: ${unique.length}`);
 
   return deduplicatedArticles;
 }
@@ -406,7 +406,7 @@ export async function saveArticles(
     }
   }
 
-  console.log(`Saved ${savedIds.length} articles to database`);
+  console.debug(`Saved ${savedIds.length} articles to database`);
   return savedIds;
 }
 
@@ -422,22 +422,22 @@ export async function fetchDailyArticles(date: string): Promise<{
   articleCount: number;
   savedArticleIds: string[];
 }> {
-  console.log(`\n=== Starting Daily CA Fetch for ${date} ===`);
+  console.debug(`\n=== Starting Daily CA Fetch for ${date} ===`);
 
   // Step 1: Get or create digest
   const digest = await getOrCreateDigest(date);
-  console.log(`Digest ID: ${digest.id}`);
+  console.debug(`Digest ID: ${digest.id}`);
 
   // Step 2: Fetch from all sources
   const allArticles = await fetchFromAllSources();
-  console.log(`Total articles fetched: ${allArticles.length}`);
+  console.debug(`Total articles fetched: ${allArticles.length}`);
 
   // Step 3: Check duplicates against database
   const articlesWithDupCheck = await checkDuplicates(allArticles);
 
   // Step 4: Remove duplicates (keep highest priority)
   const uniqueArticles = removeDuplicates(articlesWithDupCheck);
-  console.log(`Unique articles after deduplication: ${uniqueArticles.length}`);
+  console.debug(`Unique articles after deduplication: ${uniqueArticles.length}`);
 
   // Step 5: Save to database
   const savedIds = await saveArticles(digest.id, uniqueArticles);
@@ -451,7 +451,7 @@ export async function fetchDailyArticles(date: string): Promise<{
     })
     .eq('id', digest.id);
 
-  console.log(`\n=== Fetch Complete: ${savedIds.length} articles saved ===\n`);
+  console.debug(`\n=== Fetch Complete: ${savedIds.length} articles saved ===\n`);
 
   return {
     digestId: digest.id,
@@ -469,9 +469,9 @@ if (typeof require !== 'undefined' && require.main === module) {
   
   fetchDailyArticles(date)
     .then(result => {
-      console.log('\n✅ Daily CA Fetch Completed Successfully');
-      console.log(`Digest ID: ${result.digestId}`);
-      console.log(`Articles: ${result.articleCount}`);
+      console.debug('\n✅ Daily CA Fetch Completed Successfully');
+      console.debug(`Digest ID: ${result.digestId}`);
+      console.debug(`Articles: ${result.articleCount}`);
       process.exit(0);
     })
     .catch(error => {

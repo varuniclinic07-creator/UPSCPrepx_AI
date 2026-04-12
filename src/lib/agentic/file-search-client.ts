@@ -37,8 +37,8 @@ export class FileSearchClient {
   private timeout: number;
 
   constructor() {
-    // Connect to agentic-file-search service on VPS
-    this.baseUrl = process.env.AGENTIC_FILE_SEARCH_URL || 'http://89.117.60.144:8032';
+    // Connect to agentic-file-search service (URL must be set via AGENTIC_FILE_SEARCH_URL env var)
+    this.baseUrl = process.env.AGENTIC_FILE_SEARCH_URL || '';
     this.timeout = 30000; // 30 seconds for file navigation
   }
 

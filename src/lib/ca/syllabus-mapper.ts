@@ -145,7 +145,7 @@ export async function mapArticleToSyllabus(
   summary: string,
   fullContent: string
 ): Promise<SyllabusMatch[]> {
-  console.log(`Mapping article to syllabus: ${title.substring(0, 50)}...`);
+  console.debug(`Mapping article to syllabus: ${title.substring(0, 50)}...`);
 
   try {
     // Build AI prompt
@@ -180,7 +180,7 @@ export async function mapArticleToSyllabus(
       );
     });
 
-    console.log(`Found ${validMappings.length} valid syllabus mappings`);
+    console.debug(`Found ${validMappings.length} valid syllabus mappings`);
 
     // Try to match syllabus_node_id from database
     for (const mapping of validMappings) {
@@ -250,7 +250,7 @@ export async function saveSyllabusMappings(
   mappings: SyllabusMatch[]
 ): Promise<void> {
   if (mappings.length === 0) {
-    console.log('No mappings to save');
+    console.debug('No mappings to save');
     return;
   }
 
@@ -269,7 +269,7 @@ export async function saveSyllabusMappings(
 
     if (error) throw error;
 
-    console.log(`Saved ${mappings.length} syllabus mappings for article ${articleId}`);
+    console.debug(`Saved ${mappings.length} syllabus mappings for article ${articleId}`);
   } catch (error) {
     console.error('Failed to save syllabus mappings:', error);
     throw error;
@@ -287,7 +287,7 @@ export async function processArticlesForSyllabus(
     full_content: string;
   }>
 ): Promise<number> {
-  console.log(`Processing ${articles.length} articles for syllabus mapping...`);
+  console.debug(`Processing ${articles.length} articles for syllabus mapping...`);
 
   let totalMappings = 0;
   let successCount = 0;
@@ -309,9 +309,9 @@ export async function processArticlesForSyllabus(
         totalMappings += mappings.length;
         successCount++;
 
-        console.log(`✓ Article ${article.id}: ${mappings.length} mappings`);
+        console.debug(`✓ Article ${article.id}: ${mappings.length} mappings`);
       } else {
-        console.log(`⚠ Article ${article.id}: No valid mappings found`);
+        console.debug(`⚠ Article ${article.id}: No valid mappings found`);
       }
     } catch (error) {
       console.error(`✗ Article ${article.id} failed:`, error);
@@ -322,7 +322,7 @@ export async function processArticlesForSyllabus(
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 
-  console.log(
+  console.debug(
     `\n=== Syllabus Mapping Complete ===
 Success: ${successCount}/${articles.length}
 Errors: ${errorCount}

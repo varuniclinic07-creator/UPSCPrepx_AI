@@ -69,7 +69,7 @@ export class CircuitBreaker {
 
             try {
                 await Promise.race([connectPromise, timeoutPromise]);
-                console.log('[CircuitBreaker] Redis connected successfully');
+                console.debug('[CircuitBreaker] Redis connected successfully');
             } catch (e) {
                 console.warn('[CircuitBreaker] Redis unavailable, using in-memory fallback');
                 this.usingFallback = true;
@@ -203,7 +203,7 @@ export class CircuitBreaker {
         }
 
         await this.saveState(provider, state);
-        console.log(`Circuit breaker for ${provider} changed to ${newState}`);
+        console.debug(`Circuit breaker for ${provider} changed to ${newState}`);
     }
 
     // ═════════════════════════════════════════════════════════════════════════

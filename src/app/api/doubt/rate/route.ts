@@ -69,14 +69,14 @@ export async function POST(request: NextRequest) {
 
     // If flagged, notify admin (optional - implement with notification service)
     if (data.is_flagged) {
-      console.log(`Answer ${data.answer_id} flagged by user ${user.id}`);
+      console.debug(`Answer ${data.answer_id} flagged by user ${user.id}`);
       // TODO: Send notification to admin queue
     }
 
     // Update provider analytics (optional)
     if (data.rating && data.rating <= 2) {
       // Track low ratings for provider performance analysis
-      console.log(`Low rating (${data.rating}) for answer ${data.answer_id}`);
+      console.debug(`Low rating (${data.rating}) for answer ${data.answer_id}`);
     }
 
     return NextResponse.json({

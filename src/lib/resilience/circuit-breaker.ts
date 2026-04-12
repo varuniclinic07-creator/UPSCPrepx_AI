@@ -39,7 +39,7 @@ class CircuitBreaker {
     if (this.state === 'OPEN') {
       if (this.shouldAttemptReset()) {
         this.state = 'HALF_OPEN';
-        console.log(`[Circuit Breaker: ${this.name}] Attempting reset (HALF_OPEN)`);
+        console.debug(`[Circuit Breaker: ${this.name}] Attempting reset (HALF_OPEN)`);
       } else {
         throw new Error(`Circuit breaker is OPEN for ${this.name}`);
       }
@@ -72,7 +72,7 @@ class CircuitBreaker {
       if (this.stats.successes >= this.config.successThreshold) {
         this.state = 'CLOSED';
         this.stats.successes = 0;
-        console.log(`[Circuit Breaker: ${this.name}] Reset to CLOSED`);
+        console.debug(`[Circuit Breaker: ${this.name}] Reset to CLOSED`);
       }
     }
   }
@@ -111,7 +111,7 @@ class CircuitBreaker {
   reset(): void {
     this.state = 'CLOSED';
     this.stats = { failures: 0, successes: 0 };
-    console.log(`[Circuit Breaker: ${this.name}] Manually reset`);
+    console.debug(`[Circuit Breaker: ${this.name}] Manually reset`);
   }
 }
 

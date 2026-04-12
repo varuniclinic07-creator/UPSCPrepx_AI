@@ -84,7 +84,7 @@ export class DistributedRateLimiter {
 
       try {
         await Promise.race([connectPromise, timeoutPromise]);
-        console.log('[RateLimiter] Redis connected successfully');
+        console.debug('[RateLimiter] Redis connected successfully');
       } catch (e) {
         console.warn('[RateLimiter] Redis unavailable, using in-memory fallback:', (e as Error).message);
         this.usingFallback = true;

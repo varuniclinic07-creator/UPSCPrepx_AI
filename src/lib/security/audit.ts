@@ -98,7 +98,7 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
     ipAddress: entry.ipAddress,
     timestamp: ts,
   });
-  console.log(logLine);
+  console.info(logLine);
 
   // Attempt DB write (best-effort)
   try {

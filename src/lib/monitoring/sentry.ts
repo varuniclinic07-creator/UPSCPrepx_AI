@@ -17,5 +17,5 @@ export function captureException(error: Error, context?: Record<string, any>) {
 
 export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info') {
   if (!config.enabled) return;
-  console.log(`[Sentry][${level}]`, message);
+  console.debug(`[Sentry][${level}]`, message);
 }

@@ -238,7 +238,7 @@ export class VoiceProcessorService {
           }
         }
 
-        console.log('Interim:', finalTranscript + interimTranscript);
+        console.debug('Interim:', finalTranscript + interimTranscript);
       };
 
       this.recognition.onerror = (event: any) => {

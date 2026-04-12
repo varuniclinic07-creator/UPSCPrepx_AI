@@ -1,4 +1,4 @@
-const PLAUSIBLE_URL = process.env.PLAUSIBLE_URL || 'http://89.117.60.144:8089';
+const PLAUSIBLE_URL = process.env.PLAUSIBLE_URL || '';
 const PLAUSIBLE_DOMAIN = process.env.PLAUSIBLE_DOMAIN || 'aimasteryedu.in';
 
 interface PlausibleEvent {

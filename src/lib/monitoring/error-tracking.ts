@@ -32,12 +32,12 @@ class ErrorMonitoring {
 
   captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info'): void {
     if (!this.enabled || !this.dsn) {
-      console.log(`[${level.toUpperCase()}]`, message);
+      console.debug(`[${level.toUpperCase()}]`, message);
       return;
     }
 
     // TODO: Implement Sentry.captureMessage when SDK is added
-    console.log('[Error Monitoring]', { message, level, timestamp: new Date().toISOString() });
+    console.debug('[Error Monitoring]', { message, level, timestamp: new Date().toISOString() });
   }
 
   setUser(_user: { id: string; email?: string }): void {

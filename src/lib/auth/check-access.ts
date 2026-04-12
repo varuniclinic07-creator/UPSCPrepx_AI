@@ -77,7 +77,7 @@ export async function checkAccess(
       return { allowed: true };
     }
   } catch (rpcError) {
-    console.log('RPC not available, falling back to direct query');
+    console.debug('RPC not available, falling back to direct query');
   }
 
   // Fallback: Direct query to user_subscriptions

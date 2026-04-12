@@ -42,7 +42,9 @@ export async function sendOTP(phone: string): Promise<{
         // If Redis not available, allow OTP in dev mode
         if (process.env.NODE_ENV === 'development') {
             const otp = generateOTP();
-            console.log(`[DEV] OTP for ${phone}: ${otp}`);
+            if (process.env.NODE_ENV === 'development' && process.env.DEBUG_OTP) {
+                console.debug(`[DEV] OTP for ${phone}: ${otp}`);
+            }
             return { success: true, message: 'OTP logged to console (dev mode)', expiresIn: 600 };
         }
         return { success: false, message: 'Service unavailable', expiresIn: 0 };
@@ -81,8 +83,10 @@ export async function sendOTP(phone: string): Promise<{
                 to: `+91${normalizedPhone}`
             });
         } else {
-            // For development, log OTP
-            console.log(`[DEV] OTP for ${phone}: ${otp}`);
+            // For development, log OTP only when DEBUG_OTP is set
+            if (process.env.NODE_ENV === 'development' && process.env.DEBUG_OTP) {
+                console.debug(`[DEV] OTP for ${phone}: ${otp}`);
+            }
         }
 
         return {
@@ -96,7 +100,9 @@ export async function sendOTP(phone: string): Promise<{
 
         // Still return success in dev mode
         if (process.env.NODE_ENV === 'development') {
-            console.log(`[DEV] OTP for ${phone}: ${otp}`);
+            if (process.env.DEBUG_OTP) {
+                console.debug(`[DEV] OTP for ${phone}: ${otp}`);
+            }
             return {
                 success: true,
                 message: 'OTP logged to console (dev mode)',

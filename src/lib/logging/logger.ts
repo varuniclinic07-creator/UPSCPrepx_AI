@@ -131,12 +131,12 @@ function log(
     } else {
         // Fallback to structured console logging
         const consoleMethod = level === 'error' || level === 'fatal' ? 'error' :
-            level === 'warn' ? 'warn' : 'log';
+            level === 'warn' ? 'warn' : 'info';
 
         const logString = JSON.stringify(entry);
 
-        if (consoleMethod === 'log') {
-            console.log(logString);
+        if (consoleMethod === 'info') {
+            console.info(logString);
         } else {
             console[consoleMethod as 'warn' | 'error'](logString);
         }

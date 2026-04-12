@@ -50,7 +50,7 @@ export async function retryWithBackoff<T>(
                 fullConfig.maxDelay
             );
 
-            console.log(
+            console.debug(
                 `Retry attempt ${attempt + 1}/${fullConfig.maxRetries} after ${delay}ms`
             );
 
@@ -130,7 +130,7 @@ export async function retryWithJitter<T>(
             const jitter = Math.random() * baseDelay * 0.3; // Up to 30% jitter
             const delay = Math.min(baseDelay + jitter, fullConfig.maxDelay);
 
-            console.log(
+            console.debug(
                 `Retry attempt ${attempt + 1}/${fullConfig.maxRetries} after ${Math.round(delay)}ms`
             );
 

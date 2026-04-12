@@ -50,9 +50,9 @@ export class VideoShortsGenerator {
   private manimServiceUrl: string;
 
   constructor() {
-    // Connect to existing services in project
-    this.remotionServiceUrl = process.env.REMOTION_URL || 'http://89.117.60.144:3002';
-    this.manimServiceUrl = process.env.MANIM_URL || 'http://89.117.60.144:8085';
+    // Connect to existing services (URLs must be set via env vars)
+    this.remotionServiceUrl = process.env.REMOTION_URL || '';
+    this.manimServiceUrl = process.env.MANIM_URL || '';
   }
 
   /**

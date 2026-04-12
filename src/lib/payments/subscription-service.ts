@@ -130,7 +130,7 @@ export async function createSubscription(
             p_plan_tier: plan.tier
         });
     } catch (rpcError) {
-        console.log('Trial conversion RPC not available, skipping');
+        console.debug('Trial conversion RPC not available, skipping');
     }
 
     return {

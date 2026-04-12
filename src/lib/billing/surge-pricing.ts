@@ -318,7 +318,7 @@ export class SurgePricingManager {
         triggeredAt: Date.now(),
         demandLevel: decision.demandLevel,
       };
-      console.log(`[SurgePricing] Surge activated: ${decision.multiplier.toFixed(2)}x - ${decision.reason}`);
+      console.debug(`[SurgePricing] Surge activated: ${decision.multiplier.toFixed(2)}x - ${decision.reason}`);
     } else if (!decision.shouldApplySurge && this.currentState.isActive) {
       // Deactivating surge
       this.currentState = {
@@ -328,7 +328,7 @@ export class SurgePricingManager {
         triggeredAt: 0,
         demandLevel: 'normal',
       };
-      console.log('[SurgePricing] Surge deactivated');
+      console.debug('[SurgePricing] Surge deactivated');
     } else if (decision.shouldApplySurge && decision.multiplier !== this.currentState.multiplier) {
       // Updating existing surge
       const multiplierChange = Math.abs(decision.multiplier - this.currentState.multiplier);
@@ -336,7 +336,7 @@ export class SurgePricingManager {
         this.currentState.multiplier = decision.multiplier;
         this.currentState.reason = decision.reason;
         this.currentState.demandLevel = decision.demandLevel;
-        console.log(`[SurgePricing] Surge updated: ${decision.multiplier.toFixed(2)}x`);
+        console.debug(`[SurgePricing] Surge updated: ${decision.multiplier.toFixed(2)}x`);
       }
     }
 
@@ -383,7 +383,7 @@ export class SurgePricingManager {
       demandLevel: multiplier >= 2.0 ? 'extreme' : multiplier >= 1.5 ? 'very_high' : 'high',
     };
 
-    console.log(`[SurgePricing] Manual surge set: ${multiplier.toFixed(2)}x - ${reason}`);
+    console.debug(`[SurgePricing] Manual surge set: ${multiplier.toFixed(2)}x - ${reason}`);
 
     // Auto-clear after duration if specified
     if (durationMinutes) {
@@ -404,7 +404,7 @@ export class SurgePricingManager {
       triggeredAt: 0,
       demandLevel: 'normal',
     };
-    console.log('[SurgePricing] Manual surge cleared');
+    console.debug('[SurgePricing] Manual surge cleared');
   }
 
   /**
@@ -421,7 +421,7 @@ export class SurgePricingManager {
         demandLevel: 'normal',
       };
     }
-    console.log(`[SurgePricing] Surge pricing ${enabled ? 'enabled' : 'disabled'}`);
+    console.debug(`[SurgePricing] Surge pricing ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -535,5 +535,5 @@ export function startSurgeAutoUpdate(intervalMinutes: number = 5): void {
   // Periodic updates
   setInterval(updateLoop, intervalMinutes * 60 * 1000);
 
-  console.log(`[SurgePricing] Auto-update started every ${intervalMinutes} minutes`);
+  console.debug(`[SurgePricing] Auto-update started every ${intervalMinutes} minutes`);
 }

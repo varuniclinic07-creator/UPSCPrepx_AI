@@ -48,7 +48,7 @@ export class ProviderHealthChecker {
       return;
     }
 
-    console.log(`[HealthChecker] Starting health checks every ${this.CHECK_INTERVAL_MS}ms`);
+    console.debug(`[HealthChecker] Starting health checks every ${this.CHECK_INTERVAL_MS}ms`);
 
     // Run initial check immediately
     this.runHealthCheck();
@@ -66,7 +66,7 @@ export class ProviderHealthChecker {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      console.log('[HealthChecker] Stopped');
+      console.debug('[HealthChecker] Stopped');
     }
   }
 
@@ -75,7 +75,7 @@ export class ProviderHealthChecker {
    */
   private async runHealthCheck(): Promise<void> {
     if (this.isRunning) {
-      console.log('[HealthChecker] Previous check still running, skipping');
+      console.debug('[HealthChecker] Previous check still running, skipping');
       return;
     }
 
@@ -120,7 +120,7 @@ export class ProviderHealthChecker {
       }
 
       const duration = Date.now() - startTime;
-      console.log(`[HealthChecker] Completed in ${duration}ms`);
+      console.debug(`[HealthChecker] Completed in ${duration}ms`);
     } catch (error) {
       console.error('[HealthChecker] Error during health check:', error);
     } finally {

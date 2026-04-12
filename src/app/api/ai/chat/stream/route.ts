@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
       },
       cancel() {
         // Client disconnected - cleanup if needed
-        console.log('Client disconnected from stream');
+        console.debug('Client disconnected from stream');
       },
     });
 

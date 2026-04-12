@@ -213,7 +213,7 @@ async function processArticle(article: {
   image_url?: string;
   category?: string;
 }): Promise<ProcessedArticle> {
-  console.log(`Processing article: ${article.title.substring(0, 50)}...`);
+  console.debug(`Processing article: ${article.title.substring(0, 50)}...`);
 
   try {
     // Parallel AI processing for speed
@@ -280,17 +280,17 @@ async function updateArticle(article: ProcessedArticle): Promise<void> {
  * Generate complete daily digest
  */
 export async function generateDailyDigest(date: string): Promise<DailyDigest> {
-  console.log(`\n=== Starting Daily CA Generation for ${date} ===\n`);
+  console.debug(`\n=== Starting Daily CA Generation for ${date} ===\n`);
   const startTime = Date.now();
 
   try {
     // Step 1: Fetch articles from sources
-    console.log('Step 1: Fetching articles from sources...');
+    console.debug('Step 1: Fetching articles from sources...');
     const fetchResult = await fetchDailyArticles(date);
-    console.log(`✓ Fetched ${fetchResult.articleCount} articles\n`);
+    console.debug(`✓ Fetched ${fetchResult.articleCount} articles\n`);
 
     if (fetchResult.articleCount === 0) {
-      console.log('No articles found, skipping processing');
+      console.debug('No articles found, skipping processing');
       return {
         digestId: fetchResult.digestId,
         date,
@@ -303,7 +303,7 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
     }
 
     // Step 2: Get articles from database for processing
-    console.log('Step 2: Loading articles for processing...');
+    console.debug('Step 2: Loading articles for processing...');
     const { data: articles, error: fetchError } = await getSupabase()
       .from('ca_articles')
       .select('id, title, full_content, url, image_url, category')
@@ -314,10 +314,10 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
       throw new Error('Failed to load articles for processing');
     }
 
-    console.log(`✓ Loaded ${articles.length} articles\n`);
+    console.debug(`✓ Loaded ${articles.length} articles\n`);
 
     // Step 3: Process articles (AI summarization, translation, categorization)
-    console.log('Step 3: Processing articles with AI...');
+    console.debug('Step 3: Processing articles with AI...');
     const processedArticles: ProcessedArticle[] = [];
     
     for (const article of articles.slice(0, 15)) { // Max 15 articles per day
@@ -325,7 +325,7 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
         const processed = await processArticle(article);
         await updateArticle(processed);
         processedArticles.push(processed);
-        console.log(`✓ Processed: ${processed.title.substring(0, 40)}...`);
+        console.debug(`✓ Processed: ${processed.title.substring(0, 40)}...`);
       } catch (error) {
         console.error(`✗ Failed to process article ${article.id}:`, error);
       }
@@ -333,10 +333,10 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
       // Rate limiting: 500ms between articles
       await new Promise(resolve => setTimeout(resolve, 500));
     }
-    console.log(`✓ Processed ${processedArticles.length} articles\n`);
+    console.debug(`✓ Processed ${processedArticles.length} articles\n`);
 
     // Step 4: Syllabus mapping
-    console.log('Step 4: Mapping articles to syllabus...');
+    console.debug('Step 4: Mapping articles to syllabus...');
     const totalMappings = await processArticlesForSyllabus(
       processedArticles.map(a => ({
         id: a.id,
@@ -345,10 +345,10 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
         full_content: a.fullContent,
       }))
     );
-    console.log(`✓ Created ${totalMappings} syllabus mappings\n`);
+    console.debug(`✓ Created ${totalMappings} syllabus mappings\n`);
 
     // Step 5: MCQ generation
-    console.log('Step 5: Generating MCQs...');
+    console.debug('Step 5: Generating MCQs...');
     const totalMcqs = await processArticlesForMCQs(
       processedArticles.map(a => ({
         id: a.id,
@@ -358,10 +358,10 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
       })),
       3 // 3 MCQs per article
     );
-    console.log(`✓ Generated ${totalMcqs} MCQs\n`);
+    console.debug(`✓ Generated ${totalMcqs} MCQs\n`);
 
     // Step 6: Get syllabus distribution
-    console.log('Step 6: Calculating subject distribution...');
+    console.debug('Step 6: Calculating subject distribution...');
     const articleIds = processedArticles.map(a => a.id);
     const { data: mappings } = await getSupabase()
       .from('ca_syllabus_mapping')
@@ -375,10 +375,10 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
       GS4: mappings?.filter(m => m.subject === 'GS4').length || 0,
       Essay: mappings?.filter(m => m.subject === 'Essay').length || 0,
     };
-    console.log('✓ Distribution:', subjectDistribution, '\n');
+    console.debug('✓ Distribution:', subjectDistribution, '\n');
 
     // Step 7: Update digest metadata
-    console.log('Step 7: Updating digest metadata...');
+    console.debug('Step 7: Updating digest metadata...');
     const processingTimeSec = (Date.now() - startTime) / 1000;
     await getSupabase()
       .from('daily_ca_digest')
@@ -394,12 +394,12 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
       .eq('id', fetchResult.digestId);
 
     const processingTime = Date.now() - startTime;
-    console.log(`\n=== Daily CA Generation Complete ===`);
-    console.log(`Total Time: ${(processingTime / 1000 / 60).toFixed(1)} minutes`);
-    console.log(`Articles: ${processedArticles.length}`);
-    console.log(`Syllabus Mappings: ${totalMappings}`);
-    console.log(`MCQs: ${totalMcqs}`);
-    console.log(`=====================================\n`);
+    console.debug(`\n=== Daily CA Generation Complete ===`);
+    console.debug(`Total Time: ${(processingTime / 1000 / 60).toFixed(1)} minutes`);
+    console.debug(`Articles: ${processedArticles.length}`);
+    console.debug(`Syllabus Mappings: ${totalMappings}`);
+    console.debug(`MCQs: ${totalMcqs}`);
+    console.debug(`=====================================\n`);
 
     return {
       digestId: fetchResult.digestId,
@@ -447,7 +447,7 @@ export async function publishDigest(digestId: string): Promise<void> {
     })
     .eq('digest_id', digestId);
 
-  console.log(`✓ Digest ${digestId} published at ${now}`);
+  console.debug(`✓ Digest ${digestId} published at ${now}`);
 }
 
 /**
@@ -475,14 +475,14 @@ if (typeof require !== 'undefined' && require.main === module) {
   
   generateDailyDigest(date)
     .then(async digest => {
-      console.log('\n✅ Daily CA Digest Generated Successfully');
-      console.log(`Digest ID: ${digest.digestId}`);
-      console.log(`Articles: ${digest.totalArticles}`);
-      console.log(`Distribution:`, digest.subjectDistribution);
+      console.debug('\n✅ Daily CA Digest Generated Successfully');
+      console.debug(`Digest ID: ${digest.digestId}`);
+      console.debug(`Articles: ${digest.totalArticles}`);
+      console.debug(`Distribution:`, digest.subjectDistribution);
       
       // Auto-publish
       await publishDigest(digest.digestId);
-      console.log('✓ Published');
+      console.debug('✓ Published');
       
       process.exit(0);
     })

@@ -180,7 +180,7 @@ export async function evaluateAnswer(request: EvaluationRequest): Promise<Evalua
   const endTime = Date.now();
   const totalTime = (endTime - startTime) / 1000;
 
-  console.log(`Evaluation completed in ${totalTime.toFixed(2)}s (AI: ${((aiEndTime - aiStartTime) / 1000).toFixed(2)}s)`);
+  console.debug(`Evaluation completed in ${totalTime.toFixed(2)}s (AI: ${((aiEndTime - aiStartTime) / 1000).toFixed(2)}s)`);
 
   // Check if we met the <60s target
   if (totalTime > 60) {

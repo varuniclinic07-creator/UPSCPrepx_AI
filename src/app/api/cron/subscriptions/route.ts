@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Run maintenance
-        console.log('[Cron] Starting subscription maintenance...');
+        console.debug('[Cron] Starting subscription maintenance...');
         await runSubscriptionMaintenance();
 
         return NextResponse.json({

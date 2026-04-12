@@ -164,7 +164,7 @@ export async function sendEmail(
     }
 
     // 3. Dev mode — no transport configured
-    console.log(`[DEV EMAIL] To: ${to}, Subject: ${subject}`);
+    console.debug(`[DEV EMAIL] To: ${to}, Subject: ${subject}`);
     return true;
 }
 

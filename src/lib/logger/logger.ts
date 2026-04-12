@@ -31,13 +31,13 @@ class Logger {
 
   info(message: string, context?: LogContext): void {
     const logMessage = this.formatMessage('info', message, context);
-    console.log(logMessage);
+    console.info(logMessage);
   }
 
   debug(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
       const logMessage = this.formatMessage('debug', message, context);
-      console.log(logMessage);
+      console.debug(logMessage);
     }
   }
 }

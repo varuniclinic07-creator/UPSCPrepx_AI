@@ -32,8 +32,8 @@ export class WebSearchClient {
   private timeout: number;
 
   constructor() {
-    // Connect to agentic-web-search service on VPS
-    this.baseUrl = process.env.AGENTIC_WEB_SEARCH_URL || 'http://89.117.60.144:8030';
+    // Connect to agentic-web-search service (URL must be set via AGENTIC_WEB_SEARCH_URL env var)
+    this.baseUrl = process.env.AGENTIC_WEB_SEARCH_URL || '';
     this.timeout = 10000; // 10 seconds
   }
 

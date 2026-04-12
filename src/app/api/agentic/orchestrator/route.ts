@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 
 
 const SERVICE_URLS = {
-    webSearch: process.env.AGENTIC_WEB_SEARCH_URL || 'http://89.117.60.144:8030',
-    docChat: process.env.AGENTIC_AUTODOC_URL || 'http://89.117.60.144:8031',
-    fileSearch: process.env.AGENTIC_FILE_SEARCH_URL || 'http://89.117.60.144:8032'
+    webSearch: process.env.AGENTIC_WEB_SEARCH_URL || '',
+    docChat: process.env.AGENTIC_AUTODOC_URL || '',
+    fileSearch: process.env.AGENTIC_FILE_SEARCH_URL || ''
 };
 
 interface OrchestrationRequest {

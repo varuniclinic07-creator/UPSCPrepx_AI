@@ -360,7 +360,7 @@ export class MilestoneManagerService {
 
     // In production, would update user's total XP in a users table
     // For now, just log the XP award
-    console.log(`Awarded ${xpAmount} XP to user ${plan.user_id} for milestone`);
+    console.debug(`Awarded ${xpAmount} XP to user ${plan.user_id} for milestone`);
   }
 
   /**

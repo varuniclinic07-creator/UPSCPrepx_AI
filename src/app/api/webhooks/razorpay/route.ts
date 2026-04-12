@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
         if (existingEvent) {
             // Already processed, return success (idempotent)
-            console.log('[Webhook] Duplicate event, skipping:', eventId);
+            console.debug('[Webhook] Duplicate event, skipping:', eventId);
             return NextResponse.json({ received: true, duplicate: true });
         }
 
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
                 break;
 
             default:
-                console.log('[Webhook] Unhandled event:', event.event);
+                console.debug('[Webhook] Unhandled event:', event.event);
         }
 
         return NextResponse.json({ received: true });
@@ -148,7 +148,7 @@ async function handlePaymentCaptured(payment: any, supabase: any) {
 
     // Idempotency check - skip if already processed
     if (paymentRecord.status === 'completed' && paymentRecord.razorpay_payment_id === payment.id) {
-        console.log('[Webhook] Payment already processed:', paymentRecord.id);
+        console.debug('[Webhook] Payment already processed:', paymentRecord.id);
         return;
     }
 
@@ -170,7 +170,7 @@ async function handlePaymentCaptured(payment: any, supabase: any) {
         .single();
 
     if (existingSub) {
-        console.log('[Webhook] Subscription already exists:', existingSub.id);
+        console.debug('[Webhook] Subscription already exists:', existingSub.id);
         return;
     }
 
@@ -180,7 +180,7 @@ async function handlePaymentCaptured(payment: any, supabase: any) {
         paymentRecord.id
     );
 
-    console.log('[Webhook] Payment captured and subscription created:', paymentRecord.id);
+    console.debug('[Webhook] Payment captured and subscription created:', paymentRecord.id);
 }
 
 async function handlePaymentFailed(payment: any, supabase: any) {

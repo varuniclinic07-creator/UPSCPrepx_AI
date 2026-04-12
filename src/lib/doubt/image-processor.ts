@@ -114,7 +114,7 @@ export class ImageProcessorService {
       const worker = await Tesseract.createWorker({
         logger: (m) => {
           if (m.status === 'recognizing text') {
-            console.log(`OCR Progress: ${(m.progress * 100).toFixed(0)}%`);
+            console.debug(`OCR Progress: ${(m.progress * 100).toFixed(0)}%`);
           }
         },
       });

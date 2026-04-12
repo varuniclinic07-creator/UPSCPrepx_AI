@@ -60,7 +60,7 @@ export async function waitForRateLimit(
   const result = await checkRateLimit(providerOrUserId);
 
   if (!result.allowed && result.retryAfter) {
-    console.log(`[Rate Limiter] Waiting ${result.retryAfter}ms for rate limit reset...`);
+    console.debug(`[Rate Limiter] Waiting ${result.retryAfter}ms for rate limit reset...`);
     await new Promise((resolve) => setTimeout(resolve, result.retryAfter! + 100));
     return waitForRateLimit(providerOrUserId);
   }

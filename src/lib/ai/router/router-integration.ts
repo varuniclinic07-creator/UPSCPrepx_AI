@@ -149,7 +149,7 @@ export async function callAIWithRouter(
   // Select best provider
   const decision = await router.selectProvider(routingOptions);
 
-  console.log(
+  console.debug(
     `[RouterIntegration] Selected ${decision.selectedProvider} for user ${userId}: ${decision.reason}`
   );
 
@@ -316,13 +316,13 @@ CRITICAL LANGUAGE RULES — FOLLOW STRICTLY:
 
     // Try fallback providers
     if (decision.fallbackProviders.length > 0) {
-      console.log(
+      console.debug(
         `[RouterIntegration] Trying fallback providers: ${decision.fallbackProviders.join(', ')}`
       );
 
       for (const fallbackProvider of decision.fallbackProviders) {
         try {
-          console.log(`[RouterIntegration] Attempting fallback to ${fallbackProvider}`);
+          console.debug(`[RouterIntegration] Attempting fallback to ${fallbackProvider}`);
 
           const fallbackConfig = (await import('./ai-provider-router')).PROVIDER_CONFIGS[
             fallbackProvider
@@ -388,7 +388,7 @@ CRITICAL LANGUAGE RULES — FOLLOW STRICTLY:
             latencyMs: fallbackLatency,
           });
 
-          console.log(
+          console.debug(
             `[RouterIntegration] Fallback to ${fallbackProvider} successful`
           );
 
@@ -436,7 +436,7 @@ export function initializeRouterSystem(): void {
   // Start auto-rebalancing
   loadBalancer.startAutoRebalance();
 
-  console.log('[RouterIntegration] Router system initialized');
+  console.debug('[RouterIntegration] Router system initialized');
 
   return { healthChecker, loadBalancer };
 }

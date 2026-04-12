@@ -16,7 +16,7 @@ export async function cleanupOldJobs() {
         // Clean jobs older than 7 days
         await cleanOldJobs(7 * 24 * 60 * 60 * 1000);
 
-        console.log('✅ Old jobs cleaned');
+        console.debug('✅ Old jobs cleaned');
     } catch (error) {
         console.error('Job cleanup error:', error);
     }
@@ -40,11 +40,11 @@ export async function cleanupTempFiles() {
 
             if (stats.mtimeMs < twoDaysAgo) {
                 await fs.rm(folderPath, { recursive: true, force: true });
-                console.log(`Deleted temp folder: ${folder}`);
+                console.debug(`Deleted temp folder: ${folder}`);
             }
         }
 
-        console.log('✅ Temp files cleaned');
+        console.debug('✅ Temp files cleaned');
     } catch (error) {
         console.error('Temp cleanup error:', error);
     }
@@ -58,7 +58,7 @@ export async function expireTrials() {
         const supabase = await createClient();
         const { data } = await (supabase as any).rpc('expire_trials');
 
-        console.log(`✅ Expired ${data?.[0]?.expired_count || 0} trials`);
+        console.debug(`✅ Expired ${data?.[0]?.expired_count || 0} trials`);
     } catch (error) {
         console.error('Trial expiry error:', error);
     }
@@ -68,7 +68,7 @@ export async function expireTrials() {
  * Run all cleanup tasks
  */
 export async function runAllCleanupTasks() {
-    console.log('🧹 Running cleanup tasks...');
+    console.debug('🧹 Running cleanup tasks...');
 
     await Promise.all([
         cleanupOldJobs(),
@@ -76,7 +76,7 @@ export async function runAllCleanupTasks() {
         expireTrials()
     ]);
 
-    console.log('✅ All cleanup tasks complete');
+    console.debug('✅ All cleanup tasks complete');
 }
 
 // Export for cron job

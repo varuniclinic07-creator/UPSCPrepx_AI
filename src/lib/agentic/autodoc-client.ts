@@ -33,8 +33,8 @@ export class AutodocClient {
   private timeout: number;
 
   constructor() {
-    // Connect to autodoc-thinker service on VPS
-    this.baseUrl = process.env.AGENTIC_AUTODOC_URL || 'http://89.117.60.144:8031';
+    // Connect to autodoc-thinker service (URL must be set via AGENTIC_AUTODOC_URL env var)
+    this.baseUrl = process.env.AGENTIC_AUTODOC_URL || '';
     this.timeout = 30000; // 30 seconds for document processing
   }
 

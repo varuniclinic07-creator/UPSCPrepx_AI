@@ -73,7 +73,7 @@ export async function checkUsageLimit(
             };
         }
     } catch (error) {
-        console.log('RPC not available, using fallback');
+        console.debug('RPC not available, using fallback');
     }
 
     // Fallback: Direct query
@@ -123,7 +123,7 @@ export async function getUserTier(userId: string): Promise<string> {
             return tier;
         }
     } catch (error) {
-        console.log('RPC not available, using fallback');
+        console.debug('RPC not available, using fallback');
     }
 
     // Fallback: Direct query
@@ -165,7 +165,7 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
 
         return hasActive || false;
     } catch (error) {
-        console.log('RPC not available, using fallback');
+        console.debug('RPC not available, using fallback');
     }
 
     // Fallback: Direct query

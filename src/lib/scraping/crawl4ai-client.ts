@@ -1,7 +1,7 @@
 import { withCircuitBreaker } from '@/lib/resilience/circuit-breaker';
 import { logger } from '@/lib/logger/logger';
 
-const CRAWL4AI_URL = process.env.CRAWL4AI_URL || 'http://89.117.60.144:11235';
+const CRAWL4AI_URL = process.env.CRAWL4AI_URL || '';
 const TIMEOUT_MS = 30000;
 
 // Lazy token getter - only validates when actually used (not at build time)

@@ -91,7 +91,7 @@ export class AdvancedLoadBalancer {
       this.rebalance();
     }, this.config.rebalanceIntervalMs);
 
-    console.log(
+    console.debug(
       `[LoadBalancer] Auto-rebalance started every ${this.config.rebalanceIntervalMs}ms`
     );
   }
@@ -103,7 +103,7 @@ export class AdvancedLoadBalancer {
     if (this.rebalanceTimer) {
       clearInterval(this.rebalanceTimer);
       this.rebalanceTimer = null;
-      console.log('[LoadBalancer] Auto-rebalance stopped');
+      console.debug('[LoadBalancer] Auto-rebalance stopped');
     }
   }
 
@@ -365,7 +365,7 @@ export class AdvancedLoadBalancer {
       const weightStr = providers
         .map((p) => `${p}: ${(this.weights.get(p) || 0 * 100).toFixed(1)}%`)
         .join(', ');
-      console.log(`[LoadBalancer] Rebalanced: ${weightStr}`);
+      console.debug(`[LoadBalancer] Rebalanced: ${weightStr}`);
     } finally {
       this.isRunning = false;
     }
@@ -428,7 +428,7 @@ export class AdvancedLoadBalancer {
       this.weights.set(provider, initialWeight);
     });
 
-    console.log('[LoadBalancer] State reset');
+    console.debug('[LoadBalancer] State reset');
   }
 }
 

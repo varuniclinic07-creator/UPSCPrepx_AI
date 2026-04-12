@@ -1,4 +1,4 @@
-const UPTIME_KUMA_URL = process.env.UPTIME_KUMA_URL || 'http://89.117.60.144:3003';
+const UPTIME_KUMA_URL = process.env.UPTIME_KUMA_URL || '';
 const UPTIME_KUMA_PUSH_KEY = process.env.UPTIME_KUMA_PUSH_KEY;
 
 export async function pushHeartbeat(status: 'up' | 'down', msg?: string): Promise<void> {
