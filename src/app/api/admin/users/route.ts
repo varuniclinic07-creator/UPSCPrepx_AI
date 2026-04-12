@@ -8,8 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +25,7 @@ interface AdminRequest {
 export async function POST(request: NextRequest) {
   try {
     // 1. Auth Check — verify caller is admin via Supabase session
-    const supabaseAuth = createServerComponentClient({ cookies });
+    const supabaseAuth = await createServerSupabaseClient();
     const { data: { session } } = await supabaseAuth.auth.getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
