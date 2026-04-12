@@ -3,42 +3,7 @@
 // Production-ready rate limiting using Redis
 // ═══════════════════════════════════════════════════════════════
 
-import { Redis } from 'ioredis';
-
-// Singleton Redis instance
-let redisInstance: Redis | null = null;
-
-function getRedisClient(): Redis | null {
-    if (redisInstance) {
-        return redisInstance;
-    }
-
-    const redisUrl = process.env.REDIS_URL;
-
-    if (!redisUrl) {
-        console.warn('[RateLimit] REDIS_URL not configured, rate limiting disabled');
-        return null;
-    }
-
-    redisInstance = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
-        retryDelayOnFailover: 100,
-        retryStrategy: (times) => {
-            if (times > 3) return null;
-            return Math.min(times * 100, 2000);
-        },
-    });
-
-    redisInstance.on('error', (error) => {
-        console.error('[RateLimit] Redis connection error:', error);
-    });
-
-    redisInstance.on('connect', () => {
-        console.log('[RateLimit] Redis connected');
-    });
-
-    return redisInstance;
-}
+import { getRedis } from '@/lib/redis/client';
 
 export interface RateLimitConfig {
     maxRequests: number;      // Maximum requests allowed
@@ -87,7 +52,7 @@ export async function checkRateLimit(
     identifier: string,
     config: RateLimitConfig = RateLimitPresets.api
 ): Promise<RateLimitResult> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     // If Redis not available, allow all requests (fail open)
     if (!redis) {
@@ -108,7 +73,7 @@ export async function checkRateLimit(
 
         // Get current count
         const currentCount = await redis.get(key);
-        const count = currentCount ? parseInt(currentCount, 10) : 0;
+        const count = currentCount ? parseInt(currentCount as string, 10) : 0;
 
         if (count >= config.maxRequests) {
             // Rate limit exceeded
@@ -128,7 +93,7 @@ export async function checkRateLimit(
         pipeline.expire(key, config.windowSeconds);
         const results = await pipeline.exec();
 
-        const newCount = results?.[0]?.[1] as number || count + 1;
+        const newCount = (results?.[0] as number) || count + 1;
 
         return {
             allowed: true,
@@ -195,7 +160,7 @@ export function getRateLimitHeaders(result: RateLimitResult): Record<string, str
  * Reset rate limit for an identifier
  */
 export async function resetRateLimit(identifier: string): Promise<void> {
-    const redis = getRedisClient();
+    const redis = getRedis();
     if (!redis) return;
 
     try {
@@ -212,7 +177,7 @@ export async function getRateLimitStatus(
     identifier: string,
     config: RateLimitConfig = RateLimitPresets.api
 ): Promise<{ current: number; remaining: number; resetAt: number }> {
-    const redis = getRedisClient();
+    const redis = getRedis();
     const now = Date.now();
     const windowMs = config.windowSeconds * 1000;
 
@@ -223,7 +188,7 @@ export async function getRateLimitStatus(
     try {
         const key = `ratelimit:${identifier}`;
         const currentCount = await redis.get(key);
-        const count = currentCount ? parseInt(currentCount, 10) : 0;
+        const count = currentCount ? parseInt(currentCount as string, 10) : 0;
         const ttl = await redis.ttl(key);
 
         return {

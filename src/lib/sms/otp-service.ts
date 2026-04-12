@@ -3,14 +3,8 @@
 // 6-digit OTP via Twilio/MSG91
 // ═══════════════════════════════════════════════════════════════
 
-import Redis from 'ioredis';
+import { getRedis } from '@/lib/redis/client';
 import twilio from 'twilio';
-
-let _redis: Redis | null = null;
-function getRedis() {
-  if (!_redis) _redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-  return _redis;
-}
 
 let _twilioClient: ReturnType<typeof twilio> | null = null;
 function getTwilioClient() {
@@ -43,6 +37,17 @@ export async function sendOTP(phone: string): Promise<{
     // Check rate limit (1 OTP per minute per phone)
     const rateLimitKey = `otp:ratelimit:${normalizedPhone}`;
     const redis = getRedis();
+
+    if (!redis) {
+        // If Redis not available, allow OTP in dev mode
+        if (process.env.NODE_ENV === 'development') {
+            const otp = generateOTP();
+            console.log(`[DEV] OTP for ${phone}: ${otp}`);
+            return { success: true, message: 'OTP logged to console (dev mode)', expiresIn: 600 };
+        }
+        return { success: false, message: 'Service unavailable', expiresIn: 0 };
+    }
+
     const rateLimitExists = await redis.exists(rateLimitKey);
 
     if (rateLimitExists) {
@@ -115,6 +120,8 @@ export async function verifyOTP(phone: string, enteredOTP: string): Promise<bool
     const otpKey = `otp:${normalizedPhone}`;
 
     const redis = getRedis();
+    if (!redis) return false;
+
     const storedOTP = await redis.get(otpKey);
 
     if (!storedOTP) {
@@ -148,6 +155,11 @@ export async function getOTPStatus(phone: string): Promise<{
     const normalizedPhone = phone.replace(/\D/g, '');
     const otpKey = `otp:${normalizedPhone}`;
     const rateLimitKey = `otp:ratelimit:${normalizedPhone}`;
+
+    const redis = getRedis();
+    if (!redis) {
+        return { exists: false, expiresIn: 0, canResend: true };
+    }
 
     const otpTTL = await redis.ttl(otpKey);
     const rateLimitTTL = await redis.ttl(rateLimitKey);

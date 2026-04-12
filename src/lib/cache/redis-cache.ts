@@ -3,44 +3,8 @@
 // Production caching with cache-aside pattern
 // ═══════════════════════════════════════════════════════════════
 
-import { Redis } from 'ioredis';
+import { getRedis } from '@/lib/redis/client';
 import { logger } from '@/lib/logging/logger';
-
-// Singleton Redis instance
-let redisInstance: Redis | null = null;
-
-function getRedisClient(): Redis | null {
-    if (redisInstance) {
-        return redisInstance;
-    }
-
-    const redisUrl = process.env.REDIS_URL;
-
-    if (!redisUrl) {
-        logger.warn('[Cache] REDIS_URL not configured, caching disabled');
-        return null;
-    }
-
-    redisInstance = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
-        retryDelayOnFailover: 100,
-        retryStrategy: (times) => {
-            if (times > 3) return null;
-            return Math.min(times * 100, 2000);
-        },
-        keyPrefix: 'upsc:',
-    });
-
-    redisInstance.on('error', (error) => {
-        logger.error('[Cache] Redis connection error', {}, error);
-    });
-
-    redisInstance.on('connect', () => {
-        logger.info('[Cache] Redis connected');
-    });
-
-    return redisInstance;
-}
 
 export interface CacheOptions {
     ttlSeconds?: number;
@@ -88,7 +52,7 @@ export async function getFromCache<T>(
     key: string,
     options: CacheOptions = {}
 ): Promise<T | null> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         stats.misses++;
@@ -107,7 +71,7 @@ export async function getFromCache<T>(
         stats.hits++;
 
         if (options.serialize !== false) {
-            return JSON.parse(value) as T;
+            return JSON.parse(value as string) as T;
         }
 
         return value as T;
@@ -126,7 +90,7 @@ export async function setInCache<T>(
     value: T,
     options: CacheOptions = {}
 ): Promise<void> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return;
@@ -157,7 +121,7 @@ export async function deleteFromCache(
     key: string,
     options: CacheOptions = {}
 ): Promise<void> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return;
@@ -178,7 +142,7 @@ export async function deleteFromCache(
  * Delete multiple keys matching pattern
  */
 export async function deleteFromCacheByPattern(pattern: string): Promise<void> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return;
@@ -205,7 +169,7 @@ export async function existsInCache(
     key: string,
     options: CacheOptions = {}
 ): Promise<boolean> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return false;
@@ -254,7 +218,7 @@ export async function incrementCounter(
     key: string,
     options: CacheOptions = {}
 ): Promise<number> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return 0;
@@ -284,7 +248,7 @@ export async function decrementCounter(
     key: string,
     options: CacheOptions = {}
 ): Promise<number> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return 0;
@@ -308,7 +272,7 @@ export async function getCounter(
     key: string,
     options: CacheOptions = {}
 ): Promise<number> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return 0;
@@ -317,7 +281,7 @@ export async function getCounter(
     try {
         const fullKey = generateKey(options.prefix || 'counter', key);
         const value = await redis.get(fullKey);
-        return value ? parseInt(value, 10) : 0;
+        return value ? parseInt(value as string, 10) : 0;
     } catch (error) {
         stats.errors++;
         return 0;
@@ -332,7 +296,7 @@ export async function setIfNotExists<T>(
     value: T,
     options: CacheOptions = {}
 ): Promise<boolean> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return false;
@@ -343,7 +307,7 @@ export async function setIfNotExists<T>(
         const serialized = JSON.stringify(value);
         const ttl = options.ttlSeconds || 3600;
 
-        const result = await redis.set(fullKey, serialized, 'NX', 'EX', ttl);
+        const result = await redis.set(fullKey, serialized, { nx: true, ex: ttl });
         return result === 'OK';
     } catch (error) {
         stats.errors++;
@@ -360,7 +324,7 @@ export async function acquireLock(
     ttlSeconds: number = 30,
     options: { retryCount?: number; retryDelayMs?: number } = {}
 ): Promise<string | null> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return null;
@@ -372,7 +336,7 @@ export async function acquireLock(
 
     for (let i = 0; i < retryCount; i++) {
         try {
-            const result = await redis.set(fullKey, lockValue, 'NX', 'EX', ttlSeconds);
+            const result = await redis.set(fullKey, lockValue, { nx: true, ex: ttlSeconds });
 
             if (result === 'OK') {
                 logger.debug('[Cache] Lock acquired', { lockKey, lockValue });
@@ -396,7 +360,7 @@ export async function releaseLock(
     lockKey: string,
     lockValue: string
 ): Promise<boolean> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return false;
@@ -428,7 +392,7 @@ export async function extendLock(
     lockValue: string,
     ttlSeconds: number
 ): Promise<boolean> {
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (!redis) {
         return false;
@@ -492,6 +456,6 @@ export const cache = {
     acquireLock,
     releaseLock,
     extendLock,
-    getStats,
+    getStats: getCacheStats,
     resetStats: resetCacheStats,
 };

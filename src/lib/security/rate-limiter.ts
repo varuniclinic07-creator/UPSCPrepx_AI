@@ -2,20 +2,7 @@
 // RATE LIMITER - Redis-based distributed rate limiting for API protection
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { Redis } from 'ioredis';
-
-// Redis connection (singleton)
-let redisClient: Redis | null = null;
-
-function getRedis(): Redis {
-    if (!redisClient) {
-        redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-            maxRetriesPerRequest: 3,
-            enableReadyCheck: true,
-        });
-    }
-    return redisClient;
-}
+import { getRedis } from '@/lib/redis/client';
 
 export interface RateLimitConfig {
     limit: number;       // Max requests
@@ -76,6 +63,16 @@ export async function checkRateLimit(
     const windowMs = config.window * 1000;
     const windowStart = now - windowMs;
 
+    if (!redis) {
+        // Fail open - allow request if Redis is not available
+        return {
+            success: true,
+            limit: config.limit,
+            remaining: config.limit,
+            reset: Math.ceil((now + windowMs) / 1000),
+        };
+    }
+
     try {
         // Use pipeline for atomic operations
         const pipeline = redis.pipeline();
@@ -87,13 +84,13 @@ export async function checkRateLimit(
         pipeline.zcard(key);
 
         // Add current request
-        pipeline.zadd(key, now, `${now}-${Math.random()}`);
+        pipeline.zadd(key, { score: now, member: `${now}-${Math.random()}` });
 
         // Set expiry
         pipeline.expire(key, config.window + 1);
 
         const results = await pipeline.exec();
-        const count = (results?.[1]?.[1] as number) || 0;
+        const count = (results?.[1] as number) || 0;
 
         const remaining = Math.max(0, config.limit - count - 1);
         const reset = Math.ceil((now + windowMs) / 1000);
@@ -190,9 +187,13 @@ export async function checkCostRateLimit(
     const redis = getRedis();
     const key = `rl:cost:${userId}:${new Date().toISOString().split('T')[0]}`;
 
+    if (!redis) {
+        return { allowed: true, remaining: maxCostPerDay, used: 0 };
+    }
+
     try {
         const current = await redis.get(key);
-        const used = parseInt(current || '0', 10);
+        const used = parseInt((current as string) || '0', 10);
 
         if (used + cost > maxCostPerDay) {
             return { allowed: false, remaining: maxCostPerDay - used, used };

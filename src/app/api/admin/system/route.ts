@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getCurrentUser } from '@/lib/auth/auth-config';
+import { getRedis, isRedisAvailable } from '@/lib/redis/client';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,14 +43,11 @@ export async function GET(request: NextRequest) {
       supabase.from('feature_flags').select('*').order('name'),
       // Deployment info
       supabase.from('deployments').select('*').order('deployed_at', { ascending: false }).limit(5),
-      // Redis health check via ping
+      // Redis health check via Upstash client
       (async () => {
         try {
-          const Redis = require('ioredis');
-          const redis = new Redis(process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL);
-          await redis.ping();
-          await redis.quit();
-          return { status: 'healthy', latency_ms: 0 };
+          const available = await isRedisAvailable();
+          return { status: available ? 'healthy' : 'unhealthy', latency_ms: 0 };
         } catch {
           return { status: 'unhealthy', latency_ms: 0 };
         }
@@ -144,21 +142,26 @@ export async function POST(request: NextRequest) {
           .eq('id', flagId);
         break;
 
-      case 'clear_cache':
-        // Clear application cache
-        const Redis = require('ioredis');
-        const redis = new Redis(process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL);
-        await redis.flushdb();
-        await redis.quit();
+      case 'clear_cache': {
+        // Clear application cache via Upstash client
+        const redis = getRedis();
+        if (redis) {
+          const keys = await redis.keys('cache:*');
+          if (keys.length > 0) {
+            await redis.del(...keys);
+          }
+        }
         break;
+      }
 
-      case 'restart_workers':
+      case 'restart_workers': {
         // Signal workers to restart via Redis pub/sub
-        const Redis2 = require('ioredis');
-        const redis2 = new Redis(process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL);
-        await redis2.publish('admin:restart', JSON.stringify({ timestamp: Date.now() }));
-        await redis2.quit();
+        const redis = getRedis();
+        if (redis) {
+          await redis.publish('admin:restart', JSON.stringify({ timestamp: Date.now() }));
+        }
         break;
+      }
 
       default:
         return NextResponse.json(

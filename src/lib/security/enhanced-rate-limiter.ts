@@ -4,33 +4,8 @@
  * OWASP-compliant protection for UPSC PrepX-AI
  */
 
-import { Redis } from 'ioredis';
+import { getRedis } from '@/lib/redis/client';
 import { NextRequest, NextResponse } from 'next/server';
-
-// ═══════════════════════════════════════════════════════════
-// REDIS CONNECTION
-// ═══════════════════════════════════════════════════════════
-
-let redisClient: Redis | null = null;
-
-function getRedis(): Redis | null {
-  if (!redisClient) {
-    const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL;
-
-    if (!redisUrl) {
-      console.warn('[RateLimiter] Redis not configured, using memory fallback');
-      return null;
-    }
-
-    redisClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times) => Math.min(times * 50, 2000),
-      enableReadyCheck: true,
-    });
-  }
-
-  return redisClient;
-}
 
 // ═══════════════════════════════════════════════════════════
 // IN-MEMORY FALLBACK (for development)
@@ -135,12 +110,12 @@ export async function checkRateLimit(
       // Count current entries
       pipeline.zcard(key);
       // Add current request
-      pipeline.zadd(key, now, `${now}-${Math.random()}`);
+      pipeline.zadd(key, { score: now, member: `${now}-${Math.random()}` });
       // Set expiry
       pipeline.expire(key, config.window + 1);
 
       const results = await pipeline.exec();
-      const count = (results?.[1]?.[1] as number) || 0;
+      const count = (results?.[1] as number) || 0;
       const remaining = Math.max(0, config.limit - count - 1);
       const reset = Math.ceil((now + windowMs) / 1000);
 
@@ -156,7 +131,7 @@ export async function checkRateLimit(
           allowed: false,
           limit: config.limit,
           remaining: 0,
-          reset,
+          resetAt: reset,
           retryAfter: config.blockDuration || config.window,
           blocked: !!config.blockDuration,
         };
@@ -358,10 +333,10 @@ export async function checkCostRateLimit(
   try {
     if (redis) {
       const current = await redis.get(key);
-      const used = parseInt(current || '0', 10);
+      const used = parseInt((current as string) || '0', 10);
 
       if (used + cost > maxCostPerDay) {
-        const reset = Math.ceil((Date.now() + windowMs) / 1000);
+        const _reset = Math.ceil((Date.now() + windowMs) / 1000);
         return { allowed: false, remaining: maxCostPerDay - used, used };
       }
 

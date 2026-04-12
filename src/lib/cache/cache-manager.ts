@@ -3,13 +3,7 @@
 // Response caching for API calls
 // ═══════════════════════════════════════════════════════════════
 
-import Redis from 'ioredis';
-
-let _redis: Redis | null = null;
-function getRedis(): Redis {
-  if (!_redis) _redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
-  return _redis;
-}
+import { getRedis } from '@/lib/redis/client';
 
 export interface CacheStats {
     hits: number;
@@ -26,9 +20,11 @@ export async function cacheResponse(
     data: any,
     ttl: number = 3600 // 1 hour default
 ): Promise<void> {
+    const redis = getRedis();
+    if (!redis) return;
     try {
         const serialized = JSON.stringify(data);
-        await getRedis().setex(`cache:${key}`, ttl, serialized);
+        await redis.setex(`cache:${key}`, ttl, serialized);
     } catch (error) {
         console.error('Cache write error:', error);
     }
@@ -38,11 +34,13 @@ export async function cacheResponse(
  * Get cached response
  */
 export async function getCachedResponse<T>(key: string): Promise<T | null> {
+    const redis = getRedis();
+    if (!redis) return null;
     try {
-        const data = await getRedis().get(`cache:${key}`);
+        const data = await redis.get(`cache:${key}`);
         if (!data) return null;
 
-        return JSON.parse(data) as T;
+        return JSON.parse(data as string) as T;
     } catch (error) {
         console.error('Cache read error:', error);
         return null;
@@ -53,11 +51,13 @@ export async function getCachedResponse<T>(key: string): Promise<T | null> {
  * Invalidate cache by pattern
  */
 export async function invalidateCache(pattern: string): Promise<number> {
+    const redis = getRedis();
+    if (!redis) return 0;
     try {
-        const keys = await getRedis().keys(`cache:${pattern}*`);
+        const keys = await redis.keys(`cache:${pattern}*`);
         if (keys.length === 0) return 0;
 
-        await getRedis().del(...keys);
+        await redis.del(...keys);
         return keys.length;
     } catch (error) {
         console.error('Cache invalidation error:', error);
@@ -69,31 +69,24 @@ export async function invalidateCache(pattern: string): Promise<number> {
  * Get cache statistics
  */
 export async function getCacheStats(): Promise<CacheStats> {
+    const redis = getRedis();
+    if (!redis) return { hits: 0, misses: 0, keys: 0, memory: '0B' };
     try {
-        const info = await getRedis().info('stats');
-        const _keyspace = await getRedis().info('keyspace');
-
-        const hits = parseInt(info.match(/keyspace_hits:(\d+)/)?.[1] || '0');
-        const misses = parseInt(info.match(/keyspace_misses:(\d+)/)?.[1] || '0');
-        const memory = info.match(/used_memory_human:([^\r\n]+)/)?.[1] || '0B';
-
-        const keys = await getRedis().dbsize();
-
-        return { hits, misses, keys, memory };
-    } catch (error) {
-        console.error('Cache stats error:', error);
-        return { hits: 0, misses: 0, keys: 0, memory: '0B' };
-    }
+        const keys = await redis.dbsize();
+        return { hits: 0, misses: 0, keys, memory: 'N/A' };
+    } catch { return { hits: 0, misses: 0, keys: 0, memory: '0B' }; }
 }
 
 /**
  * Clear all cache
  */
 export async function clearCache(): Promise<void> {
+    const redis = getRedis();
+    if (!redis) return;
     try {
-        const keys = await getRedis().keys('cache:*');
+        const keys = await redis.keys('cache:*');
         if (keys.length > 0) {
-            await getRedis().del(...keys);
+            await redis.del(...keys);
         }
     } catch (error) {
         console.error('Cache clear error:', error);

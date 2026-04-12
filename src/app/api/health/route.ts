@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import Redis from 'ioredis';
+import { getRedis, isRedisAvailable } from '@/lib/redis/client';
 import { getCircuitBreakerStatus } from '@/lib/resilience/circuit-breaker';
 
 export const dynamic = 'force-dynamic';
@@ -28,9 +28,9 @@ async function checkDatabase(): Promise<CheckResult> {
   try {
     const supabase = await createServerSupabaseClient();
     const { error } = await supabase.from('users').select('id').limit(1);
-    
+
     if (error) throw error;
-    
+
     return {
       status: 'pass',
       responseTime: Date.now() - start,
@@ -46,26 +46,12 @@ async function checkDatabase(): Promise<CheckResult> {
 
 async function checkRedis(): Promise<CheckResult> {
   const start = Date.now();
-  let redis: Redis | null = null;
-  
   try {
-    if (!process.env.REDIS_URL) {
-      return {
-        status: 'fail',
-        error: 'Redis URL not configured',
-      };
-    }
-
-    redis = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 5000,
-    });
-
-    await redis.ping();
-    
+    const available = await isRedisAvailable();
     return {
-      status: 'pass',
+      status: available ? 'pass' : 'fail',
       responseTime: Date.now() - start,
+      ...(!available && { error: 'Redis not available or not configured' }),
     };
   } catch (error) {
     return {
@@ -73,10 +59,6 @@ async function checkRedis(): Promise<CheckResult> {
       responseTime: Date.now() - start,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
-  } finally {
-    if (redis) {
-      await redis.quit();
-    }
   }
 }
 
@@ -84,7 +66,7 @@ function checkCircuitBreakers(): CheckResult {
   try {
     const status = getCircuitBreakerStatus();
     const allClosed = Object.values(status).every(cb => cb.state === 'CLOSED');
-    
+
     return {
       status: allClosed ? 'pass' : 'fail',
       details: status,

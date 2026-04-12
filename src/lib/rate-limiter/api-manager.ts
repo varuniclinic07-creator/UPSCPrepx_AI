@@ -4,14 +4,14 @@
 // Based on CAPACITY_PLANNING_10RPM.md analysis
 // ═══════════════════════════════════════════════════════════════
 
-import Redis from 'ioredis';
+import { getRedis } from '@/lib/redis/client';
+import IORedis from 'ioredis';
 import { Queue } from 'bullmq';
 
-let _redis: Redis | null = null;
-function getRedis(): Redis {
-  if (!_redis) _redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
-  return _redis;
-}
+// BullMQ requires a TCP ioredis connection — kept separately from the Upstash HTTP client
+const bullmqConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    maxRetriesPerRequest: null,
+});
 
 // ═══════════════════════════════════════════════════════════════
 // RATE LIMITER - Sliding Window Algorithm
@@ -26,18 +26,21 @@ export class A4FRateLimiter {
      * Check if we can make an API request now
      */
     async canMakeRequest(): Promise<boolean> {
+        const redis = getRedis();
+        if (!redis) return true; // fail open
+
         const now = Date.now();
         const windowStart = now - this.window;
 
         // Remove requests older than 1 minute
-        await getRedis().zremrangebyscore(this.key, 0, windowStart);
+        await redis.zremrangebyscore(this.key, 0, windowStart);
 
         // Count current requests in window
-        const count = await getRedis().zcard(this.key);
+        const count = await redis.zcard(this.key);
 
         if (count < this.limit) {
             // Add this request to the set
-            await getRedis().zadd(this.key, now, `${now}-${Math.random()}`);
+            await redis.zadd(this.key, { score: now, member: `${now}-${Math.random()}` });
             return true;
         }
 
@@ -49,11 +52,15 @@ export class A4FRateLimiter {
      */
     async waitForSlot(): Promise<void> {
         while (!(await this.canMakeRequest())) {
-            // Get oldest request timestamp
-            const oldest = await getRedis().zrange(this.key, 0, 0, 'WITHSCORES');
+            const redis = getRedis();
+            if (!redis) return;
 
-            if (oldest.length >= 2) {
-                const oldestTimestamp = parseInt(oldest[1]);
+            // Get oldest request timestamp
+            const oldest = await redis.zrange(this.key, 0, 0, { withScores: true });
+
+            if (oldest.length >= 1) {
+                const entry = oldest[0] as { member: string; score: number };
+                const oldestTimestamp = entry.score;
                 const waitTime = oldestTimestamp + this.window - Date.now();
 
                 if (waitTime > 0) {
@@ -76,11 +83,16 @@ export class A4FRateLimiter {
         queuePosition: number;
         estimatedWaitSeconds: number;
     }> {
+        const redis = getRedis();
+        if (!redis) {
+            return { currentRequests: 0, available: this.limit, queuePosition: 0, estimatedWaitSeconds: 0 };
+        }
+
         const now = Date.now();
         const windowStart = now - this.window;
 
-        await getRedis().zremrangebyscore(this.key, 0, windowStart);
-        const count = await getRedis().zcard(this.key);
+        await redis.zremrangebyscore(this.key, 0, windowStart);
+        const count = await redis.zcard(this.key);
 
         const available = Math.max(0, this.limit - count);
         const queuePosition = Math.max(0, count - this.limit);
@@ -108,8 +120,9 @@ export class A4FRateLimiter {
      * Release a reserved slot (if request was cancelled)
      */
     async releaseSlot(): Promise<void> {
-        // Remove the most recent request
-        await getRedis().zpopmax(this.key);
+        const redis = getRedis();
+        if (!redis) return;
+        await redis.zpopmax(this.key, 1);
     }
 }
 
@@ -144,9 +157,9 @@ const _PRIORITY_WEIGHTS = {
     [PRIORITY_LEVELS.BACKGROUND]: 0.02  // 2% of capacity
 };
 
-// Create BullMQ queue
+// Create BullMQ queue (uses ioredis TCP connection — required by BullMQ)
 export const apiQueue = new Queue<APIRequest>('api-requests', {
-    connection: redis,
+    connection: bullmqConnection,
     defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -306,11 +319,16 @@ export class UserRateLimiter {
         const window = isHourly ? 3600 : 86400; // 1 hour or 1 day in seconds
         const key = `user:${userId}:${feature}`;
 
-        const current = await getRedis().get(key);
-        const count = parseInt(current || '0');
+        const redis = getRedis();
+        if (!redis) {
+            return { allowed: true, remaining: limit, resetIn: window, upgradeRequired: false };
+        }
+
+        const current = await redis.get(key);
+        const count = parseInt((current as string) || '0');
 
         if (count >= limit) {
-            const ttl = await getRedis().ttl(key);
+            const ttl = await redis.ttl(key);
             return {
                 allowed: false,
                 remaining: 0,
@@ -319,10 +337,11 @@ export class UserRateLimiter {
             };
         }
 
+        const ttl = await redis.ttl(key);
         return {
             allowed: true,
             remaining: limit - count,
-            resetIn: await getRedis().ttl(key) || window,
+            resetIn: ttl > 0 ? ttl : window,
             upgradeRequired: false
         };
     }
@@ -338,16 +357,19 @@ export class UserRateLimiter {
         const window = isHourly ? 3600 : 86400;
         const key = `user:${userId}:${feature}`;
 
-        const current = await getRedis().get(key);
+        const redis = getRedis();
+        if (!redis) return;
 
-        const multi = getRedis().multi();
-        multi.incr(key);
+        const current = await redis.get(key);
+
+        const pipeline = redis.pipeline();
+        pipeline.incr(key);
 
         if (!current) {
-            multi.expire(key, window);
+            pipeline.expire(key, window);
         }
 
-        await multi.exec();
+        await pipeline.exec();
     }
 
     /**
@@ -357,10 +379,18 @@ export class UserRateLimiter {
         const limits = PLAN_LIMITS[plan];
         const usage: Record<string, { used: number; limit: number; remaining: number }> = {};
 
+        const redis = getRedis();
+        if (!redis) {
+            for (const feature of Object.keys(limits) as Array<keyof UserLimits>) {
+                usage[feature] = { used: 0, limit: limits[feature], remaining: limits[feature] };
+            }
+            return usage;
+        }
+
         for (const feature of Object.keys(limits) as Array<keyof UserLimits>) {
             const key = `user:${userId}:${feature}`;
-            const current = await getRedis().get(key);
-            const count = parseInt(current || '0');
+            const current = await redis.get(key);
+            const count = parseInt((current as string) || '0');
             const limit = limits[feature];
 
             usage[feature] = {
