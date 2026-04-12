@@ -11,9 +11,14 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const user = await getCurrentUser();
+    let user;
+    try {
+        user = await getCurrentUser();
+    } catch (error) {
+        console.error('[Admin Layout] Error fetching user:', error);
+        redirect('/login');
+    }
 
-    // Check if user is authenticated and is admin
     if (!user) {
         redirect('/login');
     }

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { AuroraBackground } from '@/components/magic-ui/aurora-background';
 import { FloatingDock } from '@/components/magic-ui/floating-dock';
@@ -89,7 +89,13 @@ function getTutorialKey(pathname: string): TutorialKey {
 
 function DashboardShellInner({ children, user }: DashboardShellProps) {
     const pathname = usePathname();
+    const router = useRouter();
     const { openTutorial } = useTutorial();
+
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        router.push('/login');
+    };
 
     return (
         <AuroraBackground className="min-h-screen">
@@ -176,7 +182,10 @@ function DashboardShellInner({ children, user }: DashboardShellProps) {
                                     <Settings className="w-4 h-4" />
                                     Settings
                                 </Link>
-                                <button className="px-3 py-2 rounded-lg bg-muted/50 hover:bg-destructive/10 border border-border/50 text-muted-foreground hover:text-destructive transition-colors">
+                                <button
+                                    onClick={handleLogout}
+                                    className="px-3 py-2 rounded-lg bg-muted/50 hover:bg-destructive/10 border border-border/50 text-muted-foreground hover:text-destructive transition-colors"
+                                >
                                     <LogOut className="w-4 h-4" />
                                 </button>
                             </div>

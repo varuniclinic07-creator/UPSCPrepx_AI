@@ -5,13 +5,27 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { getRedis } from '@/lib/redis/client';
-import IORedis from 'ioredis';
+import type IORedisType from 'ioredis';
 import { Queue } from 'bullmq';
 
-// BullMQ requires a TCP ioredis connection — kept separately from the Upstash HTTP client
-const bullmqConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-    maxRetriesPerRequest: null,
-});
+// BullMQ requires a TCP ioredis connection — lazy-init to avoid crash when REDIS_URL not set
+let bullmqConnection: IORedisType | null = null;
+function getBullMQConnection(): IORedisType | null {
+    if (bullmqConnection) return bullmqConnection;
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) {
+        console.warn('[API Manager] REDIS_URL not set — BullMQ queues disabled');
+        return null;
+    }
+    try {
+        const IORedis = require('ioredis');
+        bullmqConnection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+        return bullmqConnection;
+    } catch {
+        console.warn('[API Manager] ioredis not available — BullMQ queues disabled');
+        return null;
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // RATE LIMITER - Sliding Window Algorithm
@@ -157,19 +171,24 @@ const _PRIORITY_WEIGHTS = {
     [PRIORITY_LEVELS.BACKGROUND]: 0.02  // 2% of capacity
 };
 
-// Create BullMQ queue (uses ioredis TCP connection — required by BullMQ)
-export const apiQueue = new Queue<APIRequest>('api-requests', {
-    connection: bullmqConnection,
-    defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-            type: 'exponential',
-            delay: 5000 // Start with 5 second delay
+// Create BullMQ queue lazily (uses ioredis TCP connection — required by BullMQ)
+let _apiQueue: Queue<APIRequest> | null = null;
+function getApiQueue(): Queue<APIRequest> | null {
+    if (_apiQueue) return _apiQueue;
+    const conn = getBullMQConnection();
+    if (!conn) return null;
+    _apiQueue = new Queue<APIRequest>('api-requests', {
+        connection: conn,
+        defaultJobOptions: {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: 100,
+            removeOnFail: 50,
         },
-        removeOnComplete: 100,
-        removeOnFail: 50
-    }
-});
+    });
+    return _apiQueue;
+}
+export const apiQueue = { get: getApiQueue };
 
 // Note: QueueScheduler was removed in BullMQ v4+
 // Delayed job handling is now built into the Worker class
@@ -184,7 +203,12 @@ export async function queueAPIRequest(
     position: number;
     estimatedWaitSeconds: number;
 }> {
-    const job = await apiQueue.add(
+    const queue = getApiQueue();
+    if (!queue) {
+        return { jobId: 'noop', position: 0, estimatedWaitSeconds: 0 };
+    }
+
+    const job = await queue.add(
         request.type,
         {
             ...request,
@@ -196,15 +220,13 @@ export async function queueAPIRequest(
         }
     );
 
-    // Get queue stats
-    const waitingCount = await apiQueue.getWaitingCount();
+    const waitingCount = await queue.getWaitingCount();
     const rateLimiter = new A4FRateLimiter();
     const stats = await rateLimiter.getQueueStats();
 
-    // Estimate wait time based on priority and queue depth
     const estimatedWaitSeconds = Math.max(
         stats.estimatedWaitSeconds,
-        (waitingCount * 6) / 10 // Average 6 seconds per request at 10 RPM
+        (waitingCount * 6) / 10
     );
 
     return {
@@ -218,7 +240,9 @@ export async function queueAPIRequest(
  * Get job status
  */
 export async function getJobStatus(jobId: string) {
-    const job = await apiQueue.getJob(jobId);
+    const queue = getApiQueue();
+    if (!queue) return { found: false };
+    const job = await queue.getJob(jobId);
 
     if (!job) {
         return { found: false };

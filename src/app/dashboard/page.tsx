@@ -30,17 +30,48 @@ export const metadata = {
 };
 
 async function DashboardStats() {
-  // In production, fetch real stats from the database
-  const stats = {
-    syllabusProgress: 34,
+  let stats = {
+    syllabusProgress: 0,
     totalSyllabus: 100,
-    studyStreak: 12,
-    bestStreak: 24,
-    studyHours: 142,
-    weeklyChange: 12,
-    mockAverage: 78,
-    mockRank: 'Top 10%',
+    studyStreak: 0,
+    bestStreak: 0,
+    studyHours: 0,
+    weeklyChange: 0,
+    mockAverage: 0,
+    mockRank: 'N/A',
   };
+
+  try {
+    const { createServerSupabaseClient } = await import('@/lib/supabase/server');
+    const supabase = await createServerSupabaseClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (authUser) {
+      // Fetch real stats - each query is independent, failures are non-fatal
+      const [notesResult, quizzesResult, progressResult] = await Promise.allSettled([
+        (supabase.from('notes') as any).select('id', { count: 'exact', head: true }).eq('user_id', authUser.id),
+        (supabase.from('quizzes') as any).select('score').eq('user_id', authUser.id).order('created_at', { ascending: false }).limit(5),
+        (supabase.from('user_progress') as any).select('syllabus_coverage, study_streak, best_streak, total_study_hours').eq('user_id', authUser.id).single(),
+      ]);
+
+      if (progressResult.status === 'fulfilled' && progressResult.value.data) {
+        const p = progressResult.value.data;
+        stats.syllabusProgress = p.syllabus_coverage || 0;
+        stats.studyStreak = p.study_streak || 0;
+        stats.bestStreak = p.best_streak || 0;
+        stats.studyHours = p.total_study_hours || 0;
+      }
+
+      if (quizzesResult.status === 'fulfilled' && quizzesResult.value.data?.length) {
+        const scores = quizzesResult.value.data.map((q: any) => q.score).filter(Boolean);
+        if (scores.length > 0) {
+          stats.mockAverage = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('[Dashboard] Stats fetch error (using defaults):', error);
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

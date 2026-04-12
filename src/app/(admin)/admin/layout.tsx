@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -60,7 +60,13 @@ const navigation = [
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,7 +131,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <p className="text-xs text-gray-500 truncate">admin@upsc.ai</p>
               </div>
             </div>
-            <button className="mt-2 w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+            <button
+              onClick={handleLogout}
+              className="mt-2 w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
               <LogOut className="w-4 h-4" />
               Sign Out
             </button>

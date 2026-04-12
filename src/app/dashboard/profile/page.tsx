@@ -19,15 +19,44 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
-  // Mock stats - in production, fetch from database
-  const stats = {
-    notesCreated: 24,
-    quizzesCompleted: 18,
-    articlesRead: 56,
-    avgQuizScore: 72,
-    studyStreak: 12,
-    totalStudyTime: '48h 30m',
+  // Fetch real stats from database
+  let stats = {
+    notesCreated: 0,
+    quizzesCompleted: 0,
+    articlesRead: 0,
+    avgQuizScore: 0,
+    studyStreak: 0,
+    totalStudyTime: '0h 0m',
   };
+
+  try {
+    const { createServerSupabaseClient } = await import('@/lib/supabase/server');
+    const supabase = await createServerSupabaseClient();
+
+    const [notesResult, quizzesResult, progressResult] = await Promise.allSettled([
+      (supabase.from('notes') as any).select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      (supabase.from('quizzes') as any).select('score').eq('user_id', user.id),
+      (supabase.from('user_progress') as any).select('study_streak, total_study_hours').eq('user_id', user.id).single(),
+    ]);
+
+    if (notesResult.status === 'fulfilled') {
+      stats.notesCreated = notesResult.value.count || 0;
+    }
+    if (quizzesResult.status === 'fulfilled' && quizzesResult.value.data) {
+      stats.quizzesCompleted = quizzesResult.value.data.length;
+      const scores = quizzesResult.value.data.map((q: any) => q.score).filter(Boolean);
+      if (scores.length > 0) {
+        stats.avgQuizScore = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
+      }
+    }
+    if (progressResult.status === 'fulfilled' && progressResult.value.data) {
+      stats.studyStreak = progressResult.value.data.study_streak || 0;
+      const hours = progressResult.value.data.total_study_hours || 0;
+      stats.totalStudyTime = `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
+    }
+  } catch (error) {
+    console.warn('[Profile] Stats fetch error (using defaults):', error);
+  }
 
   const subscriptionInfo = {
     tier: user.subscriptionTier || 'trial',
@@ -60,7 +89,7 @@ export default async function ProfilePage() {
             Manage your account and view your progress
           </p>
         </div>
-        <Link href="/settings">
+        <Link href="/dashboard/settings">
           <ShimmerButton className="px-6 py-3 text-sm" background="hsl(var(--muted))">
             <Settings className="w-4 h-4 mr-2" />
             Settings
