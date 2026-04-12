@@ -57,10 +57,8 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '10mb',
-    },
+  serverActions: {
+    bodySizeLimit: '10mb',
   },
 
   // Optimize for production
