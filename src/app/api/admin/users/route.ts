@@ -8,6 +8,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,10 +25,15 @@ interface AdminRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Auth Check (Admin Role Verification)
-    const authHeader = request.headers.get('x-admin-auth');
-    if (authHeader !== process.env.ADMIN_SECRET_TOKEN) {
+    // 1. Auth Check — verify caller is admin via Supabase session
+    const supabaseAuth = createServerComponentClient({ cookies });
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userRole = session.user.user_metadata?.role || session.user.app_metadata?.role;
+    if (userRole !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: admin role required' }, { status: 403 });
     }
 
     const body: AdminRequest = await request.json();

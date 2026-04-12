@@ -53,7 +53,7 @@ export class AnswerGeneratorService {
   constructor() {
     const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     this.edgeFunctionUrl = process.env.SUPABASE_EDGE_FUNCTION_URL
-      || `${baseUrl?.replace('.supabase.co', '.functions.supabase.co')}/doubt-solver-pipe`;
+      || `${baseUrl}/functions/v1/doubt-solver-pipe`;
   }
 
   /**

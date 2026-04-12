@@ -193,7 +193,7 @@ export class PaymentService extends BaseService {
                 orderId: order.id,
                 amount: totalAmount,
                 currency: order.currency || 'INR',
-                razorpayKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+                razorpayKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || '',
                 plan: {
                     name: planData.name,
                     duration: planData.duration_months || 1,

@@ -53,12 +53,12 @@ export class AIProviderClient {
     this.providers = [
       {
         name: '9router',
-        baseUrl: process.env.NINE_ROUTER_BASE_URL || 'https://r94p885.9router.com/v1',
-        apiKey: process.env.NINE_ROUTER_API_KEY || '',
-        model: process.env.NINE_ROUTER_MODEL || 'upsc',
+        baseUrl: process.env.NINE_ROUTER_BASE_URL || process.env['9ROUTER_BASE_URL'] || process.env.ROUTER9_BASE_URL || 'https://r94p885.9router.com/v1',
+        apiKey: process.env.NINE_ROUTER_API_KEY || process.env['9ROUTER_API_KEY'] || process.env.ROUTER9_API_KEY || '',
+        model: process.env.NINE_ROUTER_MODEL || process.env['9ROUTER_MODEL'] || process.env.UPSC_MODEL_NAME || 'upsc',
         priority: 1, // Primary
-        rateLimitRPM: 60,
-        rateLimitConcurrent: 20,
+        rateLimitRPM: parseInt(process.env.NINE_ROUTER_RATE_LIMIT_RPM || process.env['9ROUTER_RATE_LIMIT_RPM'] || '60', 10),
+        rateLimitConcurrent: parseInt(process.env.NINE_ROUTER_RATE_LIMIT_CONCURRENT || process.env['9ROUTER_RATE_LIMIT_CONCURRENT'] || '20', 10),
         isActive: true,
       },
       {
@@ -83,9 +83,20 @@ export class AIProviderClient {
       },
     ];
 
-    // Groq key from environment
-    const groqKey = process.env.GROQ_API_KEY || '';
-    this.groqKeys = [groqKey];
+    // Groq multi-key rotation: GROQ_API_KEY_1 through _7, fallback to single GROQ_API_KEY
+    this.groqKeys = [
+      process.env.GROQ_API_KEY_1,
+      process.env.GROQ_API_KEY_2,
+      process.env.GROQ_API_KEY_3,
+      process.env.GROQ_API_KEY_4,
+      process.env.GROQ_API_KEY_5,
+      process.env.GROQ_API_KEY_6,
+      process.env.GROQ_API_KEY_7,
+    ].filter((k): k is string => !!k);
+    if (this.groqKeys.length === 0) {
+      const singleKey = process.env.GROQ_API_KEY || '';
+      if (singleKey) this.groqKeys = [singleKey];
+    }
 
     // Initialize health status
     this.providers.forEach(p => this.providerHealth.set(p.name, true));

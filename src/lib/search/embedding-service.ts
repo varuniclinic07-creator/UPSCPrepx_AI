@@ -130,11 +130,13 @@ class EmbeddingService {
       console.error('Ollama embedding failed, falling back to 9Router:', error);
       
       // Fallback: Use 9Router with a text embedding model
-      const fallbackResponse = await fetch(`${process.env.NINE_ROUTER_BASE_URL}/embeddings`, {
+      const nineRouterUrl = process.env.NINE_ROUTER_BASE_URL || process.env['9ROUTER_BASE_URL'] || process.env.ROUTER9_BASE_URL || 'https://r94p885.9router.com/v1';
+      const nineRouterKey = process.env.NINE_ROUTER_API_KEY || process.env['9ROUTER_API_KEY'] || process.env.ROUTER9_API_KEY || '';
+      const fallbackResponse = await fetch(`${nineRouterUrl}/embeddings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NINE_ROUTER_API_KEY}`
+          'Authorization': `Bearer ${nineRouterKey}`
         },
         body: JSON.stringify({
           model: 'text-embedding-ada-002',

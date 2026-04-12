@@ -87,12 +87,12 @@ export interface LoadBalanceState {
 export const PROVIDER_CONFIGS: Record<ProviderName, ProviderConfig> = {
   '9router': {
     name: '9router',
-    baseUrl: process.env.NINE_ROUTER_BASE_URL || 'https://r94p885.9router.com/v1',
+    baseUrl: process.env.NINE_ROUTER_BASE_URL || process.env['9ROUTER_BASE_URL'] || process.env.ROUTER9_BASE_URL || 'https://r94p885.9router.com/v1',
     apiKeyEnv: 'NINE_ROUTER_API_KEY',
-    models: [process.env.NINE_ROUTER_MODEL || 'upsc'],
+    models: [process.env.NINE_ROUTER_MODEL || process.env['9ROUTER_MODEL'] || process.env.UPSC_MODEL_NAME || 'upsc'],
     priority: 1,
-    rateLimitRPM: 60,
-    rateLimitConcurrent: 20,
+    rateLimitRPM: parseInt(process.env['9ROUTER_RATE_LIMIT_RPM'] || '60', 10),
+    rateLimitConcurrent: parseInt(process.env['9ROUTER_RATE_LIMIT_CONCURRENT'] || '20', 10),
     maxTokensPerRequest: 32000,
     supportsStreaming: true,
     isActive: true,

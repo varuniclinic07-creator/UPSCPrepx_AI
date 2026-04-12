@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
                     orderId: order.id,
                     amount: totalAmount,
                     currency: order.currency || 'INR',
-                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
                     plan: {
                         name: planData.name,
                         duration: planData.duration_months || 1,

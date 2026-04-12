@@ -421,7 +421,6 @@ class ApiClient {
       action: (userId: string, action: 'suspend' | 'ban' | 'activate' | 'grant_xp', amount?: number) => this.request<ApiResponse<{ success: boolean; message: string }>>('/admin/users', {
         method: 'POST',
         body: { userId, action, amount },
-        headers: { 'x-admin-auth': process.env.NEXT_PUBLIC_ADMIN_SECRET || '' },
       }),
     },
   };

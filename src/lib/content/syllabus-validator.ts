@@ -10,8 +10,8 @@ import { rateLimiter } from '@/lib/rate-limiter/api-manager';
 let _openaiClient: OpenAI | null = null;
 function getOpenAIClient(): OpenAI {
   if (!_openaiClient) _openaiClient = new OpenAI({
-    apiKey: process.env.A4F_API_KEY,
-    baseURL: process.env.A4F_BASE_URL || 'https://api.a4f.co/v1'
+    apiKey: process.env.NINE_ROUTER_API_KEY || process.env['9ROUTER_API_KEY'] || process.env.ROUTER9_API_KEY || '',
+    baseURL: process.env.NINE_ROUTER_BASE_URL || process.env['9ROUTER_BASE_URL'] || process.env.ROUTER9_BASE_URL || 'https://r94p885.9router.com/v1'
 });
   return _openaiClient;
 }

@@ -1,15 +1,30 @@
 // ═══════════════════════════════════════════════════════════════
 // EMAIL SERVICE
-// Transactional emails via Resend/SendGrid
+// Transactional emails via SMTP (primary) / Resend (fallback)
 // ═══════════════════════════════════════════════════════════════
 
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
+// SMTP transport (primary — uses env.production SMTP_* vars)
+const smtpTransport = process.env.SMTP_HOST
+    ? nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: parseInt(process.env.SMTP_PORT || '587', 10) === 465,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASSWORD,
+        },
+    })
+    : null;
+
+// Resend fallback
 const resend = process.env.RESEND_API_KEY
     ? new Resend(process.env.RESEND_API_KEY)
     : null;
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@upsc-master.com';
+const FROM_EMAIL = process.env.SMTP_FROM || process.env.FROM_EMAIL || 'noreply@upsc-master.com';
 const APP_NAME = 'UPSC CSE Master';
 
 // ═══════════════════════════════════════════════════════════════
@@ -127,23 +142,30 @@ export async function sendEmail(
     subject: string,
     html: string
 ): Promise<boolean> {
-    if (!resend) {
-        console.log(`[DEV EMAIL] To: ${to}, Subject: ${subject}`);
-        return true;
+    // 1. Try SMTP (primary)
+    if (smtpTransport) {
+        try {
+            await smtpTransport.sendMail({ from: FROM_EMAIL, to, subject, html });
+            return true;
+        } catch (error) {
+            console.error('SMTP send error, falling back to Resend:', error);
+        }
     }
 
-    try {
-        await resend.emails.send({
-            from: FROM_EMAIL,
-            to,
-            subject,
-            html
-        });
-        return true;
-    } catch (error) {
-        console.error('Email send error:', error);
-        return false;
+    // 2. Try Resend (fallback)
+    if (resend) {
+        try {
+            await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
+            return true;
+        } catch (error) {
+            console.error('Resend send error:', error);
+            return false;
+        }
     }
+
+    // 3. Dev mode — no transport configured
+    console.log(`[DEV EMAIL] To: ${to}, Subject: ${subject}`);
+    return true;
 }
 
 export async function sendWelcomeEmail(email: string, name: string) {
