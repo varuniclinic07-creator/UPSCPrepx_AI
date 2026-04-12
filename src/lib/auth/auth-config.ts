@@ -88,15 +88,7 @@ export async function getCurrentUser(): Promise<User | null> {
       preferences: (profile.preferences as Record<string, unknown>) || {},
     };
   } catch (error) {
-    // Log detailed error for debugging
     console.error('[Auth] Error getting current user:', error);
-
-    // Re-throw configuration errors so they show up properly
-    if (error instanceof Error && error.message.includes('not configured')) {
-      throw error;
-    }
-
-    // For other errors, return null (unauthenticated)
     return null;
   }
 }
