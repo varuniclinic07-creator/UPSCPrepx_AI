@@ -8,9 +8,9 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+# Copy package files and npm config
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --ignore-scripts --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:22-alpine AS builder
