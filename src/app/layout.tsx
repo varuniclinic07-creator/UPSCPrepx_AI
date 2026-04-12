@@ -20,6 +20,7 @@ const notoSansDevanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://upscbyvarunsh.aimasteryedu.in'),
   title: {
     default: 'UPSC CSE Master - AI-Powered UPSC Preparation',
     template: '%s | UPSC CSE Master',
