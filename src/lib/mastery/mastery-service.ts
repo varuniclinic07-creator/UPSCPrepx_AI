@@ -216,6 +216,8 @@ export async function updateMastery(
     updated_at: now,
   };
 
+  let result: MasteryRecord | null = null;
+
   if (existing) {
     const { data, error } = await supabase
       .from('user_mastery')
@@ -224,16 +226,43 @@ export async function updateMastery(
       .select()
       .single();
     if (error) { console.error('mastery update error:', error); return null; }
-    return data as MasteryRecord;
+    result = data as MasteryRecord;
+  } else {
+    const { data, error } = await supabase
+      .from('user_mastery')
+      .insert(record)
+      .select()
+      .single();
+    if (error) { console.error('mastery insert error:', error); return null; }
+    result = data as MasteryRecord;
   }
 
-  const { data, error } = await supabase
-    .from('user_mastery')
-    .insert(record)
-    .select()
-    .single();
-  if (error) { console.error('mastery insert error:', error); return null; }
-  return data as MasteryRecord;
+  // Check for mastery-based achievements (best-effort, non-blocking)
+  try {
+    const { achievements } = await import('@/lib/gamification/achievement-service');
+    await achievements.checkUserAchievements(userId);
+  } catch (err) {
+    console.error('Achievement check (non-blocking):', err);
+  }
+
+  // Notify on mastery level-up
+  if (existing && existing.mastery_level !== masteryLevel) {
+    try {
+      const { notifyLevelUp } = await import('@/lib/mastery/mastery-notifications');
+      const { data: node } = await supabase
+        .from('knowledge_nodes')
+        .select('title')
+        .eq('id', nodeId)
+        .single();
+      if (node) {
+        await notifyLevelUp(userId, node.title, existing.mastery_level, masteryLevel);
+      }
+    } catch (err) {
+      console.error('Level-up notification (non-blocking):', err);
+    }
+  }
+
+  return result;
 }
 
 /**
