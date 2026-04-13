@@ -47,6 +47,8 @@ export class AIProviderClient {
   private providerFailures: Map<string, number> = new Map();
   private groqKeys: string[];
   private currentGroqKeyIndex: number = 0;
+  private geminiKeys: string[];
+  private currentGeminiKeyIndex: number = 0;
 
   constructor() {
     // CRITICAL: AI Provider Priority — Ollama primary, Groq fallback
@@ -71,6 +73,31 @@ export class AIProviderClient {
         rateLimitConcurrent: 10,
         isActive: true,
       },
+      {
+        name: 'nvidia',
+        baseUrl: 'https://integrate.api.nvidia.com/v1',
+        apiKey: process.env.NVIDIA_API_KEY || '',
+        model: process.env.NVIDIA_MODEL || 'nvidia/llama-3.1-nemotron-70b-instruct',
+        priority: 3,
+        rateLimitRPM: 10,
+        rateLimitConcurrent: 3,
+        isActive: Boolean(process.env.NVIDIA_API_KEY),
+      },
+      {
+        name: 'gemini',
+        baseUrl: 'gemini-adapter', // Uses GeminiAdapter, not direct fetch
+        apiKey: '', // Resolved via key rotation at call time
+        model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+        priority: 4,
+        rateLimitRPM: 15,
+        rateLimitConcurrent: 5,
+        isActive: Boolean(
+          process.env.GEMINI_API_KEY_1 ||
+          process.env.GEMINI_API_KEY_2 ||
+          process.env.GEMINI_API_KEY_3 ||
+          process.env.GEMINI_API_KEY_4
+        ),
+      },
     ];
 
     // Groq multi-key rotation: GROQ_API_KEY_1 through _7, fallback to single GROQ_API_KEY
@@ -87,6 +114,14 @@ export class AIProviderClient {
       const singleKey = process.env.GROQ_API_KEY || '';
       if (singleKey) this.groqKeys = [singleKey];
     }
+
+    // Gemini multi-key rotation: GEMINI_API_KEY_1 through _4
+    this.geminiKeys = [
+      process.env.GEMINI_API_KEY_1,
+      process.env.GEMINI_API_KEY_2,
+      process.env.GEMINI_API_KEY_3,
+      process.env.GEMINI_API_KEY_4,
+    ].filter((k): k is string => !!k);
 
     // Initialize health status
     this.providers.forEach(p => this.providerHealth.set(p.name, true));
@@ -361,6 +396,37 @@ export class AIProviderClient {
   }
 
   /**
+   * Get current Gemini key (rotation)
+   */
+  getGeminiKey(): string {
+    if (this.geminiKeys.length === 0) return '';
+    return this.geminiKeys[this.currentGeminiKeyIndex];
+  }
+
+  /**
+   * Rotate to next Gemini key
+   */
+  private rotateGeminiKey(): void {
+    if (this.geminiKeys.length > 0) {
+      this.currentGeminiKeyIndex = (this.currentGeminiKeyIndex + 1) % this.geminiKeys.length;
+    }
+  }
+
+  /** Returns provider names in priority order */
+  getProviderNames(): string[] {
+    return [...this.providers]
+      .sort((a, b) => a.priority - b.priority)
+      .map(p => p.name);
+  }
+
+  /** Returns the resolved API key for a named provider */
+  getProviderKey(name: string): string {
+    if (name === 'groq') return this.getGroqKey();
+    if (name === 'gemini') return this.getGeminiKey();
+    return this.providers.find(p => p.name === name)?.apiKey ?? '';
+  }
+
+  /**
    * Get max tokens for brevity level
    */
   private getMaxTokensForBrevity(level: string): number {
@@ -394,7 +460,7 @@ export function getAIProviderClient(): AIProviderClient {
 // callAIStream() — True streaming support for real-time AI responses
 // ============================================================================
 
-export type AIProvider = 'ollama' | 'groq';
+export type AIProvider = 'ollama' | 'groq' | 'nvidia' | 'gemini';
 
 interface CallAIOptions {
   prompt?: string;
@@ -494,11 +560,31 @@ export async function callAI(
     try {
       const apiKey = provider.name === 'groq'
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
+        : provider.name === 'gemini'
+        ? client.getGeminiKey()
         : provider.apiKey;
 
       if (provider.name !== 'ollama' && !apiKey) {
         console.warn(`Skipping provider ${provider.name}: no API key configured`);
         continue;
+      }
+
+      // Gemini uses adapter instead of direct fetch
+      if (provider.name === 'gemini') {
+        const { GeminiAdapter } = await import('./gemini-adapter');
+        const adapter = new GeminiAdapter({ apiKey, model: provider.model });
+        const response = await adapter.chat(
+          messages as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+          { temperature, maxTokens }
+        );
+        const content = response.choices[0].message.content;
+
+        const failures = (client as any).providerFailures as Map<string, number>;
+        failures.set(provider.name, 0);
+        health.set(provider.name, true);
+        (client as any).rotateGeminiKey();
+
+        return content;
       }
 
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -626,11 +712,33 @@ export async function callAIStream(
     try {
       const apiKey = provider.name === 'groq'
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
+        : provider.name === 'gemini'
+        ? client.getGeminiKey()
         : provider.apiKey;
 
       if (provider.name !== 'ollama' && !apiKey) {
         console.warn(`Skipping provider ${provider.name}: no API key configured`);
         continue;
+      }
+
+      // Gemini doesn't support true streaming — call adapter and yield full response
+      if (provider.name === 'gemini') {
+        const { GeminiAdapter } = await import('./gemini-adapter');
+        const adapter = new GeminiAdapter({ apiKey, model: provider.model });
+        const geminiResponse = await adapter.chat(
+          messages as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+          { temperature, maxTokens }
+        );
+        const content = geminiResponse.choices[0].message.content;
+        onChunk(content);
+
+        const failures = (client as any).providerFailures as Map<string, number>;
+        failures.set(provider.name, 0);
+        health.set(provider.name, true);
+        (client as any).rotateGeminiKey();
+
+        onComplete?.();
+        return;
       }
 
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {

@@ -20,6 +20,7 @@
     "validate": "npm run type-check && npm run lint && npm run format:check"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "3.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.67.3",
     "@opentelemetry/sdk-node": "^0.210.0",
@@ -58,6 +59,7 @@
     "cobe": "0.6.5",
     "date-fns": "4.1.0",
     "framer-motion": "^12.26.2",
+    "fuse.js": "^7.3.0",
     "hls.js": "^1.6.15",
     "html2canvas": "1.4.1",
     "ioredis": "^5.4.1",
