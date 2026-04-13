@@ -49,13 +49,22 @@ export async function checkStreakMilestones(userId: string, currentStreak: numbe
     100: 'LEGENDARY! 100-day streak. You\'re unstoppable!',
   };
 
+  const title = `${currentStreak}-day Study Streak!`;
+  const body = messages[currentStreak] || `Amazing ${currentStreak}-day streak!`;
+
   await supabase.from('notifications').insert({
     user_id: userId,
     type: 'achievement',
-    title: `${currentStreak}-day Study Streak!`,
-    message: messages[currentStreak] || `Amazing ${currentStreak}-day streak!`,
+    title,
+    message: body,
     is_read: false,
   });
+
+  // Best-effort web push
+  try {
+    const { sendPushToUser } = await import('@/lib/notifications/push-service');
+    await sendPushToUser(userId, { title, body, tag: 'streak' });
+  } catch { /* push is best-effort */ }
 }
 
 // ─── Mastery Level-Up ────────────────────────────────────────────
@@ -80,13 +89,22 @@ export async function notifyLevelUp(
 
   const label = levelEmoji[newLevel] || newLevel;
 
+  const title = `Level Up: ${label}!`;
+  const body = `Your mastery of "${nodeTitle}" has reached ${label} level. Keep it up!`;
+
   await supabase.from('notifications').insert({
     user_id: userId,
     type: 'success',
-    title: `Level Up: ${label}!`,
-    message: `Your mastery of "${nodeTitle}" has reached ${label} level. Keep it up!`,
+    title,
+    message: body,
     is_read: false,
   });
+
+  // Best-effort web push
+  try {
+    const { sendPushToUser } = await import('@/lib/notifications/push-service');
+    await sendPushToUser(userId, { title, body, tag: 'mastery-levelup' });
+  } catch { /* push is best-effort */ }
 }
 
 // ─── SRS Due Reminders ───────────────────────────────────────────
@@ -118,14 +136,23 @@ export async function generateDueReminders(userId: string): Promise<number> {
 
   if (todayReminder && todayReminder.length > 0) return dueCount;
 
+  const title = `${dueCount} topic${dueCount > 1 ? 's' : ''} ready for revision`;
+  const body = `You have ${dueCount} topic${dueCount > 1 ? 's' : ''} due for spaced repetition review. Revise now to strengthen your memory!`;
+
   await supabase.from('notifications').insert({
     user_id: userId,
     type: 'info',
-    title: `${dueCount} topic${dueCount > 1 ? 's' : ''} ready for revision`,
-    message: `You have ${dueCount} topic${dueCount > 1 ? 's' : ''} due for spaced repetition review. Revise now to strengthen your memory!`,
+    title,
+    message: body,
     link: '/dashboard/revision',
     is_read: false,
   });
+
+  // Best-effort web push
+  try {
+    const { sendPushToUser } = await import('@/lib/notifications/push-service');
+    await sendPushToUser(userId, { title, body, url: '/dashboard/revision', tag: 'srs-due' });
+  } catch { /* push is best-effort */ }
 
   return dueCount;
 }
@@ -146,14 +173,20 @@ export async function generateWeeklyDigest(userId: string): Promise<void> {
 
   if (!recentActivity || recentActivity.length === 0) {
     // No activity — gentle nudge
+    const nudgeTitle = 'Weekly Study Reminder';
+    const nudgeBody = 'You haven\'t studied this week. Even 15 minutes a day makes a difference for UPSC preparation!';
     await supabase.from('notifications').insert({
       user_id: userId,
       type: 'info',
-      title: 'Weekly Study Reminder',
-      message: 'You haven\'t studied this week. Even 15 minutes a day makes a difference for UPSC preparation!',
+      title: nudgeTitle,
+      message: nudgeBody,
       link: '/dashboard',
       is_read: false,
     });
+    try {
+      const { sendPushToUser } = await import('@/lib/notifications/push-service');
+      await sendPushToUser(userId, { title: nudgeTitle, body: nudgeBody, url: '/dashboard', tag: 'weekly-digest' });
+    } catch { /* push is best-effort */ }
     return;
   }
 
@@ -166,19 +199,28 @@ export async function generateWeeklyDigest(userId: string): Promise<void> {
   const hours = Math.floor(minutes / 60);
   const timeStr = hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
 
+  const digestTitle = 'Your Weekly Progress';
+  const digestBody = [
+    `Topics studied: ${topicsStudied}`,
+    `Time invested: ${timeStr}`,
+    `Average accuracy: ${Math.round(avgAccuracy * 100)}%`,
+    mastered > 0 ? `Topics mastered: ${mastered}` : null,
+  ].filter(Boolean).join(' | ');
+
   await supabase.from('notifications').insert({
     user_id: userId,
     type: 'success',
-    title: 'Your Weekly Progress',
-    message: [
-      `Topics studied: ${topicsStudied}`,
-      `Time invested: ${timeStr}`,
-      `Average accuracy: ${Math.round(avgAccuracy * 100)}%`,
-      mastered > 0 ? `Topics mastered: ${mastered}` : null,
-    ].filter(Boolean).join(' | '),
+    title: digestTitle,
+    message: digestBody,
     link: '/dashboard/revision',
     is_read: false,
   });
+
+  // Best-effort web push
+  try {
+    const { sendPushToUser } = await import('@/lib/notifications/push-service');
+    await sendPushToUser(userId, { title: digestTitle, body: digestBody, url: '/dashboard/revision', tag: 'weekly-digest' });
+  } catch { /* push is best-effort */ }
 }
 
 export const masteryNotifications = {

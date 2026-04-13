@@ -36,6 +36,14 @@ export async function createNotification(
         action_url: actionUrl,
         read: false
     });
+
+    // Send web push notification (best-effort)
+    try {
+        const { sendPushToUser } = await import('./push-service');
+        await sendPushToUser(userId, { title, body: message, url: actionUrl, tag: type });
+    } catch {
+        // Push is best-effort; in-app notification is already saved
+    }
 }
 
 /**
