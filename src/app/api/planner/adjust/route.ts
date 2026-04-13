@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { adaptiveAdjuster } from '@/lib/planner/adaptive-adjuster';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,9 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const planId = searchParams.get('plan_id');
-    const userId = request.headers.get('x-user-id');
+    const supabase = await createServerSupabaseClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const userId = authUser?.id;
 
     if (!userId) {
       return NextResponse.json(
@@ -127,7 +130,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const supabase = await createServerSupabaseClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const userId = authUser?.id;
 
     if (!userId) {
       return NextResponse.json(

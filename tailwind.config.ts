@@ -67,8 +67,8 @@ const config: Config = {
         '3xl': 'calc(var(--radius) + 16px)',
       },
       fontFamily: {
-        sans: ['Manrope', 'system-ui', 'sans-serif'],
-        display: ['Manrope', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-space-grotesk)', 'Space Grotesk', 'system-ui', 'sans-serif'],
         hindi: ['Noto Sans Devanagari', 'sans-serif'],
       },
       fontSize: {

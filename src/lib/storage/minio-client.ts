@@ -1,24 +1,36 @@
 import { Client } from 'minio';
 import { withCircuitBreaker } from '@/lib/resilience/circuit-breaker';
 
-// Validate required environment variables
-if (!process.env.MINIO_ENDPOINT) {
-  throw new Error('MINIO_ENDPOINT environment variable is required');
-}
-if (!process.env.MINIO_ACCESS_KEY) {
-  throw new Error('MINIO_ACCESS_KEY environment variable is required');
-}
-if (!process.env.MINIO_SECRET_KEY) {
-  throw new Error('MINIO_SECRET_KEY environment variable is required');
+// Lazy-initialized MinIO client — never throw at module level
+let minioClient: Client | null = null;
+
+function getMinioClient(): Client {
+  if (minioClient) return minioClient;
+
+  const endpoint = process.env.MINIO_ENDPOINT;
+  const accessKey = process.env.MINIO_ACCESS_KEY;
+  const secretKey = process.env.MINIO_SECRET_KEY;
+
+  if (!endpoint || !accessKey || !secretKey) {
+    throw new Error(
+      'MinIO not configured. Set MINIO_ENDPOINT, MINIO_ACCESS_KEY, and MINIO_SECRET_KEY.'
+    );
+  }
+
+  minioClient = new Client({
+    endPoint: endpoint,
+    port: parseInt(process.env.MINIO_PORT || '9000'),
+    useSSL: process.env.MINIO_USE_SSL === 'true',
+    accessKey,
+    secretKey,
+  });
+
+  return minioClient;
 }
 
-const minioClient = new Client({
-  endPoint: process.env.MINIO_ENDPOINT!,
-  port: parseInt(process.env.MINIO_PORT || '9000'),
-  useSSL: process.env.MINIO_USE_SSL === 'true',
-  accessKey: process.env.MINIO_ACCESS_KEY!,
-  secretKey: process.env.MINIO_SECRET_KEY!,
-});
+export function isMinioConfigured(): boolean {
+  return !!(process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY);
+}
 
 const BUCKETS = {
   MATERIALS: 'materials',
@@ -36,12 +48,13 @@ export async function uploadFile(
   return withCircuitBreaker(async () => {
     const bucketName = BUCKETS[bucket];
 
-    const exists = await minioClient.bucketExists(bucketName);
+    const client = getMinioClient();
+    const exists = await client.bucketExists(bucketName);
     if (!exists) {
-      await minioClient.makeBucket(bucketName, 'us-east-1');
+      await client.makeBucket(bucketName, 'us-east-1');
     }
 
-    await minioClient.putObject(bucketName, fileName, fileBuffer, fileBuffer.length, {
+    await client.putObject(bucketName, fileName, fileBuffer, fileBuffer.length, {
       'Content-Type': contentType,
     });
 
@@ -52,21 +65,24 @@ export async function uploadFile(
 export async function getFileUrl(bucket: keyof typeof BUCKETS, fileName: string): Promise<string> {
   return withCircuitBreaker(async () => {
     const bucketName = BUCKETS[bucket];
-    return await minioClient.presignedGetObject(bucketName, fileName, 24 * 60 * 60);
+    const client = getMinioClient();
+    return await client.presignedGetObject(bucketName, fileName, 24 * 60 * 60);
   });
 }
 
 export async function deleteFile(bucket: keyof typeof BUCKETS, fileName: string): Promise<void> {
   return withCircuitBreaker(async () => {
     const bucketName = BUCKETS[bucket];
-    await minioClient.removeObject(bucketName, fileName);
+    const client = getMinioClient();
+    await client.removeObject(bucketName, fileName);
   });
 }
 
 export async function listFiles(bucket: keyof typeof BUCKETS, prefix?: string): Promise<string[]> {
   return withCircuitBreaker(async () => {
     const bucketName = BUCKETS[bucket];
-    const stream = minioClient.listObjects(bucketName, prefix, true);
+    const client = getMinioClient();
+    const stream = client.listObjects(bucketName, prefix, true);
     const files: string[] = [];
 
     return new Promise((resolve, reject) => {

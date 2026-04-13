@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { scheduleGenerator } from '@/lib/planner/schedule-generator';
 import { milestoneManager } from '@/lib/planner/milestone-manager';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -50,8 +51,10 @@ export async function GET(request: NextRequest) {
 
     if (!planId) {
       // Get user's active plan
-      const userId = request.headers.get('x-user-id');
-      
+      const supabase = await createServerSupabaseClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const userId = authUser?.id;
+
       if (!userId) {
         return NextResponse.json(
           { success: false, error: 'Authentication required' },
@@ -135,9 +138,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user from headers
-    const userId = request.headers.get('x-user-id');
-    
+    // Get authenticated user
+    const supabase = await createServerSupabaseClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const userId = authUser?.id;
+
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },

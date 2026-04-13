@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { progressTracker } from '@/lib/planner/progress-tracker';
 import { milestoneManager } from '@/lib/planner/milestone-manager';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +38,9 @@ const CompleteTaskSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const supabase = await createServerSupabaseClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const userId = authUser?.id;
 
     if (!userId) {
       return NextResponse.json(

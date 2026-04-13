@@ -50,104 +50,68 @@ export default function AnswerPracticePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Sample questions (in production, fetch from API)
+  // Fetch questions from API
   useEffect(() => {
-    const sampleQuestions: Question[] = [
-      {
-        id: '1',
-        question_text: 'The Indian Constitution embodies the principle of \'Basic Structure\'. Discuss the evolution of this doctrine through landmark Supreme Court judgments.',
-        question_text_hindi: 'भारतीय संविधान \'मूल संरचना\' के सिद्धांत को समाहित करता है। landmark सुप्रीम कोर्ट के फैसलों के माध्यम से इस सिद्धांत के विकास पर चर्चा करें।',
-        subject: 'GS2',
-        topic: 'Constitution',
-        word_limit: 250,
-        time_limit_min: 15,
-        marks: 10,
-        is_pyo: true,
-        year: 2023,
-      },
-      {
-        id: '2',
-        question_text: 'Explain the impact of climate change on water resources in India. Suggest adaptive strategies for sustainable water management.',
-        question_text_hindi: 'भारत में जल संसाधनों पर जलवायु परिवर्तन के प्रभाव की व्याख्या करें। सतत जल प्रबंधन के लिए अनुकूलन रणनीतियों का सुझाव दें।',
-        subject: 'GS3',
-        topic: 'Environment',
-        word_limit: 250,
-        time_limit_min: 15,
-        marks: 10,
-        is_pyo: false,
-      },
-      {
-        id: '3',
-        question_text: 'What are the challenges in India\'s agricultural marketing system? How can e-NAM transform the sector?',
-        question_text_hindi: 'भारत की कृषि विपणन प्रणाली में क्या चुनौतियां हैं? e-NAM क्षेत्र को कैसे बदल सकता है?',
-        subject: 'GS3',
-        topic: 'Agriculture',
-        word_limit: 250,
-        time_limit_min: 15,
-        marks: 10,
-        is_pyo: true,
-        year: 2022,
-      },
-      {
-        id: '4',
-        question_text: 'Ethical concerns in the use of Artificial Intelligence: Discuss with relevant examples.',
-        question_text_hindi: 'कृत्रिम बुद्धिमत्ता के उपयोग में नैतिक चिंताएं: प्रासंगिक उदाहरणों के साथ चर्चा करें।',
-        subject: 'GS4',
-        topic: 'Ethics',
-        word_limit: 250,
-        time_limit_min: 15,
-        marks: 10,
-        is_pyo: false,
-      },
-      {
-        id: '5',
-        question_text: 'Trace the evolution of the Indian freedom struggle from 1857 to 1905.',
-        question_text_hindi: '1857 से 1905 तक भारतीय स्वतंत्रता संग्राम के विकास का पता लगाएं।',
-        subject: 'GS1',
-        topic: 'History',
-        word_limit: 250,
-        time_limit_min: 15,
-        marks: 10,
-        is_pyo: true,
-        year: 2021,
-      },
-    ];
-
-    setQuestions(sampleQuestions);
-    setIsLoading(false);
+    async function fetchQuestions() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/eval/mains/questions');
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Failed to load questions (${res.status})`);
+        }
+        const data = await res.json();
+        const mapped: Question[] = (data.questions || []).map((q: any) => ({
+          id: q.id,
+          question_text: q.question_text,
+          question_text_hindi: q.question_text_hi,
+          subject: q.subject,
+          topic: q.topic,
+          word_limit: q.word_limit || 250,
+          time_limit_min: q.time_limit_min || 15,
+          marks: q.marks || 10,
+          is_pyo: q.is_pyq ?? false,
+          year: q.year,
+        }));
+        setQuestions(mapped);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load questions');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchQuestions();
   }, []);
 
-  // Sample evaluations (in production, fetch from API)
+  // Fetch evaluation history from API
   useEffect(() => {
-    const sampleEvaluations: Evaluation[] = [
-      {
-        id: 'eval-1',
-        question_text: 'The Indian Constitution embodies the principle of Basic Structure...',
-        subject: 'GS2',
-        topic: 'Constitution',
-        overall_percentage: 72,
-        grade: 'Good',
-        word_count: 245,
-        time_taken_sec: 890,
-        created_at: '2024-01-15T10:30:00Z',
-        is_pyo: true,
-        year: 2023,
-      },
-      {
-        id: 'eval-2',
-        question_text: 'Explain the impact of climate change on water resources...',
-        subject: 'GS3',
-        topic: 'Environment',
-        overall_percentage: 58,
-        grade: 'Average',
-        word_count: 230,
-        time_taken_sec: 920,
-        created_at: '2024-01-14T14:20:00Z',
-        is_pyo: false,
-      },
-    ];
-
-    setEvaluations(sampleEvaluations);
+    async function fetchHistory() {
+      try {
+        const res = await fetch('/api/eval/mains/history?limit=20');
+        if (!res.ok) return; // silently skip if not available
+        const data = await res.json();
+        if (data.success && data.data) {
+          const mapped: Evaluation[] = data.data.map((e: any) => ({
+            id: e.id,
+            question_text: e.mains_questions?.question_text || e.question_text || '',
+            subject: e.mains_questions?.subject || e.subject || '',
+            topic: e.mains_questions?.topic || e.topic || '',
+            overall_percentage: e.overall_percentage ?? 0,
+            grade: e.grade || '',
+            word_count: e.word_count ?? 0,
+            time_taken_sec: e.time_taken_sec ?? 0,
+            created_at: e.created_at || '',
+            is_pyo: e.mains_questions?.is_pyq ?? false,
+            year: e.mains_questions?.year,
+          }));
+          setEvaluations(mapped);
+        }
+      } catch {
+        // History fetch failure is non-critical
+      }
+    }
+    fetchHistory();
   }, []);
 
   const handleStartWriting = (question: Question) => {
@@ -156,10 +120,43 @@ export default function AnswerPracticePage() {
   };
 
   const handleSubmitAnswer = async (answerHtml: string, wordCount: number, timeTaken: number) => {
-    // In production: POST to /api/eval/mains/submit
-    console.log('Submitting answer...', { answerHtml, wordCount, timeTaken });
-    // After submission, show loading then result
+    if (!selectedQuestion) return;
     setView('result');
+    try {
+      const res = await fetch('/api/eval/mains/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: selectedQuestion.id,
+          answer_text: answerHtml,
+          word_count: wordCount,
+          time_taken_sec: timeTaken,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || 'Evaluation failed');
+        return;
+      }
+      const data = await res.json();
+      if (data.success && data.evaluation) {
+        setSelectedEvaluation({
+          id: data.evaluation.id,
+          question_text: selectedQuestion.question_text,
+          subject: selectedQuestion.subject,
+          topic: selectedQuestion.topic,
+          overall_percentage: data.evaluation.overall_percentage ?? 0,
+          grade: data.evaluation.grade || '',
+          word_count: wordCount,
+          time_taken_sec: timeTaken,
+          created_at: new Date().toISOString(),
+          is_pyo: selectedQuestion.is_pyo,
+          year: selectedQuestion.year,
+        });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit answer');
+    }
   };
 
   const handleViewEvaluation = (evalId: string) => {

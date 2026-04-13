@@ -1,14 +1,22 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, Noto_Sans_Devanagari } from 'next/font/google';
+import { Space_Grotesk, Inter, Noto_Sans_Devanagari } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 
-// Primary font - Manrope for futuristic Apple-style UI
-const manrope = Manrope({
+// Display font - Space Grotesk for headings & branding
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-manrope',
-  weight: ['200', '300', '400', '500', '600', '700', '800'],
+  variable: '--font-space-grotesk',
+  weight: ['300', '400', '500', '600', '700'],
+});
+
+// Body font - Inter for clean readability
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+  weight: ['300', '400', '500', '600', '700'],
 });
 
 // Hindi font support
@@ -74,7 +82,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${notoSansDevanagari.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`dark ${spaceGrotesk.variable} ${inter.variable} ${notoSansDevanagari.variable}`}>
       <head>
         {/* Material Symbols for icons */}
         <link

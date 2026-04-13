@@ -406,26 +406,34 @@ export interface RequestValidationResult {
 
 /**
  * Validate request has required security headers
+ * Allows JSON, multipart (file uploads), form-urlencoded, and text content types.
+ * Webhooks and auth callbacks may omit Content-Type entirely — that's OK.
  */
 export function validateRequestSecurity(request: NextRequest): RequestValidationResult {
-    // For API routes, require Content-Type for non-GET requests
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-        const contentType = request.headers.get('content-type');
+        const contentType = request.headers.get('content-type') || '';
+        const pathname = request.nextUrl.pathname;
 
-        if (!contentType) {
-            return {
-                valid: false,
-                error: 'Content-Type header required',
-                statusCode: 400,
-            };
-        }
+        // Exempt webhook and auth callback routes — they use varied content types
+        const exemptPrefixes = ['/api/payments/', '/api/auth/', '/api/webhooks/', '/api/cron/'];
+        const isExempt = exemptPrefixes.some(prefix => pathname.startsWith(prefix));
 
-        if (!contentType.includes('application/json')) {
-            return {
-                valid: false,
-                error: 'Content-Type must be application/json',
-                statusCode: 415,
-            };
+        if (!isExempt && contentType) {
+            const allowedTypes = [
+                'application/json',
+                'multipart/form-data',
+                'application/x-www-form-urlencoded',
+                'text/plain',
+            ];
+            const isAllowed = allowedTypes.some(type => contentType.includes(type));
+
+            if (!isAllowed) {
+                return {
+                    valid: false,
+                    error: `Unsupported Content-Type: ${contentType}`,
+                    statusCode: 415,
+                };
+            }
         }
     }
 

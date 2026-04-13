@@ -61,9 +61,11 @@ const nextConfig = {
     bodySizeLimit: '10mb',
   },
 
-  // Optimize for production
+  // Optimize for production — keep error/warn for diagnostics
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: process.env.NODE_ENV === 'production'
+      ? { exclude: ['error', 'warn', 'info'] }
+      : false,
   },
 
   // Security headers
@@ -84,7 +86,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://api.a4f.co https://api.razorpay.com",
+              "connect-src 'self' https://*.supabase.co https://*.9router.com https://api.groq.com https://api.razorpay.com https://*.upstash.io",
               "frame-src 'self' https://api.razorpay.com",
               "object-src 'none'",
               "base-uri 'self'",

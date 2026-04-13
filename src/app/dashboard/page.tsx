@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 
-// Force dynamic rendering to avoid static generation errors with Server Components
 export const dynamic = 'force-dynamic';
 import {
   BookOpen,
@@ -14,16 +13,12 @@ import {
   Sparkles,
   Calendar,
   Flame,
-  CheckCircle2,
   Play,
   FileText,
-  Zap,
+  Video,
+  PenTool,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth/auth-config';
-import { BentoGrid, BentoCard, BentoCardLarge } from '@/components/magic-ui/bento-grid';
-import { StatCard, ProgressStatCard } from '@/components/magic-ui/stat-card';
-import { ShimmerButton } from '@/components/magic-ui/shimmer-button';
-import { BorderBeamInput } from '@/components/magic-ui/border-beam';
 
 export const metadata = {
   title: 'Dashboard',
@@ -47,7 +42,6 @@ async function DashboardStats() {
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     if (authUser) {
-      // Fetch real stats - each query is independent, failures are non-fatal
       const [notesResult, quizzesResult, progressResult] = await Promise.allSettled([
         (supabase.from('notes') as any).select('id', { count: 'exact', head: true }).eq('user_id', authUser.id),
         (supabase.from('quizzes') as any).select('score').eq('user_id', authUser.id).order('created_at', { ascending: false }).limit(5),
@@ -73,253 +67,68 @@ async function DashboardStats() {
     console.warn('[Dashboard] Stats fetch error (using defaults):', error);
   }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <ProgressStatCard
-        title="Syllabus Completed"
-        value={stats.syllabusProgress}
-        total={stats.totalSyllabus}
-        icon={BookOpen}
-        glowColor="hsl(var(--primary))"
-      />
-
-      <StatCard
-        title="Current Streak"
-        value={stats.studyStreak}
-        subtitle="Days"
-        icon={Flame}
-        trend={{ value: 'Keep it up!', direction: 'up' }}
-        glowColor="hsl(32, 100%, 50%)"
-      >
-        <p className="text-xs text-muted-foreground mt-3">Best: {stats.bestStreak} Days</p>
-      </StatCard>
-
-      <StatCard
-        title="Study Hours"
-        value={`${stats.studyHours}h`}
-        icon={Clock}
-        trend={{ value: `▲ ${stats.weeklyChange}h`, direction: 'up' }}
-        glowColor="hsl(var(--secondary))"
-      >
-        <p className="text-xs text-muted-foreground mt-3">This week</p>
-      </StatCard>
-
-      <StatCard
-        title="Mock Average"
-        value={`${stats.mockAverage}%`}
-        icon={Target}
-        trend={{ value: stats.mockRank, direction: 'up' }}
-        glowColor="hsl(263, 70%, 50%)"
-      >
-        <p className="text-xs text-muted-foreground mt-3">Last 5 Tests</p>
-      </StatCard>
-    </div>
-  );
-}
-
-function AISearchInput() {
-  return (
-    <BorderBeamInput className="w-full">
-      <div className="relative flex items-center w-full h-16 lg:h-20 bg-card rounded-2xl border border-border/50 shadow-lg focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all overflow-hidden">
-        <div className="pl-6 pr-4 text-muted-foreground">
-          <Sparkles className="w-6 h-6" />
-        </div>
-        <input
-          className="w-full h-full bg-transparent border-none focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground text-lg font-medium"
-          placeholder="Ask AI anything about UPSC (e.g., India's Foreign Policy)..."
-          type="text"
-        />
-        <div className="pr-3">
-          <ShimmerButton className="h-10 lg:h-12 px-6 text-sm">
-            Generate
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </ShimmerButton>
-        </div>
-      </div>
-    </BorderBeamInput>
-  );
-}
-
-function QuickActionChips() {
-  const chips = [
-    { icon: FileText, label: 'Generate Summary', color: 'primary' },
-    { icon: Brain, label: 'Create Flashcards', color: 'secondary' },
-    { icon: Calendar, label: 'Extract Timeline', color: 'accent' },
-    { icon: TrendingUp, label: 'Analyze Trends', color: 'accent' },
+  const statCards = [
+    {
+      icon: BookOpen,
+      label: 'Syllabus',
+      value: `${stats.syllabusProgress}%`,
+      sub: `of ${stats.totalSyllabus} topics`,
+      color: 'text-blue-400',
+      bg: 'from-blue-500/15 to-blue-600/5',
+    },
+    {
+      icon: Flame,
+      label: 'Streak',
+      value: `${stats.studyStreak}`,
+      sub: `Best: ${stats.bestStreak} days`,
+      color: 'text-orange-400',
+      bg: 'from-orange-500/15 to-orange-600/5',
+    },
+    {
+      icon: Clock,
+      label: 'Study Hours',
+      value: `${stats.studyHours}h`,
+      sub: 'This week',
+      color: 'text-cyan-400',
+      bg: 'from-cyan-500/15 to-cyan-600/5',
+    },
+    {
+      icon: Target,
+      label: 'Mock Avg',
+      value: `${stats.mockAverage}%`,
+      sub: 'Last 5 tests',
+      color: 'text-violet-400',
+      bg: 'from-violet-500/15 to-violet-600/5',
+    },
   ];
 
   return (
-    <div className="flex flex-wrap gap-3 mt-6">
-      {chips.map((chip) => (
-        <button
-          key={chip.label}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 hover:bg-muted border border-border/50 hover:border-primary/30 transition-all text-sm text-muted-foreground hover:text-foreground group"
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {statCards.map((card) => (
+        <div
+          key={card.label}
+          className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-300"
         >
-          <chip.icon className="w-4 h-4 text-primary/70 group-hover:text-primary" />
-          {chip.label}
-        </button>
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.bg} flex items-center justify-center mb-3`}>
+            <card.icon className={`w-5 h-5 ${card.color}`} />
+          </div>
+          <p className="text-2xl font-display font-bold text-foreground">{card.value}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{card.label}</p>
+          <p className="text-xs text-white/30 mt-1">{card.sub}</p>
+        </div>
       ))}
     </div>
   );
 }
 
-function MainBentoGrid() {
-  return (
-    <BentoGrid className="grid-cols-1 md:grid-cols-3 auto-rows-[minmax(200px,auto)]">
-      {/* Large Card: Smart Study Notes */}
-      <BentoCardLarge
-        title="Smart Study Notes"
-        description="Indian Polity - Chapter 4: Preamble of the Constitution. Summarized with key case laws."
-        icon={BookOpen}
-        badge={{ text: 'AI Generated', variant: 'primary' }}
-        glowColor="hsl(var(--primary))"
-        className="p-8"
-      >
-        <div className="bg-muted/30 backdrop-blur-sm rounded-xl p-4 border border-border/50 mt-4 group-hover:border-primary/20 transition-colors">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
-              <Target className="w-6 h-6 text-indigo-400" />
-            </div>
-            <div>
-              <h4 className="text-foreground font-semibold">Key Concepts Extracted</h4>
-              <p className="text-xs text-muted-foreground">Sovereign, Socialist, Secular, Democratic, Republic</p>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <span className="text-[10px] bg-muted/50 text-muted-foreground px-2 py-1 rounded-md">Kesavananda Bharati Case</span>
-            <span className="text-[10px] bg-muted/50 text-muted-foreground px-2 py-1 rounded-md">42nd Amendment</span>
-          </div>
-        </div>
-        <div className="mt-6 flex gap-3">
-          <Link href="/dashboard/notes/latest">
-            <ShimmerButton className="px-5 py-2.5 text-sm">
-              <Sparkles className="w-4 h-4 mr-2" />
-              View Notes
-            </ShimmerButton>
-          </Link>
-          <button className="px-5 py-2.5 rounded-full bg-muted/50 text-foreground text-sm font-medium hover:bg-muted transition-all">
-            Regenerate
-          </button>
-        </div>
-      </BentoCardLarge>
-
-      {/* Tall Card: Daily Quiz */}
-      <div className="md:row-span-2 bento-card bg-gradient-to-b from-secondary/10 to-card p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-foreground">Daily Quiz</h3>
-          <span className="badge badge-primary">History</span>
-        </div>
-
-        {/* Score Circle */}
-        <div className="flex-1 flex flex-col items-center justify-center my-4">
-          <div className="relative w-32 h-32 mb-4">
-            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
-              <circle
-                className="text-muted/30"
-                cx="50" cy="50" r="40"
-                fill="transparent"
-                stroke="currentColor"
-                strokeWidth="8"
-              />
-              <circle
-                className="text-primary"
-                cx="50" cy="50" r="40"
-                fill="transparent"
-                stroke="currentColor"
-                strokeDasharray="251.2"
-                strokeDashoffset="30"
-                strokeLinecap="round"
-                strokeWidth="8"
-              />
-            </svg>
-            <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-foreground">88</span>
-              <span className="text-xs text-muted-foreground">Score</span>
-            </div>
-          </div>
-          <p className="text-foreground text-lg font-medium mb-1">Excellent!</p>
-          <p className="text-muted-foreground text-sm">You're in the top 5% today.</p>
-        </div>
-
-        <div className="space-y-3 mt-auto">
-          <Link href="/dashboard/quiz/history-5" className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer border border-transparent hover:border-border/50">
-            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 font-bold text-xs">H</div>
-            <div className="flex-1">
-              <p className="text-sm text-foreground font-medium">History Mock #5</p>
-              <p className="text-[10px] text-muted-foreground">20 Questions • 30 Mins</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <Link href="/dashboard/quiz/new">
-            <ShimmerButton className="w-full py-3 text-sm">
-              <Play className="w-4 h-4 mr-2" />
-              Start New Quiz
-            </ShimmerButton>
-          </Link>
-        </div>
-      </div>
-
-      {/* Medium Card: Current Affairs */}
-      <BentoCard
-        title="Current Affairs"
-        icon={Newspaper}
-        glowColor="hsl(var(--secondary))"
-        className="relative overflow-hidden"
-      >
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary via-accent to-primary" />
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs text-muted-foreground">Today, Jan 15</span>
-        </div>
-        <div className="space-y-4">
-          <Link href="/dashboard/current-affairs/1" className="flex gap-4 items-start group/item cursor-pointer">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-1 block">Economy</span>
-              <h4 className="text-foreground text-sm font-medium leading-snug group-hover/item:text-primary transition-colors">
-                RBI releases new guidelines for digital lending apps.
-              </h4>
-            </div>
-          </Link>
-          <div className="w-full h-px bg-border/50" />
-          <Link href="/dashboard/current-affairs/2" className="flex gap-4 items-start group/item cursor-pointer">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center shrink-0">
-              <Zap className="w-6 h-6 text-green-400" />
-            </div>
-            <div>
-              <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider mb-1 block">Environment</span>
-              <h4 className="text-foreground text-sm font-medium leading-snug group-hover/item:text-primary transition-colors">
-                India's new tiger census shows positive growth trend.
-              </h4>
-            </div>
-          </Link>
-        </div>
-      </BentoCard>
-
-      {/* AI Assistant Card */}
-      <BentoCard
-        title="Stuck on a topic?"
-        description="Ask your personalized AI tutor for instant clarification."
-        icon={Brain}
-        glowColor="hsl(var(--accent))"
-        className="flex flex-col items-center text-center justify-center"
-      >
-        <div className="relative w-full mt-4">
-          <input
-            className="w-full bg-muted/30 text-foreground text-sm rounded-full py-3 px-4 pl-10 border border-border/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-            placeholder="Ask anything..."
-            type="text"
-          />
-          <Sparkles className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-          <button className="absolute right-1 top-1 bg-primary text-primary-foreground p-2 rounded-full w-8 h-8 flex items-center justify-center hover:scale-105 transition-transform">
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </BentoCard>
-    </BentoGrid>
-  );
-}
+const quickActions = [
+  { icon: BookOpen, label: 'Study Notes', href: '/dashboard/notes', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  { icon: Brain, label: 'Practice Quiz', href: '/dashboard/quiz', color: 'text-violet-400', bg: 'bg-violet-500/10' },
+  { icon: Newspaper, label: 'Current Affairs', href: '/dashboard/current-affairs', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  { icon: Video, label: 'Video Lectures', href: '/dashboard/videos', color: 'text-rose-400', bg: 'bg-rose-500/10' },
+  { icon: PenTool, label: 'Answer Practice', href: '/dashboard/answer-practice', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  { icon: Calendar, label: 'Study Planner', href: '/dashboard/planner', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+];
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -328,47 +137,140 @@ export default async function DashboardPage() {
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 18 ? 'Good Afternoon' : 'Good Evening';
 
   return (
-    <div className="flex flex-col gap-8 animate-slide-down">
+    <div className="flex flex-col gap-8">
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl md:text-4xl font-light text-foreground tracking-tight">
-            {greeting}, <span className="font-bold text-gradient">{firstName}</span>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-display font-bold tracking-tight text-foreground">
+            {greeting}, <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{firstName}</span>
           </h1>
-          <p className="text-muted-foreground text-base md:text-lg font-light">
-            Your daily AI-orchestrated study plan is ready.
-          </p>
+          <p className="text-muted-foreground mt-1">Your daily AI-orchestrated study plan is ready.</p>
         </div>
-        <Link href="/dashboard/planner">
-          <ShimmerButton className="px-6 py-3 text-sm">
-            <Play className="w-4 h-4 mr-2" />
-            Start Session
-          </ShimmerButton>
+        <Link
+          href="/dashboard/planner"
+          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:brightness-110 transition-all"
+        >
+          <Play className="w-4 h-4" />
+          Start Session
         </Link>
       </header>
 
-      {/* Stats Overview */}
+      {/* Stats */}
       <Suspense fallback={<StatsLoading />}>
         <DashboardStats />
       </Suspense>
 
-      {/* AI Search Section */}
-      <section className="space-y-2">
-        <AISearchInput />
-        <QuickActionChips />
+      {/* AI Search */}
+      <div className="relative">
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.1] transition-all">
+          <Sparkles className="w-5 h-5 text-primary shrink-0" />
+          <input
+            className="flex-1 bg-transparent border-none text-foreground placeholder:text-white/30 text-base focus:outline-none"
+            placeholder="Ask AI anything about UPSC..."
+            type="text"
+          />
+          <button className="px-5 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:brightness-110 transition-all flex items-center gap-2">
+            Generate
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-3">
+          {['Generate Summary', 'Create Flashcards', 'Analyze Trends'].map((label) => (
+            <button
+              key={label}
+              className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-all"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Actions Grid */}
+      <section>
+        <h2 className="font-display text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {quickActions.map((action) => (
+            <Link
+              key={action.label}
+              href={action.href}
+              className="group flex flex-col items-center gap-3 p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200"
+            >
+              <div className={`w-12 h-12 rounded-xl ${action.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                <action.icon className={`w-6 h-6 ${action.color}`} />
+              </div>
+              <span className="text-xs font-medium text-white/60 group-hover:text-white/80 text-center transition-colors">
+                {action.label}
+              </span>
+            </Link>
+          ))}
+        </div>
       </section>
 
-      {/* Main Bento Grid */}
-      <MainBentoGrid />
+      {/* Two-column content */}
+      <div className="grid md:grid-cols-2 gap-5">
+        {/* Recent Activity */}
+        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-display font-semibold text-foreground">Recent Activity</h3>
+            <Link href="/dashboard/notes" className="text-xs text-primary hover:underline">View all</Link>
+          </div>
+          <div className="space-y-3">
+            {[
+              { icon: FileText, label: 'Indian Polity Notes', time: '2h ago', color: 'text-blue-400' },
+              { icon: Brain, label: 'History Mock Test', time: '5h ago', color: 'text-violet-400' },
+              { icon: TrendingUp, label: 'Economy Analysis', time: 'Yesterday', color: 'text-emerald-400' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                  <item.icon className={`w-4 h-4 ${item.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{item.label}</p>
+                  <p className="text-xs text-white/30">{item.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Mentor */}
+        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <h3 className="font-display font-semibold text-foreground">AI Mentor</h3>
+              <p className="text-xs text-white/30">Your personal UPSC guide</p>
+            </div>
+          </div>
+          <div className="space-y-3 mb-4">
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+              <p className="text-sm text-white/60">
+                Based on your progress, I recommend focusing on <span className="text-primary font-medium">Indian Economy</span> today.
+                You&apos;ve covered 60% of Polity but only 25% of Economy.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/mentor"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 text-sm font-medium hover:bg-violet-500/15 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            Chat with Mentor
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
 
 function StatsLoading() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="stat-card shimmer h-40" />
+        <div key={i} className="h-36 rounded-2xl bg-white/[0.03] border border-white/[0.06] animate-pulse" />
       ))}
     </div>
   );
