@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { explanationGenerator } from '@/lib/mcq/explanation-generator';
+import { updateMastery } from '@/lib/mastery/mastery-service';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -190,6 +191,38 @@ export async function POST(request: NextRequest) {
       p_source: 'mcq_practice',
       p_metadata: { sessionId, correctAnswers, accuracy },
     });
+
+    // Update mastery for each topic's knowledge node (best-effort)
+    try {
+      // Group answers by topic to find knowledge nodes
+      const topicGroups = new Map<string, { correct: number; total: number; time: number }>();
+      for (const answer of answers) {
+        const question = questions.find(q => q.id === answer.questionId);
+        if (!question?.topic) continue;
+        const key = question.topic;
+        const group = topicGroups.get(key) || { correct: 0, total: 0, time: 0 };
+        group.total++;
+        if (answer.selectedOption === question.correct_option) group.correct++;
+        group.time += answer.timeSpent || 0;
+        topicGroups.set(key, group);
+      }
+
+      // Find matching knowledge_nodes and update mastery
+      for (const [topic, stats] of topicGroups) {
+        const { data: node } = await supabase
+          .from('knowledge_nodes')
+          .select('id')
+          .ilike('title', `%${topic}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (node) {
+          await updateMastery(user.id, node.id, stats.correct, stats.total, stats.time);
+        }
+      }
+    } catch (masteryErr) {
+      console.error('Mastery update (non-critical):', masteryErr);
+    }
 
     // Update daily analytics
     await supabase
