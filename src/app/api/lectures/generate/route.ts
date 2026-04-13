@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 import { addLectureJob } from '@/lib/queues/lecture-queue';
 import { v4 as uuidv4 } from 'uuid';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,10 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+
+        // Best-effort UPSC input normalization
+        let normalized: any = null;
+        try { normalized = await normalizeUPSCInput(topic || ''); } catch (_e) { /* non-blocking */ }
 
         // 2. Check lecture generation limits
         const supabase = await createClient();

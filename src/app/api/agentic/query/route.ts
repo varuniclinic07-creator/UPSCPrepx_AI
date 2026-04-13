@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { agenticOrchestrator } from '@/lib/agentic/orchestrator';
 import type { AgenticQueryRequest } from '@/types/agentic';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,13 @@ export async function POST(req: NextRequest) {
                 { error: 'Query is required' },
                 { status: 400 }
             );
+        }
+
+        // Normalize query for KG enrichment (best-effort)
+        try {
+            const normalized = await normalizeUPSCInput(body.query);
+        } catch (e) {
+            console.warn('Normalizer failed, using raw input:', e);
         }
 
         // Build request

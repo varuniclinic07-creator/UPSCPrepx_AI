@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserNotes, searchNotes, getBookmarkedNotes } from '@/lib/services/notes-service';
 import { requireUser } from '@/lib/auth/auth-config';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const bookmarked = searchParams.get('bookmarked');
+
+    // Best-effort UPSC input normalization
+    let normalized = null;
+    try {
+      normalized = search ? await normalizeUPSCInput(search) : null;
+    } catch (e) { /* non-blocking enrichment */ }
 
     let notes;
 

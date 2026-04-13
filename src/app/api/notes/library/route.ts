@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,12 @@ export async function GET(request: NextRequest) {
       page: parseInt(searchParams.get('page') || '1'),
       limit: parseInt(searchParams.get('limit') || '20'),
     };
+
+    // Best-effort UPSC input normalization
+    let normalized = null;
+    try {
+      normalized = query.topic ? await normalizeUPSCInput(query.topic) : null;
+    } catch (e) { /* non-blocking enrichment */ }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

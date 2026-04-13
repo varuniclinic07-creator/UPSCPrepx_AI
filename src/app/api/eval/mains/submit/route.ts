@@ -13,6 +13,7 @@ import { evaluateAnswer } from '@/lib/eval/mains-evaluator-service';
 import { z } from 'zod';
 import { checkAccess } from '@/lib/auth/check-access';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { question_id, answer_text, word_count, time_taken_sec } = validation.data;
+
+    // Best-effort UPSC input normalization on answer context
+    let normalized: any = null;
+    try { normalized = await normalizeUPSCInput(answer_text.substring(0, 500)); } catch (_e) { /* non-blocking */ }
 
     // Step 3: Check entitlement (free: 1 mains eval/day)
     const access = await checkAccess(session.user.id, 'mains_eval');

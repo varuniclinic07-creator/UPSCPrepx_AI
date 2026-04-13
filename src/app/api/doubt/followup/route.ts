@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { doubtService } from '@/lib/doubt/doubt-service';
 import { answerGenerator } from '@/lib/doubt/answer-generator';
 import { z } from 'zod';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,10 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validation.data;
+
+    // Best-effort UPSC input normalization
+    let normalized: any = null;
+    try { normalized = await normalizeUPSCInput(data.question || ''); } catch (_e) { /* non-blocking */ }
 
     // Get thread to verify ownership and get context
     const threadResult = await doubtService.getThread(data.thread_id, user.id);

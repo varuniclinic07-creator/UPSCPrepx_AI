@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireSession } from '@/lib/auth/auth-config';
 import { checkAccess } from '@/lib/auth/check-access';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,10 @@ export async function POST(request: NextRequest) {
         if (!topic?.trim()) {
             return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
         }
+
+        // Best-effort UPSC input normalization
+        let normalized: any = null;
+        try { normalized = await normalizeUPSCInput(topic || ''); } catch (_e) { /* non-blocking */ }
 
         // Generate mind map structure using AI (simplified version)
         // In production, this would call the AI API

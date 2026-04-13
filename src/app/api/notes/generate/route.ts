@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import { requireSession } from '@/lib/auth/session';
 import { checkAccess } from '@/lib/auth/check-access';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,12 +80,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize topic to KG node (best-effort enrichment)
+    let resolvedSubject = body.subject;
+    try {
+      const normalized = await normalizeUPSCInput(body.topic);
+      resolvedSubject = body.subject || normalized.subject as any;
+    } catch (e) {
+      console.warn('Normalizer failed, using raw input:', e);
+    }
+
     // Generate notes using Agentic Intelligence
     const notesGenerator = getAgenticNotesGenerator();
-    
+
     const options: NotesGenerationOptions = {
       topic: body.topic,
-      subject: body.subject,
+      subject: resolvedSubject,
       brevityLevel: body.brevityLevel,
       includeCurrentAffairs: body.includeCurrentAffairs ?? true,
       includeStaticMaterials: body.includeStaticMaterials ?? true,

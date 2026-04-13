@@ -11,6 +11,7 @@ import { mentorChat } from '@/lib/mentor/chat-service';
 import { checkAccess } from '@/lib/auth/check-access';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,12 @@ export async function POST(request: NextRequest) {
     if (!session_id || !message) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
+
+    // Best-effort UPSC input normalization
+    let normalized = null;
+    try {
+      normalized = await normalizeUPSCInput(topic || message);
+    } catch (e) { /* non-blocking enrichment */ }
 
     const result = await mentorChat.sendMessage(userId, session_id, message);
     return NextResponse.json({ success: true, data: result });

@@ -7,6 +7,7 @@ import {
 } from '@/lib/services/current-affairs-service';
 import { requireAdmin } from '@/lib/auth/auth-config';
 import { getRateLimitHeaders, checkRateLimit } from '@/lib/ai/rate-limiter';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,14 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const limit = searchParams.get('limit');
     const offset = searchParams.get('offset');
+
+    // Normalize search input if present (best-effort)
+    let normalized = null;
+    try {
+      normalized = search ? await normalizeUPSCInput(search) : null;
+    } catch (e) {
+      console.warn('Normalizer failed, using raw input:', e);
+    }
 
     let affairs;
 

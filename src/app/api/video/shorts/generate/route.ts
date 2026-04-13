@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVideoShortsGenerator } from '@/lib/video/shorts-generator';
 import { createClient } from '@supabase/supabase-js';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,12 @@ export async function POST(request: NextRequest) {
         error: 'Authentication required',
       }, { status: 401 });
     }
+
+    // Best-effort UPSC input normalization
+    let normalized = null;
+    try {
+      normalized = await normalizeUPSCInput(body.topic);
+    } catch (e) { /* non-blocking enrichment */ }
 
     // Create queue entry
     const supabase = createClient(

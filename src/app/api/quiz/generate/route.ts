@@ -4,6 +4,7 @@ import { requireUser, canAccessFeature } from '@/lib/auth/auth-config';
 import { getRateLimitHeaders, checkRateLimit } from '@/lib/ai/rate-limiter';
 import { SUBJECTS } from '@/types';
 import { errors } from '@/lib/security/error-sanitizer';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,13 @@ export async function POST(request: NextRequest) {
     const validDifficulties = ['easy', 'medium', 'hard', 'mixed'];
     if (body.difficulty && !validDifficulties.includes(body.difficulty)) {
       return errors.validation([{ field: 'difficulty', message: 'Invalid difficulty' }]);
+    }
+
+    // Normalize topic for metadata enrichment (best-effort)
+    try {
+      const normalized = await normalizeUPSCInput(body.topic);
+    } catch (e) {
+      console.warn('Normalizer failed, using raw input:', e);
     }
 
     // Generate quiz

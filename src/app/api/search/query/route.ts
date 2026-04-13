@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { embeddingService } from '@/lib/search/embedding-service';
 import { callAI } from '@/lib/ai/ai-provider-client';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +79,12 @@ export async function POST(request: NextRequest) {
 
     // Validate limit
     const searchLimit = Math.min(Math.max(1, limit), 100);
+
+    // Best-effort UPSC input normalization
+    let normalized = null;
+    try {
+      normalized = await normalizeUPSCInput(body.query || '');
+    } catch (e) { /* non-blocking enrichment */ }
 
     // Generate embedding for query
     const embedding = await embeddingService.generate(query);

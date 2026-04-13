@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server';
 import { questionBank } from '@/lib/mcq/question-bank';
 import { adaptiveEngine } from '@/lib/mcq/adaptive-engine';
 import { z } from 'zod';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,10 @@ export async function POST(request: NextRequest) {
     }
 
     const config = validation.data;
+
+    // Best-effort UPSC input normalization
+    let normalized: any = null;
+    try { normalized = await normalizeUPSCInput(config.topic || config.subject || ''); } catch (_e) { /* non-blocking */ }
 
     // Get adaptive difficulty if not specified
     let difficulty = config.difficulty;

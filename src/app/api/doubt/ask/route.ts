@@ -17,6 +17,7 @@ import { voiceProcessor } from '@/lib/doubt/voice-processor';
 import { z } from 'zod';
 import { checkAccess } from '@/lib/auth/check-access';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,13 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validation.data;
+
+    // Normalize question for KG enrichment (best-effort)
+    try {
+      const normalized = await normalizeUPSCInput(data.question);
+    } catch (e) {
+      console.warn('Normalizer failed, using raw input:', e);
+    }
 
     // Process attachments (OCR for images, transcription for audio)
     const processedAttachments = await processAttachments(data.attachments || []);
