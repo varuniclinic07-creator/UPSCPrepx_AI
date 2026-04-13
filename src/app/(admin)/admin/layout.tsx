@@ -51,6 +51,8 @@ const navigation = [
   { name: 'AI Providers', href: '/admin/ai-providers', icon: Cpu },
   { name: 'Queue Status', href: '/admin/queue', icon: Activity },
   { name: 'Content', href: '/admin/content', icon: FileText },
+  { name: 'Hermes', href: '/admin/hermes', icon: Cpu },
+  { name: 'Knowledge Graph', href: '/admin/knowledge-base', icon: Database },
   { name: 'AI Videos', href: '/admin/ai-videos', icon: Video },
   { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
   { name: 'System Health', href: '/admin/system', icon: Database },
