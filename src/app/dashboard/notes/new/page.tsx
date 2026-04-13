@@ -36,10 +36,19 @@ export default function NewNotePage() {
     setGeneratedNote(null);
 
     try {
+      // Map noteType to API brevityLevel
+      const brevityMap: Record<string, string> = {
+        'Summary': '250',
+        'Detailed Analysis': '1000',
+        'Key Facts': '100',
+        'Prelims Focus': '500',
+      };
+      const brevityLevel = brevityMap[noteType] || '500';
+
       const response = await fetch('/api/notes/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: topic.trim(), subject }),
+        body: JSON.stringify({ topic: topic.trim(), subject, brevityLevel }),
       });
 
       const data = await response.json();
