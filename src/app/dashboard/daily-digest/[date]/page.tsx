@@ -115,7 +115,7 @@ export default function DailyDigestArchivePage() {
     const date = new Date(currentDate);
     date.setDate(date.getDate() + days);
     const newDate = date.toISOString().split('T')[0];
-    router.push(`/daily-digest/${newDate}`);
+    router.push(`/dashboard/daily-digest/${newDate}`);
   };
 
   // Filter articles

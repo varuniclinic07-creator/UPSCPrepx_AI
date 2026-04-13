@@ -92,9 +92,16 @@ export default function MockTestPage() {
       const data = await response.json();
 
       if (data.success) {
-        setTest(data.data.test);
+        const mock = data.data.mock;
+        setTest({
+          id: mock.id,
+          title: mock.title,
+          totalQuestions: mock.totalQuestions,
+          durationSec: mock.durationMin * 60,
+          sections: [],
+        });
         setQuestions(data.data.questions);
-        setTimeRemaining(data.data.test.durationSec);
+        setTimeRemaining(mock.durationMin * 60);
       }
     } catch (error) {
       console.error('Failed to fetch mock test:', error);

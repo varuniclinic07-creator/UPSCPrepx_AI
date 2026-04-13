@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request', details: validation.errors },
+        { success: false, error: 'Invalid request', details: validation.error?.issues },
         { status: 400 }
       );
     }
@@ -177,6 +177,94 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('MCQ practice start error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================================================
+// GET /api/mcq/practice/start?sessionId=<id>
+// Fetch an existing practice session by attempt ID
+// ============================================================================
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('sessionId');
+
+    if (!sessionId) {
+      return NextResponse.json(
+        { success: false, error: 'sessionId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Fetch the attempt record
+    const { data: attempt, error: attemptError } = await supabase
+      .from('mcq_attempts')
+      .select('*')
+      .eq('id', sessionId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (attemptError || !attempt) {
+      return NextResponse.json(
+        { success: false, error: 'Session not found' },
+        { status: 404 }
+      );
+    }
+
+    // Fetch questions for this attempt
+    const questions = await questionBank.getPracticeQuestions({
+      subject: attempt.subject,
+      topic: attempt.topic,
+      difficulty: attempt.difficulty,
+      questionCount: attempt.total_questions,
+      timed: true,
+      timeLimitSec: attempt.total_questions * 90,
+      sessionType: attempt.session_type,
+    });
+
+    const sanitizedQuestions = questions.map((q: any) => ({
+      id: q.id,
+      questionText: q.questionText,
+      options: q.options,
+      subject: q.subject,
+      topic: q.topic,
+      difficulty: q.difficulty,
+      timeEstimateSec: q.timeEstimateSec,
+      marks: q.marks,
+      negativeMarks: q.negativeMarks,
+      isPyy: q.isPyy,
+      year: q.year,
+    }));
+
+    const timeLimitSec = attempt.total_questions * 90;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        sessionId: attempt.id,
+        mode: attempt.session_type?.toLowerCase() || 'practice',
+        subject: attempt.subject,
+        totalQuestions: attempt.total_questions,
+        timeLimitSec,
+        questions: sanitizedQuestions,
+      },
+    });
+  } catch (error) {
+    console.error('MCQ practice session fetch error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

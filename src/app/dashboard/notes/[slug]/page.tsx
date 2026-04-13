@@ -57,7 +57,7 @@ export default async function NotePage({ params }: NotePageProps) {
           </div>
         </div>
         <Button variant="gradient" asChild>
-          <Link href={`/quiz/new?topic=${encodeURIComponent(note.title)}&subject=${encodeURIComponent(note.subject)}`}>
+          <Link href={`/dashboard/quiz/new?topic=${encodeURIComponent(note.title)}&subject=${encodeURIComponent(note.subject)}`}>
             <Brain className="w-4 h-4 mr-2" />
             Take Quiz
           </Link>
@@ -168,7 +168,7 @@ export default async function NotePage({ params }: NotePageProps) {
               {content.relatedTopics.map((topic, index) => (
                 <Link
                   key={index}
-                  href={`/notes/new?topic=${encodeURIComponent(topic)}`}
+                  href={`/dashboard/notes/new?topic=${encodeURIComponent(topic)}`}
                   className="px-3 py-1.5 text-sm rounded-full border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-foreground"
                 >
                   {topic}

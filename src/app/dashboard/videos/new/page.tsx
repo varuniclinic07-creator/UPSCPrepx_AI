@@ -60,7 +60,7 @@ export default function NewVideoPage() {
             }
 
             const data = await response.json();
-            router.push(`/videos/${data.jobId}`);
+            router.push(`/dashboard/videos/${data.lectureId}`);
         } catch (err: any) {
             setError(err.message);
             setIsGenerating(false);

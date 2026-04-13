@@ -83,13 +83,9 @@ export default function PracticeSessionPage() {
 
   const fetchSessionData = async () => {
     try {
-      const response = await fetch(`/api/mcq/practice/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: params.id }),
-      });
+      const response = await fetch(`/api/mcq/practice/start?sessionId=${params.id}`);
       const data = await response.json();
-      
+
       if (data.success) {
         setSession(data.data);
         setTimeRemaining(data.data.timeLimitSec);

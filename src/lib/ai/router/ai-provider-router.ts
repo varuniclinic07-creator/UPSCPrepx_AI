@@ -9,7 +9,7 @@ import { PROVIDER_PRICING, PLAN_LIMITS } from '@/lib/ai-cost/cost-tracker';
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type ProviderName = '9router' | 'groq' | 'ollama' | 'anthropic' | 'openai';
+export type ProviderName = 'ollama' | 'groq' | 'anthropic' | 'openai';
 
 export type UserPlan = 'free' | 'basic' | 'premium' | 'enterprise';
 
@@ -85,35 +85,6 @@ export interface LoadBalanceState {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const PROVIDER_CONFIGS: Record<ProviderName, ProviderConfig> = {
-  '9router': {
-    name: '9router',
-    baseUrl: process.env.NINE_ROUTER_BASE_URL || process.env['9ROUTER_BASE_URL'] || process.env.ROUTER9_BASE_URL || 'https://r94p885.9router.com/v1',
-    apiKeyEnv: 'NINE_ROUTER_API_KEY',
-    models: [process.env.NINE_ROUTER_MODEL || process.env['9ROUTER_MODEL'] || process.env.UPSC_MODEL_NAME || 'upsc'],
-    priority: 1,
-    rateLimitRPM: parseInt(process.env['9ROUTER_RATE_LIMIT_RPM'] || '60', 10),
-    rateLimitConcurrent: parseInt(process.env['9ROUTER_RATE_LIMIT_CONCURRENT'] || '20', 10),
-    maxTokensPerRequest: 32000,
-    supportsStreaming: true,
-    isActive: true,
-  },
-  groq: {
-    name: 'groq',
-    baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
-    apiKeyEnv: 'GROQ_API_KEY',
-    models: [
-      process.env.GROQ_MODEL || 'groq/llama-3.3-70b-versatile',
-      'groq/llama-3.1-8b-instant',
-      'groq/mixtral-8x7b-32768',
-      'groq/gemma2-9b-it',
-    ],
-    priority: 2,
-    rateLimitRPM: 30,
-    rateLimitConcurrent: 10,
-    maxTokensPerRequest: 32768,
-    supportsStreaming: true,
-    isActive: true,
-  },
   ollama: {
     name: 'ollama',
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
@@ -124,10 +95,27 @@ export const PROVIDER_CONFIGS: Record<ProviderName, ProviderConfig> = {
       'mixtral:8x7b',
       'gemma2:9b',
     ],
-    priority: 3,
+    priority: 1, // Primary
     rateLimitRPM: 20,
     rateLimitConcurrent: 5,
     maxTokensPerRequest: 32000,
+    supportsStreaming: true,
+    isActive: true,
+  },
+  groq: {
+    name: 'groq',
+    baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
+    apiKeyEnv: 'GROQ_API_KEY',
+    models: [
+      process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+      'mixtral-8x7b-32768',
+      'gemma2-9b-it',
+    ],
+    priority: 2, // Fallback
+    rateLimitRPM: 30,
+    rateLimitConcurrent: 10,
+    maxTokensPerRequest: 32768,
     supportsStreaming: true,
     isActive: true,
   },
@@ -184,30 +172,26 @@ const PRIORITY_WEIGHTS: Record<Required<RoutingOptions>['priority'], {
 // Plan-based provider preferences (higher = more preferred)
 const PLAN_PROVIDER_PREFERENCES: Record<UserPlan, Record<ProviderName, number>> = {
   free: {
-    '9router': 1.0,
+    ollama: 1.0,
     groq: 0.9,
-    ollama: 0.8,
     anthropic: 0.3, // Low preference due to cost
     openai: 0.3,
   },
   basic: {
-    '9router': 1.0,
+    ollama: 1.0,
     groq: 1.0,
-    ollama: 0.9,
     anthropic: 0.5,
     openai: 0.5,
   },
   premium: {
-    '9router': 1.0,
-    groq: 1.0,
     ollama: 1.0,
+    groq: 1.0,
     anthropic: 0.8,
     openai: 0.8,
   },
   enterprise: {
-    '9router': 1.0,
-    groq: 1.0,
     ollama: 1.0,
+    groq: 1.0,
     anthropic: 1.0,
     openai: 1.0,
   },
@@ -486,8 +470,8 @@ export class AIProviderRouter {
     if (scores.length === 0) {
       // All providers unavailable - return error decision
       return {
-        selectedProvider: '9router' as ProviderName, // Default fallback
-        selectedModel: PROVIDER_CONFIGS['9router'].models[0],
+        selectedProvider: 'ollama' as ProviderName, // Default fallback
+        selectedModel: PROVIDER_CONFIGS['ollama'].models[0],
         reason: 'All providers unavailable - using default',
         estimatedCost: 0,
         estimatedLatencyMs: 0,
@@ -560,7 +544,7 @@ export class AIProviderRouter {
    */
   estimateCost(provider: ProviderName, tokens: number): number {
     const pricingKey = this.getProviderPricingKey(provider);
-    const pricing = PROVIDER_PRICING[pricingKey] || PROVIDER_PRICING['9router'];
+    const pricing = PROVIDER_PRICING[pricingKey] || PROVIDER_PRICING['ollama-local'];
 
     // Assume 50% prompt / 50% completion for estimation
     const promptTokens = tokens * 0.5;
@@ -577,9 +561,8 @@ export class AIProviderRouter {
    */
   private getProviderPricingKey(provider: ProviderName): string {
     const mapping: Record<ProviderName, string> = {
-      '9router': '9router',
-      groq: 'groq-llama-70b',
       ollama: 'ollama-local',
+      groq: 'groq-llama-70b',
       anthropic: 'claude-3-sonnet',
       openai: 'gpt-4o',
     };

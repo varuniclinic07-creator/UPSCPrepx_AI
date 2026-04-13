@@ -5,7 +5,6 @@ export const APP_CONFIG = {
 } as const;
 
 export const RATE_LIMITS = {
-  A4F_RPM: 10,
   API_PER_MINUTE: 60,
   API_PER_HOUR: 1000,
 } as const;

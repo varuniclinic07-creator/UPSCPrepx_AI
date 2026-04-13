@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid query params', details: validation.errors },
+        { success: false, error: 'Invalid query params', details: validation.error?.issues },
         { status: 400 }
       );
     }

@@ -162,7 +162,7 @@ export default async function CurrentAffairPage({ params }: CurrentAffairPagePro
               {content.relatedTopics.map((topic, index) => (
                 <Link
                   key={index}
-                  href={`/notes/new?topic=${encodeURIComponent(topic)}`}
+                  href={`/dashboard/notes/new?topic=${encodeURIComponent(topic)}`}
                   className="px-3 py-1.5 text-sm rounded-full border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-foreground"
                 >
                   {topic}
@@ -200,7 +200,7 @@ export default async function CurrentAffairPage({ params }: CurrentAffairPagePro
           </Link>
         </Button>
         <Button variant="gradient" asChild>
-          <Link href={`/quiz/new?topic=${encodeURIComponent(affair.topic)}&subject=Current Affairs`}>
+          <Link href={`/dashboard/quiz/new?topic=${encodeURIComponent(affair.topic)}&subject=Current Affairs`}>
             Take Quiz on This Topic
           </Link>
         </Button>

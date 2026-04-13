@@ -1,6 +1,6 @@
 /**
  * BMAD Phase 4: Feature 10 - AI Provider Client
- * AI Provider Routing: 9Router → Groq → Ollama (NOT A4F)
+ * AI Provider Routing: Ollama → Groq (fallback)
  * Implements fallback mechanism with 7-key Groq rotation
  */
 
@@ -49,36 +49,26 @@ export class AIProviderClient {
   private currentGroqKeyIndex: number = 0;
 
   constructor() {
-    // CRITICAL: AI Provider Priority (NOT A4F - user specified)
+    // CRITICAL: AI Provider Priority — Ollama primary, Groq fallback
     this.providers = [
       {
-        name: '9router',
-        baseUrl: process.env.NINE_ROUTER_BASE_URL || process.env['9ROUTER_BASE_URL'] || process.env.ROUTER9_BASE_URL || 'https://r94p885.9router.com/v1',
-        apiKey: process.env.NINE_ROUTER_API_KEY || process.env['9ROUTER_API_KEY'] || process.env.ROUTER9_API_KEY || '',
-        model: process.env.NINE_ROUTER_MODEL || process.env['9ROUTER_MODEL'] || process.env.UPSC_MODEL_NAME || 'upsc',
+        name: 'ollama',
+        baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+        apiKey: process.env.OLLAMA_API_KEY || '',
+        model: process.env.OLLAMA_MODEL || 'qwen3.5:397b-cloud',
         priority: 1, // Primary
-        rateLimitRPM: parseInt(process.env.NINE_ROUTER_RATE_LIMIT_RPM || process.env['9ROUTER_RATE_LIMIT_RPM'] || '60', 10),
-        rateLimitConcurrent: parseInt(process.env.NINE_ROUTER_RATE_LIMIT_CONCURRENT || process.env['9ROUTER_RATE_LIMIT_CONCURRENT'] || '20', 10),
+        rateLimitRPM: 20,
+        rateLimitConcurrent: 5,
         isActive: true,
       },
       {
         name: 'groq',
         baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
         apiKey: '', // Will use rotation from groqKeys
-        model: process.env.GROQ_MODEL || 'groq/llama-3.3-70b-versatile',
-        priority: 2, // Fallback 1
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+        priority: 2, // Fallback
         rateLimitRPM: 30,
         rateLimitConcurrent: 10,
-        isActive: true,
-      },
-      {
-        name: 'ollama',
-        baseUrl: process.env.OLLAMA_BASE_URL || 'https://ollama.com/v1',
-        apiKey: process.env.OLLAMA_API_KEY || '',
-        model: process.env.OLLAMA_MODEL || 'qwen3.5:397b-cloud',
-        priority: 3, // Fallback 2
-        rateLimitRPM: 20,
-        rateLimitConcurrent: 5,
         isActive: true,
       },
     ];
@@ -404,7 +394,7 @@ export function getAIProviderClient(): AIProviderClient {
 // callAIStream() — True streaming support for real-time AI responses
 // ============================================================================
 
-export type AIProvider = '9router' | 'groq' | 'ollama';
+export type AIProvider = 'ollama' | 'groq';
 
 interface CallAIOptions {
   prompt?: string;
@@ -491,7 +481,7 @@ export async function callAI(
     maxTokens = promptOrOptions.maxTokens ?? 2000;
   }
 
-  // Try providers in priority order (9Router → Groq → Ollama)
+  // Try providers in priority order (Ollama → Groq)
   const providers = (client as any).providers as AIProviderConfig[];
   const sortedProviders = [...providers].sort((a, b) => a.priority - b.priority);
 
@@ -506,7 +496,7 @@ export async function callAI(
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
         : provider.apiKey;
 
-      if (!apiKey) {
+      if (provider.name !== 'ollama' && !apiKey) {
         console.warn(`Skipping provider ${provider.name}: no API key configured`);
         continue;
       }
@@ -623,7 +613,7 @@ export async function callAIStream(
     maxTokens = promptOrOptions.maxTokens ?? 2000;
   }
 
-  // Try providers in priority order (9Router → Groq → Ollama)
+  // Try providers in priority order (Ollama → Groq)
   const providers = (client as any).providers as AIProviderConfig[];
   const sortedProviders = [...providers].sort((a, b) => a.priority - b.priority);
 
@@ -638,7 +628,7 @@ export async function callAIStream(
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
         : provider.apiKey;
 
-      if (!apiKey) {
+      if (provider.name !== 'ollama' && !apiKey) {
         console.warn(`Skipping provider ${provider.name}: no API key configured`);
         continue;
       }
