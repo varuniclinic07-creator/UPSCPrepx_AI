@@ -47,15 +47,10 @@ export {
   cpuUsage,
 } from './metrics';
 
-export type { RateLimitConfig } from './metrics';
+// RateLimitConfig is exported from '@/lib/security/enhanced-rate-limiter', not metrics
 
 // Logging
-export {
-  logger,
-  createRequestLogger,
-  withRequestLogging,
-  Logger,
-} from './logger';
+export { logger, createRequestLogger, withRequestLogging, Logger } from './logger';
 
 export type { LogLevel, LogContext, LogEntry } from './logger';
 

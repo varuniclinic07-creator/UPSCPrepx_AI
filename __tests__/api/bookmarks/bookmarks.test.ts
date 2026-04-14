@@ -8,7 +8,7 @@ import { GET, POST, DELETE } from '@/app/api/bookmarks/route';
 const mockRequireSession = jest.fn();
 
 jest.mock('@/lib/auth/auth-config', () => ({
-  requireSession: (...args: any[]) => mockRequireSession(...args),
+  requireSession: () => mockRequireSession(),
   requireUser: jest.fn(),
   getCurrentUser: jest.fn(),
 }));
@@ -43,7 +43,7 @@ jest.mock('@/lib/supabase/server', () => ({
 // --- Helpers ---
 
 function makeRequest(method: string, body?: Record<string, unknown>): NextRequest {
-  const init: RequestInit = { method };
+  const init: Record<string, any> = { method };
   if (body) {
     init.headers = { 'Content-Type': 'application/json' };
     init.body = JSON.stringify(body);

@@ -65,7 +65,7 @@ const SOURCE_WEIGHTS = {
 export class RAGSearchService {
   
 
-  constructor() {
+  constructor() {
   }
 
   private async getSupabase() {
@@ -154,7 +154,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      let query = (await this.getSupabase()).rpc('match_content_library', {
+      let query = (await this.getSupabase()).rpc('match_content_library' as any, {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -202,7 +202,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      const { data, error } = await (await this.getSupabase()).rpc('match_user_notes', {
+      const { data, error } = await (await this.getSupabase()).rpc('match_user_notes' as any, {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -242,7 +242,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      const { data, error } = await (await this.getSupabase()).rpc('match_ca_articles', {
+      const { data, error } = await (await this.getSupabase()).rpc('match_ca_articles' as any, {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -283,7 +283,7 @@ export class RAGSearchService {
     weight: number
   ): Promise<SearchDocument[]> {
     try {
-      const { data, error } = await (await this.getSupabase()).rpc('match_ncert_content', {
+      const { data, error } = await (await this.getSupabase()).rpc('match_ncert_content' as any, {
         query_embedding: embedding,
         match_limit: options.limit,
         min_similarity: options.minRelevance,
@@ -391,7 +391,7 @@ export class RAGSearchService {
 
       // Simple keyword search using ILIKE
       const { data, error } = await (await this.getSupabase())
-        .from(tableName)
+        .from(tableName as any)
         .select(`*, ${contentColumn}`)
         .or(`${contentColumn}.ilike.%${options.query}%,${titleColumn}.ilike.%${options.query}%`)
         .limit(options.limit);

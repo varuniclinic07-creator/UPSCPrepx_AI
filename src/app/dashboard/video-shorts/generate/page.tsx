@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function VideoShortsGeneratePage() {
-  const { user, isLoading } = useUser();
+  const { user, loading: isLoading } = useUser();
 
   if (isLoading) {
     return (
@@ -43,7 +43,10 @@ export default function VideoShortsGeneratePage() {
       {/* Generator Component */}
       <ShortsGenerator
         userId={user?.id}
-        isPremium={user?.subscription_tier === 'premium' || user?.subscription_tier === 'premium_plus'}
+        isPremium={
+          user?.subscriptionTier === 'premium' ||
+          (user?.subscriptionTier as string) === 'premium_plus'
+        }
       />
     </div>
   );

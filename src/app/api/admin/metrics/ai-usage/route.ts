@@ -26,7 +26,7 @@ const PROVIDER_COSTS: Record<string, { prompt: number; completion: number }> = {
  * Returns AI usage analytics
  */
 async function getAIUsageAnalytics(params: { period?: string }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const period = params.period || '30d';
   const days = parseInt(period.replace('d', ''), 10) || 30;
 
@@ -34,6 +34,8 @@ async function getAIUsageAnalytics(params: { period?: string }) {
   startDate.setDate(startDate.getDate() - days);
 
   // Parallel fetch AI metrics
+  // Cast rpc calls to any — these RPC functions exist in the DB but are not in the generated types
+  const sb = supabase as any;
   const [
     totalRequests,
     totalTokens,
@@ -45,45 +47,45 @@ async function getAIUsageAnalytics(params: { period?: string }) {
     costByProvider,
   ] = await Promise.all([
     // Total AI requests
-    supabase.rpc('get_ai_request_count', {
+    sb.rpc('get_ai_request_count', {
       start_date: startDate.toISOString(),
       end_date: new Date().toISOString(),
     }),
 
     // Total tokens used
-    supabase.rpc('get_ai_token_count', {
+    sb.rpc('get_ai_token_count', {
       start_date: startDate.toISOString(),
       end_date: new Date().toISOString(),
     }),
 
     // Requests by provider
-    supabase.rpc('get_ai_requests_by_provider', {
+    sb.rpc('get_ai_requests_by_provider', {
       start_date: startDate.toISOString(),
     }),
 
     // Daily AI usage
-    supabase.rpc('get_daily_ai_usage', {
+    sb.rpc('get_daily_ai_usage', {
       start_date: startDate.toISOString(),
       end_date: new Date().toISOString(),
     }),
 
     // Usage by endpoint
-    supabase.rpc('get_ai_usage_by_endpoint', {
+    sb.rpc('get_ai_usage_by_endpoint', {
       start_date: startDate.toISOString(),
     }),
 
     // Average latency by provider
-    supabase.rpc('get_ai_latency_by_provider', {
+    sb.rpc('get_ai_latency_by_provider', {
       start_date: startDate.toISOString(),
     }),
 
     // Error rates by provider
-    supabase.rpc('get_ai_error_rates', {
+    sb.rpc('get_ai_error_rates', {
       start_date: startDate.toISOString(),
     }),
 
     // Cost by provider (calculated)
-    supabase.rpc('get_ai_tokens_by_provider', {
+    sb.rpc('get_ai_tokens_by_provider', {
       start_date: startDate.toISOString(),
     }),
   ]);
@@ -141,7 +143,9 @@ export async function GET(request: NextRequest) {
         console.error('[AI Usage Metrics] Error:', error);
 
         // Return mock data for development
-        const days = parseInt(period?.replace('d', '') || '30', 10);
+        const { searchParams: sp } = new URL(request.url);
+        const fallbackPeriod = sp.get('period') || '30d';
+        const days = parseInt(fallbackPeriod.replace('d', '') || '30', 10);
         const dailyUsage = Array.from({ length: days }, (_, i) => ({
           date: new Date(Date.now() - (days - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           requests: Math.floor(Math.random() * 5000) + 2000,

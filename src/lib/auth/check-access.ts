@@ -44,7 +44,10 @@ const FREE_LIMITS: Record<FeatureKey, FeatureLimit> = {
  * Maps feature keys to the DB table and column used for counting usage.
  * Uses the new usage_tracking table from migration 038.
  */
-const USAGE_TABLE_MAP: Record<FeatureKey, { table: string; userColumn: string; dateColumn?: string }> = {
+const USAGE_TABLE_MAP: Record<
+  FeatureKey,
+  { table: string; userColumn: string; dateColumn?: string }
+> = {
   mcq: { table: 'usage_tracking', userColumn: 'user_id', dateColumn: 'used_at' },
   mains_eval: { table: 'usage_tracking', userColumn: 'user_id', dateColumn: 'used_at' },
   custom_notes: { table: 'usage_tracking', userColumn: 'user_id' },
@@ -61,16 +64,13 @@ export interface AccessResult {
   remaining?: number;
 }
 
-export async function checkAccess(
-  userId: string,
-  feature: FeatureKey
-): Promise<AccessResult> {
+export async function checkAccess(userId: string, feature: FeatureKey): Promise<AccessResult> {
   const supabase = await createServerSupabaseClient();
 
   // 1. Check subscription status using RPC function
   try {
     const { data: hasActive } = await (supabase.rpc as any)('has_active_subscription', {
-      p_user_id: userId
+      p_user_id: userId,
     });
 
     if (hasActive) {
@@ -81,8 +81,7 @@ export async function checkAccess(
   }
 
   // Fallback: Direct query to user_subscriptions
-  const { data: subscription } = await (supabase
-    .from('user_subscriptions') as any)
+  const { data: subscription } = await (supabase.from('user_subscriptions') as any)
     .select('status, ends_at, tier')
     .eq('user_id', userId)
     .eq('status', 'active')
@@ -98,14 +97,13 @@ export async function checkAccess(
   }
 
   // 2. Check if user is on trial
-  const { data: user } = await (supabase
-    .from('users') as any)
+  const { data: user } = await (supabase.from('users') as any)
     .select('subscription_status, trial_ends_at')
     .eq('id', userId)
     .single();
 
   if (user && user.subscription_status === 'trial' && user.trial_ends_at) {
-    if (new Date(user.trial_ends_at) > now) {
+    if (new Date(user.trial_ends_at) > new Date()) {
       return { allowed: true };
     }
   }
@@ -123,7 +121,7 @@ export async function checkAccess(
     const { data: usageData, error: rpcError } = await (supabase.rpc as any)('check_usage_limit', {
       p_user_id: userId,
       p_feature: feature,
-      p_limit_type: limitType
+      p_limit_type: limitType,
     });
 
     if (!rpcError && usageData && usageData.length > 0) {
@@ -146,7 +144,7 @@ export async function checkAccess(
       return { allowed: true };
     }
 
-    let query = (supabase.from(mapping.table) as any)
+    let query = (supabase.from(mapping.table as any) as any)
       .select('id', { count: 'exact', head: true })
       .eq(mapping.userColumn, userId);
 

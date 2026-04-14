@@ -11,16 +11,16 @@ const mockSupabase = { from: mockFrom };
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn().mockResolvedValue({
-    from: (...args: any[]) => mockFrom(...args),
+    from: (table: any) => mockFrom(table),
   }),
   createServerSupabaseClient: jest.fn().mockResolvedValue({
-    from: (...args: any[]) => mockFrom(...args),
+    from: (table: any) => mockFrom(table),
   }),
 }));
 
 const mockRequireSession = jest.fn();
 jest.mock('@/lib/auth/session', () => ({
-  requireSession: (...args: any[]) => mockRequireSession(...args),
+  requireSession: () => mockRequireSession(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ function chainable(resolvedValue: any) {
 }
 
 function makeRequest(method: string, url: string, body?: any): NextRequest {
-  const init: RequestInit = { method };
+  const init: Record<string, any> = { method };
   if (body) {
     init.body = JSON.stringify(body);
     init.headers = { 'Content-Type': 'application/json' };

@@ -1,10 +1,10 @@
 /**
  * Content Service - User Content Studio (Feature F4)
- * 
+ *
  * CRUD operations for notes and answers
  * Master Prompt v8.0 - READ Mode
  * TipTap Rich Text Editor, Auto-save, Export
- * 
+ *
  * AI Provider: 9Router → Groq → Ollama
  */
 
@@ -99,7 +99,11 @@ const AnswerSchema = z.object({
 const FolderSchema = z.object({
   name: z.string().min(1).max(100),
   parent_id: z.string().uuid().nullable().optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().default('#6B7280'),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional()
+    .default('#6B7280'),
   icon: z.string().optional().default('folder'),
   sort_order: z.number().optional().default(0),
 });
@@ -116,7 +120,7 @@ export async function createNote(
   data: z.infer<typeof NoteSchema>
 ): Promise<Note | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Validate input
     const validated = NoteSchema.parse(data);
@@ -124,8 +128,7 @@ export async function createNote(
     // Calculate word and character count from content
     const { word_count, character_count } = calculateContentStats(validated.content);
 
-    const { data: note, error } = await supabase
-      .from('user_notes')
+    const { data: note, error } = await (supabase.from('user_notes') as any)
       .insert({
         user_id: userId,
         title: validated.title,
@@ -156,12 +159,9 @@ export async function createNote(
 /**
  * Get a single note by ID
  */
-export async function getNote(
-  noteId: string,
-  userId: string
-): Promise<Note | null> {
+export async function getNote(noteId: string, userId: string): Promise<Note | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: note, error } = await supabase
       .from('user_notes')
@@ -174,7 +174,7 @@ export async function getNote(
       return null;
     }
 
-    return note as Note;
+    return note as unknown as Note;
   } catch (error) {
     console.error('Error in getNote:', error);
     return null;
@@ -200,12 +200,9 @@ export async function getNotes(
   }
 ): Promise<{ notes: Note[]; total: number }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
-    let query = supabase
-      .from('user_notes')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId);
+    let query = supabase.from('user_notes').select('*', { count: 'exact' }).eq('user_id', userId);
 
     // Apply filters
     if (options?.subject) {
@@ -253,7 +250,7 @@ export async function getNotes(
     }
 
     return {
-      notes: notes as Note[],
+      notes: notes as unknown as Note[],
       total: notes?.length || 0,
     };
   } catch (error) {
@@ -274,7 +271,7 @@ export async function updateNote(
   }
 ): Promise<Note | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Prepare update data
     const updateData: any = {
@@ -295,8 +292,7 @@ export async function updateNote(
     if (data.is_public !== undefined) updateData.is_public = data.is_public;
     if (data.is_pinned !== undefined) updateData.is_pinned = data.is_pinned;
 
-    const { data: note, error } = await supabase
-      .from('user_notes')
+    const { data: note, error } = await (supabase.from('user_notes') as any)
       .update(updateData)
       .eq('id', noteId)
       .eq('user_id', userId)
@@ -318,12 +314,9 @@ export async function updateNote(
 /**
  * Delete a note
  */
-export async function deleteNote(
-  noteId: string,
-  userId: string
-): Promise<boolean> {
+export async function deleteNote(noteId: string, userId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('user_notes')
@@ -346,19 +339,14 @@ export async function deleteNote(
 /**
  * Auto-save a note (creates version)
  */
-export async function autoSaveNote(
-  noteId: string,
-  userId: string,
-  content: any
-): Promise<boolean> {
+export async function autoSaveNote(noteId: string, userId: string, content: any): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update the note
     const { word_count, character_count } = calculateContentStats(content);
 
-    const { error: updateError } = await supabase
-      .from('user_notes')
+    const { error: updateError } = await (supabase.from('user_notes') as any)
       .update({
         content,
         word_count,
@@ -375,18 +363,16 @@ export async function autoSaveNote(
     }
 
     // Create a version entry (limited to last 10 versions)
-    await supabase
-      .from('note_versions')
-      .insert({
-        note_id: noteId,
-        user_id: userId,
-        content,
-        word_count,
-        save_type: 'auto',
-      });
+    await (supabase.from('note_versions') as any).insert({
+      note_id: noteId,
+      user_id: userId,
+      content,
+      word_count,
+      save_type: 'auto',
+    });
 
     // Clean up old versions (keep last 10)
-    await supabase.rpc('delete_old_note_versions', {
+    await (supabase as any).rpc('delete_old_note_versions', {
       p_note_id: noteId,
       p_keep_count: 10,
     });
@@ -401,12 +387,9 @@ export async function autoSaveNote(
 /**
  * Pin/unpin a note
  */
-export async function toggleNotePin(
-  noteId: string,
-  userId: string
-): Promise<boolean> {
+export async function toggleNotePin(noteId: string, userId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get current pin status
     const { data: note } = await supabase
@@ -418,10 +401,9 @@ export async function toggleNotePin(
 
     if (!note) return false;
 
-    const { error } = await supabase
-      .from('user_notes')
+    const { error } = await (supabase.from('user_notes') as any)
       .update({
-        is_pinned: !note.is_pinned,
+        is_pinned: !(note as any).is_pinned,
         updated_at: new Date().toISOString(),
       })
       .eq('id', noteId)
@@ -437,15 +419,11 @@ export async function toggleNotePin(
 /**
  * Archive/unarchive a note
  */
-export async function toggleNoteArchive(
-  noteId: string,
-  userId: string
-): Promise<boolean> {
+export async function toggleNoteArchive(noteId: string, userId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
-    const { error } = await supabase
-      .from('user_notes')
+    const { error } = await (supabase.from('user_notes') as any)
       .update({
         is_archived: true,
         is_pinned: false,
@@ -475,13 +453,12 @@ export async function createAnswer(
   }
 ): Promise<Answer | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const validated = AnswerSchema.parse(data);
     const { word_count } = calculateContentStats(validated.content);
 
-    const { data: answer, error } = await supabase
-      .from('user_answers')
+    const { data: answer, error } = await (supabase.from('user_answers') as any)
       .insert({
         user_id: userId,
         question_id: data.question_id || null,
@@ -510,12 +487,9 @@ export async function createAnswer(
 /**
  * Get a single answer by ID
  */
-export async function getAnswer(
-  answerId: string,
-  userId: string
-): Promise<Answer | null> {
+export async function getAnswer(answerId: string, userId: string): Promise<Answer | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: answer, error } = await supabase
       .from('user_answers')
@@ -548,12 +522,9 @@ export async function getAnswers(
   }
 ): Promise<{ answers: Answer[]; total: number }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
-    let query = supabase
-      .from('user_answers')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId);
+    let query = supabase.from('user_answers').select('*', { count: 'exact' }).eq('user_id', userId);
 
     if (options?.status) {
       query = query.eq('status', options.status);
@@ -599,7 +570,7 @@ export async function updateAnswer(
   }
 ): Promise<Answer | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const updateData: any = {
       updated_at: new Date().toISOString(),
@@ -616,8 +587,7 @@ export async function updateAnswer(
       updateData.time_taken_seconds = data.time_taken_seconds;
     }
 
-    const { data: answer, error } = await supabase
-      .from('user_answers')
+    const { data: answer, error } = await (supabase.from('user_answers') as any)
       .update(updateData)
       .eq('id', answerId)
       .eq('user_id', userId)
@@ -639,15 +609,11 @@ export async function updateAnswer(
 /**
  * Submit an answer for evaluation
  */
-export async function submitAnswer(
-  answerId: string,
-  userId: string
-): Promise<Answer | null> {
+export async function submitAnswer(answerId: string, userId: string): Promise<Answer | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
-    const { data: answer, error } = await supabase
-      .from('user_answers')
+    const { data: answer, error } = await (supabase.from('user_answers') as any)
       .update({
         status: 'submitted',
         submitted_at: new Date().toISOString(),
@@ -673,12 +639,9 @@ export async function submitAnswer(
 /**
  * Delete an answer
  */
-export async function deleteAnswer(
-  answerId: string,
-  userId: string
-): Promise<boolean> {
+export async function deleteAnswer(answerId: string, userId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('user_answers')
@@ -705,12 +668,11 @@ export async function createFolder(
   data: z.infer<typeof FolderSchema>
 ): Promise<Folder | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const validated = FolderSchema.parse(data);
 
-    const { data: folder, error } = await supabase
-      .from('note_folders')
+    const { data: folder, error } = await (supabase.from('note_folders') as any)
       .insert({
         user_id: userId,
         name: validated.name,
@@ -739,7 +701,7 @@ export async function createFolder(
  */
 export async function getFolders(userId: string): Promise<Folder[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: folders, error } = await supabase
       .from('note_folders')
@@ -768,7 +730,7 @@ export async function updateFolder(
   data: Partial<z.infer<typeof FolderSchema>>
 ): Promise<Folder | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const updateData: any = {
       updated_at: new Date().toISOString(),
@@ -780,8 +742,7 @@ export async function updateFolder(
     if (data.icon) updateData.icon = data.icon;
     if (data.sort_order !== undefined) updateData.sort_order = data.sort_order;
 
-    const { data: folder, error } = await supabase
-      .from('note_folders')
+    const { data: folder, error } = await (supabase.from('note_folders') as any)
       .update(updateData)
       .eq('id', folderId)
       .eq('user_id', userId)
@@ -803,16 +764,12 @@ export async function updateFolder(
 /**
  * Delete a folder
  */
-export async function deleteFolder(
-  folderId: string,
-  userId: string
-): Promise<boolean> {
+export async function deleteFolder(folderId: string, userId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // First, move all notes in this folder to null
-    await supabase
-      .from('user_notes')
+    await (supabase.from('user_notes') as any)
       .update({ folder_id: null })
       .eq('folder_id', folderId)
       .eq('user_id', userId);

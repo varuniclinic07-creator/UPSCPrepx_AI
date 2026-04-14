@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  * Returns revenue analytics
  */
 async function getRevenueAnalytics(params: { period?: string }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const period = params.period || '30d';
 
   // Calculate date range
@@ -24,6 +24,8 @@ async function getRevenueAnalytics(params: { period?: string }) {
   startDate.setDate(startDate.getDate() - days);
 
   // Parallel fetch revenue metrics
+  // Cast rpc calls to any — these RPC functions exist in the DB but are not in the generated types
+  const sb = supabase as any;
   const [
     mrr,
     arr,
@@ -35,35 +37,35 @@ async function getRevenueAnalytics(params: { period?: string }) {
     contractionRevenue,
   ] = await Promise.all([
     // MRR (Monthly Recurring Revenue)
-    supabase.rpc('get_mrr'),
+    sb.rpc('get_mrr'),
 
     // ARR (Annual Recurring Revenue)
-    supabase.rpc('get_arr'),
+    sb.rpc('get_arr'),
 
     // Daily revenue trend
-    supabase.rpc('get_daily_revenue', {
+    sb.rpc('get_daily_revenue', {
       start_date: startDate.toISOString(),
       end_date: new Date().toISOString(),
     }),
 
     // Revenue by plan
-    supabase.rpc('get_revenue_by_plan', {
+    sb.rpc('get_revenue_by_plan', {
       start_date: startDate.toISOString(),
     }),
 
     // Churn rate
-    supabase.rpc('get_churn_rate', { days }),
+    sb.rpc('get_churn_rate', { days }),
 
     // LTV (Lifetime Value)
-    supabase.rpc('get_ltv'),
+    sb.rpc('get_ltv'),
 
     // Expansion revenue (upgrades)
-    supabase.rpc('get_expansion_revenue', {
+    sb.rpc('get_expansion_revenue', {
       start_date: startDate.toISOString(),
     }),
 
     // Contraction revenue (downgrades)
-    supabase.rpc('get_contraction_revenue', {
+    sb.rpc('get_contraction_revenue', {
       start_date: startDate.toISOString(),
     }),
   ]);
@@ -112,7 +114,9 @@ export async function GET(request: NextRequest) {
         console.error('[Revenue Metrics] Error:', error);
 
         // Return mock data for development
-        const days = parseInt(period?.replace('d', '') || '30', 10);
+        const { searchParams: sp } = new URL(request.url);
+        const fallbackPeriod = sp.get('period') || '30d';
+        const days = parseInt(fallbackPeriod.replace('d', '') || '30', 10);
         const dailyRevenue = Array.from({ length: days }, (_, i) => ({
           date: new Date(Date.now() - (days - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           revenue: Math.floor(Math.random() * 5000) + 2000,

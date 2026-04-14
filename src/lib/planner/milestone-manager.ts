@@ -1,6 +1,6 @@
 /**
  * Study Milestone Manager Service
- * 
+ *
  * Master Prompt v8.0 - Feature F8 (READ Mode)
  * - Track milestone progress
  * - Detect achievements
@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 // ============================================================================
 // TYPES
@@ -62,7 +63,7 @@ const MILESTONE_XP_REWARDS: Record<string, number> = {
 
 const CELEBRATION_MESSAGES: Record<string, { en: string; hi: string }> = {
   syllabus_25: {
-    en: '🎉 You\'ve completed 25% of your syllabus! Keep going!',
+    en: "🎉 You've completed 25% of your syllabus! Keep going!",
     hi: '🎉 आपने अपने पाठ्यक्रम का 25% पूरा कर लिया है! जारी रखें!',
   },
   syllabus_50: {
@@ -70,11 +71,11 @@ const CELEBRATION_MESSAGES: Record<string, { en: string; hi: string }> = {
     hi: '🎊 आधा रास्ता तय हो गया! 50% पाठ्यक्रम पूर्ण!',
   },
   syllabus_75: {
-    en: '🏆 75% complete! You\'re almost there!',
+    en: "🏆 75% complete! You're almost there!",
     hi: '🏆 75% पूर्ण! आप लगभग पहुँच गए हैं!',
   },
   syllabus_100: {
-    en: '👑 SYLLABUS COMPLETE! You\'re ready for the exam!',
+    en: "👑 SYLLABUS COMPLETE! You're ready for the exam!",
     hi: '👑 पाठ्यक्रम पूर्ण! आप परीक्षा के लिए तैयार हैं!',
   },
   mock_5: {
@@ -82,7 +83,7 @@ const CELEBRATION_MESSAGES: Record<string, { en: string; hi: string }> = {
     hi: '📝 5 मॉक टेस्ट पूर्ण! बेहतरीन अभ्यास!',
   },
   mock_10: {
-    en: '📚 10 Mock Tests! You\'re getting stronger!',
+    en: "📚 10 Mock Tests! You're getting stronger!",
     hi: '📚 10 मॉक टेस्ट! आप मजबूत हो रहे हैं!',
   },
   mock_20: {
@@ -94,11 +95,11 @@ const CELEBRATION_MESSAGES: Record<string, { en: string; hi: string }> = {
     hi: '🔄 पहला रिविजन पूर्ण! ज्ञान मजबूत हो रहा है!',
   },
   revision_2: {
-    en: '🔁 Second revision done! You\'re mastering this!',
+    en: "🔁 Second revision done! You're mastering this!",
     hi: '🔁 दूसरा रिविजन हुआ! आप मास्टर कर रहे हैं!',
   },
   revision_3: {
-    en: '✨ Final revision complete! You\'re unstoppable!',
+    en: "✨ Final revision complete! You're unstoppable!",
     hi: '✨ अंतिम रिविजन पूर्ण! आप अजेय हैं!',
   },
 };
@@ -108,10 +109,10 @@ const CELEBRATION_MESSAGES: Record<string, { en: string; hi: string }> = {
 // ============================================================================
 
 export class MilestoneManagerService {
-  private supabase: ReturnType<typeof createClient>;
+  private supabase: ReturnType<typeof createClient<Database>>;
 
   constructor() {
-    this.supabase = createClient(
+    this.supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -145,7 +146,7 @@ export class MilestoneManagerService {
     // Get current value
     const { data: current } = await this.supabase
       .from('study_milestones')
-      .select('current_value, target_value')
+      .select('current_value, target_value, achieved_at')
       .eq('id', milestoneId)
       .single();
 
@@ -153,7 +154,7 @@ export class MilestoneManagerService {
       return null;
     }
 
-    const oldValue = current.current_value;
+    const oldValue = current.current_value ?? 0;
     const isAchieved = newValue >= current.target_value;
 
     // Update milestone
@@ -206,12 +207,10 @@ export class MilestoneManagerService {
 
         if (update?.isAchieved) {
           const xpReward = MILESTONE_XP_REWARDS[milestone.type] || 50;
-          const celebrationMessage =
-            CELEBRATION_MESSAGES[milestone.type] ||
-            {
-              en: `🎉 Milestone achieved: ${milestone.title.en}`,
-              hi: `🎉 मील का पत्थर हासिल: ${milestone.title.en}`,
-            };
+          const celebrationMessage = CELEBRATION_MESSAGES[milestone.type] || {
+            en: `🎉 Milestone achieved: ${milestone.title.en}`,
+            hi: `🎉 मील का पत्थर हासिल: ${milestone.title.en}`,
+          };
 
           // Award XP to user
           await this.awardMilestoneXP(planId, xpReward);
@@ -232,10 +231,7 @@ export class MilestoneManagerService {
   /**
    * Calculate current value for a milestone type
    */
-  private async calculateCurrentValue(
-    planId: string,
-    milestoneType: string
-  ): Promise<number> {
+  private async calculateCurrentValue(planId: string, milestoneType: string): Promise<number> {
     switch (milestoneType) {
       case 'syllabus_coverage':
         return this.calculateSyllabusCoverage(planId);
@@ -261,10 +257,9 @@ export class MilestoneManagerService {
       .select('*', { count: 'exact', head: true })
       .in(
         'schedule_id',
-        (await this.supabase
-          .from('study_schedules')
-          .select('id')
-          .eq('plan_id', planId)).data?.map((s) => s.id) || []
+        (await this.supabase.from('study_schedules').select('id').eq('plan_id', planId)).data?.map(
+          (s) => s.id
+        ) || []
       );
 
     // Get completed tasks
@@ -274,10 +269,9 @@ export class MilestoneManagerService {
       .eq('status', 'completed')
       .in(
         'schedule_id',
-        (await this.supabase
-          .from('study_schedules')
-          .select('id')
-          .eq('plan_id', planId)).data?.map((s) => s.id) || []
+        (await this.supabase.from('study_schedules').select('id').eq('plan_id', planId)).data?.map(
+          (s) => s.id
+        ) || []
       );
 
     if (!totalTasks || totalTasks === 0) {
@@ -306,14 +300,12 @@ export class MilestoneManagerService {
     const { count } = await this.supabase
       .from('study_completions')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', plan.user_id)
-      .eq(
+      .eq('user_id', plan.user_id!)
+      .in(
         'task_id',
-        (await this.supabase
-          .from('study_tasks')
-          .select('id')
-          .eq('task_type', 'mock_test'))
-          .data?.map((t) => t.id) || []
+        (
+          await this.supabase.from('study_tasks').select('id').eq('task_type', 'mock_test')
+        ).data?.map((t) => t.id) || []
       );
 
     return count || 0;
@@ -332,10 +324,9 @@ export class MilestoneManagerService {
       .eq('status', 'completed')
       .in(
         'schedule_id',
-        (await this.supabase
-          .from('study_schedules')
-          .select('id')
-          .eq('plan_id', planId)).data?.map((s) => s.id) || []
+        (await this.supabase.from('study_schedules').select('id').eq('plan_id', planId)).data?.map(
+          (s) => s.id
+        ) || []
       );
 
     // Assume 1 round = completing all subjects once (simplified)
@@ -429,9 +420,7 @@ export class MilestoneManagerService {
 
     const nextMilestone = upcoming.length > 0 ? upcoming[0] : null;
     const overallProgress =
-      milestones.length > 0
-        ? Math.round((achieved.length / milestones.length) * 100)
-        : 0;
+      milestones.length > 0 ? Math.round((achieved.length / milestones.length) * 100) : 0;
 
     return {
       totalMilestones: milestones.length,

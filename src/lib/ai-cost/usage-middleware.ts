@@ -42,7 +42,7 @@ export async function withUsageTracking(
 
   try {
     // Get user from session
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

@@ -114,6 +114,8 @@ export default function AICostPage() {
         revenue: data.revenue,
         cost: data.cost,
         margin: data.margin,
+        users: data.users,
+        costPerUser: data.costPerUser,
       }))
     : [];
 
@@ -275,7 +277,7 @@ export default function AICostPage() {
                     border: '1px solid #E5E7EB',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
+                  formatter={((value: number) => [`$${value.toFixed(2)}`, 'Cost']) as any}
                 />
                 <Legend />
                 <Area
@@ -339,7 +341,7 @@ export default function AICostPage() {
                       border: '1px solid #E5E7EB',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Margin']}
+                    formatter={((value: number) => [`${value.toFixed(1)}%`, 'Margin']) as any}
                   />
                   <Bar dataKey="margin" name="Margin %" fill="#10B981" />
                 </BarChart>

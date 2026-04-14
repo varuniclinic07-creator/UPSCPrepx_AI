@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 // ============================================================================
 // TYPES
@@ -68,11 +69,10 @@ const XP_REWARDS = {
 // ============================================================================
 
 export class ProgressTrackerService {
-  private supabase: ReturnType<typeof createClient>;
+  private supabase: ReturnType<typeof createClient<Database>>;
 
   constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    this.supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
   }
@@ -176,7 +176,7 @@ export class ProgressTrackerService {
           .eq('is_active', true)).data?.map((p) => p.id) || []
       );
 
-    const totalTasks = schedules?.reduce((sum, s) => sum + s.total_tasks, 0) || 0;
+    const totalTasks = schedules?.reduce((sum, s) => sum + (s.total_tasks ?? 0), 0) || 0;
     const completedTasks = completions?.length || 0;
     const totalMinutes = completions?.reduce((sum, c) => sum + (c.time_spent_minutes || 0), 0) || 0;
     const xpEarned = completions?.reduce((sum, c) => sum + (c.xp_earned || 0), 0) || 0;
@@ -265,7 +265,7 @@ export class ProgressTrackerService {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const dates = [...new Set(completions.map((c) => c.completed_at?.split('T')[0]))];
+    const dates = [...new Set(completions.map((c) => c.completed_at?.split('T')[0]).filter((d): d is string => !!d))];
 
     // Calculate current streak
     let currentStreak = 0;
@@ -396,17 +396,16 @@ export class ProgressTrackerService {
     const syllabusCoverage = milestones?.[0]?.current_value || 0;
 
     // Mock tests completed
+    const mockTestTaskIds = (await this.supabase
+      .from('study_tasks')
+      .select('id')
+      .eq('task_type', 'mock_test')).data?.map((t) => t.id) || [];
+
     const { count: mockTestsCompleted } = await this.supabase
       .from('study_completions')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq(
-        'task_id',
-        (await this.supabase
-          .from('study_tasks')
-          .select('id')
-          .eq('task_type', 'mock_test')).data?.map((t) => t.id) || []
-      );
+      .in('task_id', mockTestTaskIds);
 
     return {
       totalTasksCompleted: totalTasksCompleted || 0,

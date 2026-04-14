@@ -177,25 +177,27 @@ export class AnalyticsService {
    */
   private async getAnalyticsOverview(userId: string): Promise<AnalyticsOverview> {
     try {
-      const { data: attempts } = await (await this.getSupabase())
+      const { data } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('*')
         .eq('user_id', userId)
         .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
 
-      if (!attempts || attempts.length === 0) {
+      const attempts = (data || []) as any[];
+
+      if (attempts.length === 0) {
         return this.getDefaultOverview();
       }
 
       const totalAttempts = attempts.length;
-      const totalQuestions = attempts.reduce((sum, a) => sum + (a.total_questions || 0), 0);
-      const correctAnswers = attempts.reduce((sum, a) => sum + (a.correct_answers || 0), 0);
-      const incorrectAnswers = attempts.reduce((sum, a) => sum + (a.incorrect_answers || 0), 0);
-      const unattempted = attempts.reduce((sum, a) => sum + (a.unattempted || 0), 0);
-      const overallAccuracy = attempts.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / totalAttempts;
-      const avgScore = attempts.reduce((sum, a) => sum + (a.net_marks || 0), 0) / totalAttempts;
-      const avgTimePerQuestion = attempts.reduce((sum, a) => sum + (a.avg_time_per_question || 0), 0) / totalAttempts;
+      const totalQuestions = attempts.reduce((sum: number, a: any) => sum + (a.total_questions || 0), 0);
+      const correctAnswers = attempts.reduce((sum: number, a: any) => sum + (a.correct_answers || 0), 0);
+      const incorrectAnswers = attempts.reduce((sum: number, a: any) => sum + (a.incorrect_answers || 0), 0);
+      const unattempted = attempts.reduce((sum: number, a: any) => sum + (a.unattempted || 0), 0);
+      const overallAccuracy = attempts.reduce((sum: number, a: any) => sum + (a.accuracy_percent || 0), 0) / totalAttempts;
+      const avgScore = attempts.reduce((sum: number, a: any) => sum + (a.net_marks || 0), 0) / totalAttempts;
+      const avgTimePerQuestion = attempts.reduce((sum: number, a: any) => sum + (a.avg_time_per_question || 0), 0) / totalAttempts;
 
       // Find best and worst subjects
       const subjectStats = this.calculateSubjectStats(attempts);
@@ -234,13 +236,15 @@ export class AnalyticsService {
    */
   private async getSubjectBreakdown(userId: string): Promise<SubjectAnalytics[]> {
     try {
-      const { data: attempts } = await (await this.getSupabase())
+      const { data } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('*')
         .eq('user_id', userId)
         .not('completed_at', 'is', null);
 
-      if (!attempts || attempts.length === 0) {
+      const attempts = (data || []) as any[];
+
+      if (attempts.length === 0) {
         return [];
       }
 
@@ -253,7 +257,7 @@ export class AnalyticsService {
         accuracy: stat.accuracy,
         avgScore: stat.avgScore,
         avgTime: stat.avgTime,
-        trend: this.calculateTrend(attempts.filter(a => a.subject === stat.subject)),
+        trend: this.calculateTrend(attempts.filter((a: any) => a.subject === stat.subject)),
       }));
     } catch (error) {
       console.error('AnalyticsService.getSubjectBreakdown error:', error);
@@ -266,7 +270,7 @@ export class AnalyticsService {
    */
   private async getTopicBreakdown(userId: string): Promise<TopicAnalytics[]> {
     try {
-      const { data: attempts } = await (await this.getSupabase())
+      const { data } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select(`
           *,
@@ -282,7 +286,9 @@ export class AnalyticsService {
         .not('completed_at', 'is', null)
         .limit(50);
 
-      if (!attempts || attempts.length === 0) {
+      const attempts = (data || []) as any[];
+
+      if (attempts.length === 0) {
         return [];
       }
 
@@ -336,7 +342,7 @@ export class AnalyticsService {
    */
   private async getAccuracyTrend(userId: string, days: number = 30): Promise<TrendData[]> {
     try {
-      const { data: attempts } = await (await this.getSupabase())
+      const { data } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('completed_at, accuracy_percent')
         .eq('user_id', userId)
@@ -344,13 +350,15 @@ export class AnalyticsService {
         .gte('completed_at', new Date(Date.now() - days * 86400000).toISOString())
         .order('completed_at', { ascending: true });
 
-      if (!attempts || attempts.length === 0) {
+      const attempts = (data || []) as any[];
+
+      if (attempts.length === 0) {
         return [];
       }
 
       // Group by date
       const dateMap = new Map<string, { sum: number; count: number }>();
-      
+
       for (const attempt of attempts) {
         const date = attempt.completed_at.split('T')[0];
         
@@ -378,7 +386,7 @@ export class AnalyticsService {
    */
   private async getSpeedTrend(userId: string, days: number = 30): Promise<TrendData[]> {
     try {
-      const { data: attempts } = await (await this.getSupabase())
+      const { data } = await (await this.getSupabase())
         .from('mcq_attempts')
         .select('completed_at, avg_time_per_question')
         .eq('user_id', userId)
@@ -386,11 +394,13 @@ export class AnalyticsService {
         .gte('completed_at', new Date(Date.now() - days * 86400000).toISOString())
         .order('completed_at', { ascending: true });
 
-      if (!attempts || attempts.length === 0) {
+      const attempts = (data || []) as any[];
+
+      if (attempts.length === 0) {
         return [];
       }
 
-      return attempts.map(attempt => ({
+      return attempts.map((attempt: any) => ({
         date: attempt.completed_at.split('T')[0],
         value: Math.round(attempt.avg_time_per_question || 0),
       }));
@@ -413,9 +423,9 @@ export class AnalyticsService {
 
       for (const topic of topicBreakdown) {
         const accuracy = topic.accuracy;
-        const priority = accuracy < 50 ? 'high' : accuracy < 65 ? 'medium' : 'low';
+        const priority: 'high' | 'medium' | 'low' = accuracy < 50 ? 'high' : accuracy < 65 ? 'medium' : 'low';
 
-        const area = {
+        const area: AreaAnalysis = {
           area: topic.topic,
           subject: topic.subject,
           accuracy,

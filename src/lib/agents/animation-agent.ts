@@ -29,7 +29,7 @@ class AnimationAgent extends BaseAgent {
       const animType = params.animationType || 'concept';
       const userPrompt = `Topic: ${params.topic}${params.subject ? `\nSubject: ${params.subject}` : ''}\nAnimation type: ${animType}\n\nGenerate a Manim animation prompt for this UPSC concept.`;
 
-      const raw = await callAI({ systemPrompt, userPrompt });
+      const raw = await callAI({ systemPrompt, userPrompt, providerPreferences: this.getProviderPreferences() });
 
       let parsed: {
         manimPrompt: string;

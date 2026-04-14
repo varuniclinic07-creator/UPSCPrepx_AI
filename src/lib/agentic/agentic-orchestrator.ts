@@ -124,7 +124,7 @@ export class AgenticOrchestrator {
           system: 'autodoc' as const,
           sourceName: r.documentName,
           sourceUrl: r.documentUrl,
-          sourceType: 'standard_book',
+          sourceType: 'standard_book' as const,
           relevanceScore: r.relevanceScore,
           excerpt: r.excerpt,
         })));

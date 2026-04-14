@@ -48,7 +48,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     action: 'current_affairs.scraped',
     resourceType: 'current_affairs',
     newValues: { count: data.length, sources: sources.length },
-    ipAddress: request.headers.get('x-forwarded-for') || request.ip,
+    ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
   });
 
   return NextResponse.json({

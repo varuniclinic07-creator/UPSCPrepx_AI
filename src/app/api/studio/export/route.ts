@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/security/auth';
 import { checkSubscriptionAccess } from '@/lib/trial/subscription-checker';
@@ -161,10 +162,10 @@ function generateDocxContent(
           {
             type: 'text',
             text: metaParts.join(' | '),
-            italics: true,
+            italic: true,
             size: 20,
             color: '6b7280',
-          },
+          } as any,
         ],
       });
     }
@@ -180,7 +181,7 @@ function generateDocxContent(
           type: 'text',
           text: para,
           size: 22,
-        },
+        } as any,
       ],
     });
   });
@@ -246,7 +247,7 @@ export async function POST(request: NextRequest) {
     // Subscription check - PDF export is premium
     const subscription = await checkSubscriptionAccess(authUser.id, 'content_studio');
     
-    if (validated.format === 'pdf' && !subscription.isPremium) {
+    if (validated.format === 'pdf' && subscription.tier !== 'premium' && subscription.tier !== 'premium_plus') {
       return NextResponse.json(
         {
           success: false,
@@ -371,7 +372,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid input', details: error.errors },
+        { success: false, error: 'Invalid input', details: error.issues },
         { status: 400 }
       );
     }

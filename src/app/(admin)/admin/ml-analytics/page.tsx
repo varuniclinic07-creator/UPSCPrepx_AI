@@ -331,14 +331,14 @@ export default function AdminMLAnalyticsPage() {
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-600">Token Usage</p>
-                {data?.usage.growthRates.tokens >= 0 ? (
+                {(data?.usage.growthRates.tokens ?? 0) >= 0 ? (
                   <ArrowUpRight className="w-4 h-4 text-green-600" />
                 ) : (
                   <ArrowDownRight className="w-4 h-4 text-red-600" />
                 )}
               </div>
               <p className="text-2xl font-bold text-gray-900">
-                {data?.usage.growthRates.tokens >= 0 ? '+' : ''}{data?.usage.growthRates.tokens.toFixed(1)}%
+                {(data?.usage.growthRates.tokens ?? 0) >= 0 ? '+' : ''}{(data?.usage.growthRates.tokens ?? 0).toFixed(1)}%
               </p>
               <p className="text-xs text-gray-500 mt-1">vs previous period</p>
             </div>
@@ -346,14 +346,14 @@ export default function AdminMLAnalyticsPage() {
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-600">User Growth</p>
-                {data?.usage.growthRates.users >= 0 ? (
+                {(data?.usage.growthRates.users ?? 0) >= 0 ? (
                   <ArrowUpRight className="w-4 h-4 text-green-600" />
                 ) : (
                   <ArrowDownRight className="w-4 h-4 text-red-600" />
                 )}
               </div>
               <p className="text-2xl font-bold text-gray-900">
-                {data?.usage.growthRates.users >= 0 ? '+' : ''}{data?.usage.growthRates.users.toFixed(1)}%
+                {(data?.usage.growthRates.users ?? 0) >= 0 ? '+' : ''}{(data?.usage.growthRates.users ?? 0).toFixed(1)}%
               </p>
               <p className="text-xs text-gray-500 mt-1">vs previous period</p>
             </div>
@@ -361,14 +361,14 @@ export default function AdminMLAnalyticsPage() {
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-600">Revenue Growth</p>
-                {data?.usage.growthRates.revenue >= 0 ? (
+                {(data?.usage.growthRates.revenue ?? 0) >= 0 ? (
                   <ArrowUpRight className="w-4 h-4 text-green-600" />
                 ) : (
                   <ArrowDownRight className="w-4 h-4 text-red-600" />
                 )}
               </div>
               <p className="text-2xl font-bold text-gray-900">
-                {data?.usage.growthRates.revenue >= 0 ? '+' : ''}{data?.usage.growthRates.revenue.toFixed(1)}%
+                {(data?.usage.growthRates.revenue ?? 0) >= 0 ? '+' : ''}{(data?.usage.growthRates.revenue ?? 0).toFixed(1)}%
               </p>
               <p className="text-xs text-gray-500 mt-1">vs previous period</p>
             </div>

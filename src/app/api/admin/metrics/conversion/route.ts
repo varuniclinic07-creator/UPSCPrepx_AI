@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  * Returns conversion funnel analytics
  */
 async function getConversionAnalytics(params: { period?: string }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const period = params.period || '30d';
   const days = parseInt(period.replace('d', ''), 10) || 30;
 
@@ -23,6 +23,8 @@ async function getConversionAnalytics(params: { period?: string }) {
   startDate.setDate(startDate.getDate() - days);
 
   // Parallel fetch funnel metrics
+  // Cast rpc calls to any — these RPC functions exist in the DB but are not in the generated types
+  const sb = supabase as any;
   const [
     funnelData,
     conversionBySource,
@@ -31,28 +33,28 @@ async function getConversionAnalytics(params: { period?: string }) {
     dropoffPoints,
   ] = await Promise.all([
     // Funnel stages
-    supabase.rpc('get_conversion_funnel', {
+    sb.rpc('get_conversion_funnel', {
       start_date: startDate.toISOString(),
       end_date: new Date().toISOString(),
     }),
 
     // Conversion by traffic source
-    supabase.rpc('get_conversion_by_source', {
+    sb.rpc('get_conversion_by_source', {
       start_date: startDate.toISOString(),
     }),
 
     // Time to convert distribution
-    supabase.rpc('get_time_to_convert', {
+    sb.rpc('get_time_to_convert', {
       start_date: startDate.toISOString(),
     }),
 
     // Activation rate (users who completed onboarding)
-    supabase.rpc('get_activation_rate', {
+    sb.rpc('get_activation_rate', {
       start_date: startDate.toISOString(),
     }),
 
     // Drop-off points
-    supabase.rpc('get_funnel_dropoffs', {
+    sb.rpc('get_funnel_dropoffs', {
       start_date: startDate.toISOString(),
     }),
   ]);

@@ -86,6 +86,7 @@ export class NotesAgent extends BaseAgent {
         content = await callAI({
           systemPrompt: SYSTEM_PROMPT,
           userPrompt,
+          providerPreferences: this.getProviderPreferences(),
         });
       } catch (aiErr: any) {
         this.log('error', `AI provider call failed: ${aiErr.message}`);

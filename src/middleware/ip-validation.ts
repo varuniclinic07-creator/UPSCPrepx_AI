@@ -34,7 +34,7 @@ function getClientIP(request: NextRequest): string {
 
     // Fallback to remote address
     return request.headers.get('x-forwarded-for')?.split(',')[0] ||
-        request.ip ||
+        (request as any).ip ||
         '0.0.0.0';
 }
 

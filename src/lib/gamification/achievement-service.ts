@@ -6,12 +6,13 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { gamification } from './xp-service';
 
-let _sb: ReturnType<typeof createClient> | null = null;
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
   if (!_sb)
-    _sb = createClient(
+    _sb = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -50,17 +51,11 @@ const achievementChecks: AchievementDefinition[] = [
 /**
  * Compute consecutive days of revision activity
  */
-function computeConsecutiveDays(
-  revisions: Array<{ last_attempted_at: string }> | null
-): number {
+function computeConsecutiveDays(revisions: Array<{ last_attempted_at: string }> | null): number {
   if (!revisions || revisions.length === 0) return 0;
 
   const dates = [
-    ...new Set(
-      revisions
-        .map((r) => r.last_attempted_at?.split('T')[0])
-        .filter(Boolean)
-    ),
+    ...new Set(revisions.map((r) => r.last_attempted_at?.split('T')[0]).filter(Boolean)),
   ].sort((a, b) => b.localeCompare(a)); // descending
 
   if (dates.length === 0) return 0;
@@ -75,9 +70,7 @@ function computeConsecutiveDays(
   for (let i = 1; i < dates.length; i++) {
     const prev = new Date(dates[i - 1]);
     const curr = new Date(dates[i]);
-    const diffDays = Math.round(
-      (prev.getTime() - curr.getTime()) / 86400000
-    );
+    const diffDays = Math.round((prev.getTime() - curr.getTime()) / 86400000);
     if (diffDays === 1) {
       streak++;
     } else {
@@ -106,9 +99,7 @@ export class AchievementService {
         .eq('user_id', userId);
 
       const unlockedCodes = new Set(
-        (unlocked || [])
-          .map((u: any) => u.achievements?.code)
-          .filter(Boolean)
+        (unlocked || []).map((u: any) => u.achievements?.code).filter(Boolean)
       );
 
       // 3. Count mastered topics
@@ -130,7 +121,9 @@ export class AchievementService {
         .order('last_attempted_at', { ascending: false })
         .limit(60);
 
-      const revisionStreak = computeConsecutiveDays(recentRevisions);
+      const revisionStreak = computeConsecutiveDays(
+        recentRevisions as { last_attempted_at: string }[] | null
+      );
 
       // 6. Build enriched stats
       const enrichedStats: EnrichedStats = {
@@ -210,10 +203,10 @@ export class AchievementService {
     }
 
     // Award bonus XP
-    if (achievement.xp_reward > 0) {
+    if ((achievement.xp_reward ?? 0) > 0) {
       await gamification.awardXP({
         userId,
-        amount: achievement.xp_reward,
+        amount: achievement.xp_reward ?? 0,
         source: 'achievement',
         description: `Unlocked: ${achievement.name}`,
       });

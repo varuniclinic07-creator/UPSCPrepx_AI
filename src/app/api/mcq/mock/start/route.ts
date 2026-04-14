@@ -68,11 +68,11 @@ export async function POST(request: NextRequest) {
 
     // Check premium access
     if (mock.isPremium) {
-      const { data: userProfile } = await supabase
-        .from('user_profiles')
+      const { data: userProfile } = await (supabase
+        .from('user_profiles') as any)
         .select('subscription_tier')
         .eq('id', user.id)
-        .single();
+        .single() as { data: any };
 
       if (userProfile?.subscription_tier !== 'premium' && userProfile?.subscription_tier !== 'premium_plus') {
         return NextResponse.json(

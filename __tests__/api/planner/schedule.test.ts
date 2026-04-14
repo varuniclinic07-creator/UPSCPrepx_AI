@@ -10,21 +10,21 @@ const mockFromFn = jest.fn();
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
-    from: (...args: any[]) => mockFromFn(...args),
+    from: (table: any) => mockFromFn(table),
   })),
 }));
 
 const mockGetMilestones = jest.fn();
 jest.mock('@/lib/planner/milestone-manager', () => ({
   milestoneManager: {
-    getMilestones: (...args: any[]) => mockGetMilestones(...args),
+    getMilestones: (planId: any) => mockGetMilestones(planId),
   },
 }));
 
 const mockGenerateSchedule = jest.fn();
 jest.mock('@/lib/planner/schedule-generator', () => ({
   scheduleGenerator: {
-    generateSchedule: (...args: any[]) => mockGenerateSchedule(...args),
+    generateSchedule: (params: any) => mockGenerateSchedule(params),
   },
 }));
 
@@ -54,7 +54,7 @@ function makeRequest(
   body?: any,
   headers?: Record<string, string>,
 ): NextRequest {
-  const init: RequestInit = { method, headers: { ...headers } };
+  const init: Record<string, any> = { method, headers: { ...headers } };
   if (body) {
     init.body = JSON.stringify(body);
     (init.headers as Record<string, string>)['Content-Type'] = 'application/json';

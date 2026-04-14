@@ -9,13 +9,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { recommendationEngine } from '@/lib/planner/recommendation-engine';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 // ============================================================================
@@ -39,11 +40,11 @@ export async function GET(request: NextRequest) {
 
     // Get user's active plan
     const { data: plan } = await getSupabase()
-      .from('study_plans')
+      .from('study_plans' as any)
       .select('id')
       .eq('user_id', userId)
       .eq('is_active', true)
-      .single();
+      .single() as { data: any };
 
     if (!plan) {
       return NextResponse.json(
@@ -58,11 +59,11 @@ export async function GET(request: NextRequest) {
 
     // Get schedule for the date
     const { data: schedule } = await getSupabase()
-      .from('study_schedules')
+      .from('study_schedules' as any)
       .select('*')
       .eq('plan_id', plan.id)
       .eq('date', date)
-      .single();
+      .single() as { data: any };
 
     if (!schedule) {
       // No schedule for this date - might be in the future or past
@@ -83,10 +84,10 @@ export async function GET(request: NextRequest) {
 
     // Get tasks for this schedule
     const { data: tasks } = await getSupabase()
-      .from('study_tasks')
+      .from('study_tasks' as any)
       .select('*')
       .eq('schedule_id', schedule.id)
-      .order('order_index', { ascending: true });
+      .order('order_index', { ascending: true }) as { data: any[] | null };
 
     // Calculate progress
     const completedTasks = tasks?.filter((t) => t.status === 'completed').length || 0;

@@ -8,18 +8,18 @@ import { GET, POST } from '@/app/api/admin/system/route';
 // ---------------------------------------------------------------------------
 
 jest.mock('@/lib/auth/auth-config', () => ({
-  getCurrentUser: (...args: any[]) => mockGetCurrentUser(...args),
+  getCurrentUser: (req: any) => mockGetCurrentUser(req),
 }));
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
-    from: (...args: any[]) => mockFrom(...args),
-  })),
+    from: (table: any) => mockFrom(table),
+  })) as any,
 }));
 
 jest.mock('@/lib/redis/client', () => ({
-  getRedis: (...args: any[]) => mockGetRedis(...args),
-  isRedisAvailable: (...args: any[]) => mockIsRedisAvailable(...args),
+  getRedis: () => mockGetRedis(),
+  isRedisAvailable: () => mockIsRedisAvailable(),
 }));
 
 const mockGetCurrentUser = jest.fn();
@@ -53,7 +53,7 @@ const mockFrom = jest.fn(() => ({
 // ---------------------------------------------------------------------------
 
 function buildRequest(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init);
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as any);
 }
 
 function mockAdmin() {

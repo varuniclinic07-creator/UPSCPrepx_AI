@@ -2,9 +2,18 @@
  * CRON: Daily Study Plans — Daily 5:00am
  * Generates personalized daily study plans for active users based on
  * user_mastery (weak nodes, SRS due, untouched topics, today's CA).
+ *
+ * Plan composition:
+ *   1. Weak nodes (accuracy < 0.5) — revise
+ *   2. SRS-due nodes — revise
+ *   3. Untouched / not_started nodes — new topic introduction
+ *   4. Today's Current Affairs — read
+ *   5. CA-to-weak cross-reference — read + revise (CA linked to weak areas)
+ *   6. Practice quiz on weak areas
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,8 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     );
 
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
       try {
         const plan: DailyPlanItem[] = [];
 
-        // 1. Find weak nodes (accuracy < 0.5)
+        // 1. Find weak nodes (mastery_level='weak' = accuracy < 0.5 per spec)
         const { data: weakNodes } = await supabase
           .from('user_mastery')
           .select('node_id, accuracy_score, knowledge_nodes(id, title, subject)')
@@ -56,10 +64,14 @@ export async function POST(request: NextRequest) {
           .eq('mastery_level', 'weak')
           .limit(3);
 
+        // Collect weak node IDs for CA cross-referencing later
+        const weakNodeIds = new Set<string>();
+
         if (weakNodes) {
           for (const wn of weakNodes) {
             const node = (wn as any).knowledge_nodes;
             if (node) {
+              weakNodeIds.add(node.id);
               plan.push({
                 time: '09:00',
                 action: 'revise',
@@ -96,12 +108,46 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // 3. Add today's CA if available
+        // 3. Find untouched nodes (exist in knowledge_nodes but no user_mastery entry)
+        //    Uses a left-join filter: select nodes where user_mastery is null for this user.
+        const { data: userMasteryNodeIds } = await supabase
+          .from('user_mastery')
+          .select('node_id')
+          .eq('user_id', user.id);
+
+        const touchedNodeIds = (userMasteryNodeIds || []).map((r: any) => r.node_id);
+
+        let untouchedQuery = supabase
+          .from('knowledge_nodes')
+          .select('id, title, subject')
+          .limit(3);
+
+        // Exclude nodes the user already has mastery entries for
+        if (touchedNodeIds.length > 0) {
+          untouchedQuery = untouchedQuery.not('id', 'in', `(${touchedNodeIds.join(',')})`);
+        }
+
+        const { data: untouchedNodes } = await untouchedQuery;
+
+        if (untouchedNodes) {
+          for (const node of untouchedNodes) {
+            plan.push({
+              time: '11:00',
+              action: 'new',
+              topic: node.title,
+              subject: node.subject || 'General',
+              nodeId: node.id,
+              reason: 'New topic — not yet started',
+            });
+          }
+        }
+
+        // 4. Add today's CA if available
         const { data: todayCA } = await supabase
           .from('current_affairs')
           .select('id, title, node_id')
           .gte('published_date', today)
-          .limit(2);
+          .limit(5);
 
         if (todayCA) {
           for (const ca of todayCA) {
@@ -116,7 +162,58 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // 4. Practice quiz on weak areas
+        // 5. CA-to-weak cross-reference
+        //    If a CA article's node_id (or a connected node via knowledge_edges)
+        //    matches one of the user's weak nodes, flag it for focused revision.
+        if (todayCA && todayCA.length > 0 && weakNodeIds.size > 0) {
+          const caNodeIds = todayCA
+            .map((ca: any) => ca.node_id)
+            .filter((id: string | null): id is string => !!id);
+
+          // Direct matches: CA node_id is itself a weak node
+          for (const ca of todayCA) {
+            if (ca.node_id && weakNodeIds.has(ca.node_id)) {
+              plan.push({
+                time: '10:30',
+                action: 'revise',
+                topic: ca.title,
+                subject: 'General',
+                nodeId: ca.node_id,
+                reason: `Related to today's news: ${ca.title}`,
+              });
+            }
+          }
+
+          // Edge-based matches: CA node connects to a weak node via knowledge_edges
+          if (caNodeIds.length > 0) {
+            const { data: linkedEdges } = await supabase
+              .from('knowledge_edges')
+              .select('from_node_id, to_node_id')
+              .in('from_node_id', caNodeIds)
+              .limit(50);
+
+            if (linkedEdges) {
+              for (const edge of linkedEdges) {
+                if (weakNodeIds.has(edge.to_node_id)) {
+                  // Find the CA article that produced this edge
+                  const matchingCA = todayCA.find((ca: any) => ca.node_id === edge.from_node_id);
+                  if (matchingCA) {
+                    plan.push({
+                      time: '10:30',
+                      action: 'revise',
+                      topic: matchingCA.title,
+                      subject: 'General',
+                      nodeId: edge.to_node_id,
+                      reason: `Related to today's news: ${matchingCA.title}`,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // 6. Practice quiz on weak areas
         if (weakNodes && weakNodes.length > 0) {
           plan.push({
             time: '16:00',
@@ -137,7 +234,7 @@ export async function POST(request: NextRequest) {
               title: `Your Study Plan for ${today}`,
               message: JSON.stringify(plan),
               type: 'daily_plan',
-              read: false,
+              is_read: false,
             });
           usersProcessed++;
         }

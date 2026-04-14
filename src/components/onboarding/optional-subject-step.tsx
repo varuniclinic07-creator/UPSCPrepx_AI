@@ -98,8 +98,8 @@ export function OptionalSubjectStep({
     if (!searchQuery.trim()) return OPTIONAL_SUBJECTS;
     
     const query = searchQuery.toLowerCase();
-    const filtered: typeof OPTIONAL_SUBJECTS = {};
-    
+    const filtered: Record<string, string[]> = {};
+
     Object.entries(OPTIONAL_SUBJECTS).forEach(([category, subjects]) => {
       const matching = subjects.filter(s => s.toLowerCase().includes(query));
       if (matching.length > 0) {

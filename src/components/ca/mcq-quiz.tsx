@@ -57,7 +57,7 @@ interface MCQQuizProps {
   articleId: string;
   showHindi?: boolean;
   onToggleLanguage?: () => void;
-  onSubmit?: (answers: Record<string, string>) => void;
+  onSubmit?: (answers: Record<string, string>) => Promise<{ data?: { results: QuizResult[]; score: { correct: number; total: number; percentage: number } } } | void> | void;
 }
 
 interface QuizResult {
@@ -377,8 +377,8 @@ export function MCQQuiz({
 
     if (onSubmit) {
       const response = await onSubmit(answers);
-      
-      if (response && response.data) {
+
+      if (response && typeof response === 'object' && 'data' in response && response.data) {
         setResults(response.data.results);
         setScore(response.data.score);
       }

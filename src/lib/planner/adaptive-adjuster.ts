@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { callAI } from '@/lib/ai/ai-provider-client';
 
 // ============================================================================
@@ -94,11 +95,10 @@ Generate 2-4 actionable recommendations.`;
 // ============================================================================
 
 export class AdaptiveAdjusterService {
-  private supabase: ReturnType<typeof createClient>;
+  private supabase: ReturnType<typeof createClient<Database>>;
 
   constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    this.supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
   }
@@ -108,12 +108,13 @@ export class AdaptiveAdjusterService {
    */
   async analyzeScheduleStatus(planId: string): Promise<ScheduleStatus> {
     // Get plan details
-    const { data: plan } = await this.supabase
+    const { data: planRaw } = await this.supabase
       .from('study_plans')
       .select('*')
       .eq('id', planId)
       .single();
 
+    const plan = planRaw as any;
     if (!plan) {
       throw new Error('Study plan not found');
     }
@@ -126,33 +127,25 @@ export class AdaptiveAdjusterService {
     const daysElapsed = Math.ceil((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     const daysRemaining = Math.ceil((examDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
+    // Get schedule IDs for this plan up to today
+    const scheduleResult = await this.supabase
+      .from('study_schedules')
+      .select('id')
+      .eq('plan_id', planId)
+      .lte('date', today);
+    const scheduleIds = (scheduleResult.data as any[] | null)?.map((s: any) => s.id) || [];
+
     // Get scheduled vs completed tasks
     const { count: totalScheduled } = await this.supabase
       .from('study_tasks')
       .select('*', { count: 'exact', head: true })
-      .in(
-        'schedule_id',
-        (await this.supabase
-          .from('study_schedules')
-          .select('id')
-          .eq('plan_id', planId)
-          .lte('date', today))
-          .data?.map((s) => s.id) || []
-      );
+      .in('schedule_id', scheduleIds);
 
     const { count: completedTasks } = await this.supabase
       .from('study_tasks')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'completed')
-      .in(
-        'schedule_id',
-        (await this.supabase
-          .from('study_schedules')
-          .select('id')
-          .eq('plan_id', planId)
-          .lte('date', today))
-          .data?.map((s) => s.id) || []
-      );
+      .in('schedule_id', scheduleIds);
 
     const completionRate = totalScheduled && totalScheduled > 0
       ? Math.round(((completedTasks || 0) / totalScheduled) * 100)
@@ -200,20 +193,21 @@ export class AdaptiveAdjusterService {
     const status = await this.analyzeScheduleStatus(planId);
 
     // Get user's MCQ accuracy
-    const { data: plan } = await this.supabase
+    const { data: planDataRaw } = await this.supabase
       .from('study_plans')
-      .select('user_id, daily_study_hours')
+      .select('user_id, daily_study_hours, exam_date')
       .eq('id', planId)
       .single();
 
-    if (!plan) {
+    const planData = planDataRaw as any;
+    if (!planData) {
       throw new Error('Plan not found');
     }
 
-    const mcqAccuracy = await this.getUserMCQAccuracy(plan.user_id);
-    const streakInfo = await this.getUserStreak(plan.user_id);
+    const mcqAccuracy = await this.getUserMCQAccuracy(planData.user_id);
+    const streakInfo = await this.getUserStreak(planData.user_id);
     const daysUntilExam = Math.ceil(
-      (new Date(plan.exam_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      (new Date(planData.exam_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
     );
 
     // Prepare AI prompt
@@ -223,12 +217,11 @@ export class AdaptiveAdjusterService {
       .replace('{accuracy}', mcqAccuracy.toString())
       .replace('{streak}', streakInfo.currentStreak.toString())
       .replace('{days_until_exam}', daysUntilExam.toString())
-      .replace('{daily_hours}', plan.daily_study_hours.toString());
+      .replace('{daily_hours}', planData.daily_study_hours.toString());
 
     // Generate recommendations using AI
     const aiResponse = await callAI({
       prompt,
-      provider: '9router',
       temperature: 0.7,
       maxTokens: 2000,
     });
@@ -328,17 +321,18 @@ export class AdaptiveAdjusterService {
       const dateStr = date.toISOString().split('T')[0];
 
       // Get or create schedule for this date
-      const { data: schedule } = await this.supabase
+      const { data: scheduleRaw } = await this.supabase
         .from('study_schedules')
         .select('id')
         .eq('plan_id', planId)
         .eq('date', dateStr)
         .single();
 
+      const schedule = scheduleRaw as any;
       if (schedule) {
         // Add revision task for weak subject
         const subject = weakSubjects[i % weakSubjects.length];
-        await this.supabase.from('study_tasks').insert({
+        await (this.supabase.from('study_tasks') as any).insert({
           schedule_id: schedule.id,
           task_type: 'revision',
           subject,
@@ -352,7 +346,7 @@ export class AdaptiveAdjusterService {
     }
 
     // Record adjustment
-    await this.supabase.from('schedule_adjustments').insert({
+    await (this.supabase.from('schedule_adjustments') as any).insert({
       plan_id: planId,
       reason: 'poor_performance',
       tasks_added: tasksAdded,
@@ -378,13 +372,14 @@ export class AdaptiveAdjusterService {
     planId: string,
     newExamDate: string
   ): Promise<AdjustmentResult> {
-    const { data: plan } = await this.supabase
+    const { data: extendPlanRaw } = await this.supabase
       .from('study_plans')
       .select('exam_date')
       .eq('id', planId)
       .single();
 
-    if (!plan) {
+    const extendPlan = extendPlanRaw as any;
+    if (!extendPlan) {
       return {
         success: false,
         tasksRescheduled: 0,
@@ -398,16 +393,16 @@ export class AdaptiveAdjusterService {
     }
 
     // Update exam date
-    await this.supabase
-      .from('study_plans')
+    await (this.supabase
+      .from('study_plans') as any)
       .update({ exam_date: newExamDate })
       .eq('id', planId);
 
     // Record adjustment
-    await this.supabase.from('schedule_adjustments').insert({
+    await (this.supabase.from('schedule_adjustments') as any).insert({
       plan_id: planId,
       reason: 'behind_schedule',
-      old_exam_date: plan.exam_date,
+      old_exam_date: extendPlan.exam_date,
       new_exam_date: newExamDate,
     });
 
@@ -431,13 +426,14 @@ export class AdaptiveAdjusterService {
     planId: string,
     additionalHours: number
   ): Promise<AdjustmentResult> {
-    const { data: plan } = await this.supabase
+    const { data: hoursPlanRaw } = await this.supabase
       .from('study_plans')
       .select('daily_study_hours')
       .eq('id', planId)
       .single();
 
-    if (!plan) {
+    const hoursPlan = hoursPlanRaw as any;
+    if (!hoursPlan) {
       return {
         success: false,
         tasksRescheduled: 0,
@@ -451,9 +447,9 @@ export class AdaptiveAdjusterService {
     }
 
     // Update daily hours
-    await this.supabase
-      .from('study_plans')
-      .update({ daily_study_hours: plan.daily_study_hours + additionalHours })
+    await (this.supabase
+      .from('study_plans') as any)
+      .update({ daily_study_hours: hoursPlan.daily_study_hours + additionalHours })
       .eq('id', planId);
 
     // Would reschedule tasks here to fill additional hours
@@ -478,13 +474,14 @@ export class AdaptiveAdjusterService {
     // Get upcoming schedules
     const today = new Date().toISOString().split('T')[0];
     
-    const { data: schedules } = await this.supabase
+    const { data: schedulesRaw } = await this.supabase
       .from('study_schedules')
       .select('id, date')
       .eq('plan_id', planId)
       .gte('date', today)
       .limit(14); // Next 2 weeks
 
+    const schedules = schedulesRaw as any[] | null;
     if (!schedules || schedules.length === 0) {
       return {
         success: false,
@@ -502,7 +499,7 @@ export class AdaptiveAdjusterService {
 
     // Add 1-2 extra tasks per day
     for (const schedule of schedules) {
-      await this.supabase.from('study_tasks').insert({
+      await (this.supabase.from('study_tasks') as any).insert({
         schedule_id: schedule.id,
         task_type: 'study',
         subject: 'GS',
@@ -530,18 +527,19 @@ export class AdaptiveAdjusterService {
    * Get user's MCQ accuracy
    */
   private async getUserMCQAccuracy(userId: string): Promise<number> {
-    const { data: attempts } = await this.supabase
+    const { data: attemptsRaw } = await this.supabase
       .from('mcq_attempts')
       .select('is_correct')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50);
 
+    const attempts = attemptsRaw as any[] | null;
     if (!attempts || attempts.length === 0) {
       return 50; // Default
     }
 
-    const correct = attempts.filter((a) => a.is_correct).length;
+    const correct = attempts.filter((a: any) => a.is_correct).length;
     return Math.round((correct / attempts.length) * 100);
   }
 

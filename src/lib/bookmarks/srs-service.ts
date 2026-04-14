@@ -7,9 +7,10 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 interface SRSStats {
@@ -74,7 +75,7 @@ export async function submitReview(
 
     // 2. Calculate new state
     const { interval_days, ease_factor, repetitions } = calculateNextReview(
-        { interval_days: current.interval_days, ease_factor: current.ease_factor, repetitions: current.repetitions },
+        { interval_days: current.interval_days ?? 1, ease_factor: current.ease_factor ?? 2.5, repetitions: current.repetitions ?? 0 },
         quality
     );
 
@@ -91,7 +92,7 @@ export async function submitReview(
             repetitions,
             next_review_date: nextDate.toISOString(),
             last_reviewed_at: new Date().toISOString(),
-            lapses: quality < 3 ? current.lapses + 1 : current.lapses
+            lapses: quality < 3 ? (current.lapses ?? 0) + 1 : (current.lapses ?? 0)
         })
         .eq('bookmark_id', bookmarkId);
 }

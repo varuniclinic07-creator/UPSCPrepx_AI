@@ -12,9 +12,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAdmin(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     const supabase = await createClient();
@@ -87,10 +87,11 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAdmin(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
+    const admin = authResult.user;
 
     const supabase = await createClient();
     const body = await request.json();
@@ -112,7 +113,7 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await (supabase.from('content_queue') as any)
       .update({
         status: statusMap[action],
-        reviewed_by: (admin as any).id,
+        reviewed_by: admin.id,
         reviewed_at: new Date().toISOString(),
         review_notes: reviewNotes || null,
       })
@@ -131,7 +132,7 @@ export async function PATCH(request: NextRequest) {
 
     // Log admin action
     await (supabase.from('admin_logs') as any).insert({
-      admin_id: (admin as any).id,
+      admin_id: admin.id,
       action: `CONTENT_${action.toUpperCase()}`,
       target_id: itemId,
       target_type: 'CONTENT_QUEUE',

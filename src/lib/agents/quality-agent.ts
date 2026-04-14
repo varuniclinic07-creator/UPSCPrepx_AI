@@ -46,7 +46,7 @@ class QualityAgent extends BaseAgent {
 
       const userPrompt = `Content type: ${params.contentType}${params.topic ? `\nTopic: ${params.topic}` : ''}\n\nContent:\n${params.content}`;
 
-      const raw = await callAI({ systemPrompt, userPrompt });
+      const raw = await callAI({ systemPrompt, userPrompt, providerPreferences: this.getProviderPreferences() });
 
       let parsed: {
         accuracy: number;

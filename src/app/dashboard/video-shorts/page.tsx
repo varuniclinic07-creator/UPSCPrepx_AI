@@ -10,7 +10,7 @@ import { ShortsLibrary } from '@/components/video/shorts-library';
 import { useUser } from '@/hooks/use-user';
 
 export default function VideoShortsPage() {
-  const { user, isLoading } = useUser();
+  const { user, loading: isLoading } = useUser();
 
   if (isLoading) {
     return (
@@ -27,7 +27,10 @@ export default function VideoShortsPage() {
     <div className="min-h-screen bg-gray-50">
       <ShortsLibrary
         userId={user?.id}
-        isPremium={user?.subscription_tier === 'premium' || user?.subscription_tier === 'premium_plus'}
+        isPremium={
+          user?.subscriptionTier === 'premium' ||
+          (user?.subscriptionTier as string) === 'premium_plus'
+        }
       />
     </div>
   );

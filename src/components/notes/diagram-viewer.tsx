@@ -42,7 +42,8 @@ function DiagramCard({ aid, noteSlug, index }: { aid: VisualAid; noteSlug: strin
     if (!aid.mermaidCode) return;
 
     // Dynamic import of mermaid
-    import('mermaid').then(async (mermaid) => {
+    // @ts-ignore - mermaid types may not be installed
+    import('mermaid').then(async (mermaid: any) => {
       mermaid.default.initialize({ startOnLoad: false, theme: 'neutral' });
       try {
         const { svg } = await mermaid.default.render(`diagram-${index}`, aid.mermaidCode!);

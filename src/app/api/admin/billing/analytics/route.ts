@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         const surgeAnalytics = surgeManager.getAnalytics();
 
         // Get plan distribution
-        const supabase = createClient();
+        const supabase = await createClient();
         const { data: subscriptions } = await supabase
           .from('subscriptions')
           .select('plan_type, status')
@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
         };
 
         // This would need plan_type in invoices table - simplified for now
-        const totalPlanRevenue = invoices?.reduce((sum, inv) => sum + (inv.plan_charge || 0), 0) || 0;
-        const totalOverageRevenue = invoices?.reduce((sum, inv) => sum + (inv.overage_charge || 0), 0) || 0;
+        const totalPlanRevenue = invoices?.reduce((sum: number, inv: any) => sum + ((inv as any).plan_charge || 0), 0) || 0;
+        const totalOverageRevenue = invoices?.reduce((sum: number, inv: any) => sum + ((inv as any).overage_charge || 0), 0) || 0;
 
         return NextResponse.json({
           success: true,

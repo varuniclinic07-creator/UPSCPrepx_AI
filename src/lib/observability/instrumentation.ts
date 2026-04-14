@@ -73,7 +73,7 @@ export function instrument(
       requestId,
       method: request.method,
       url: request.url,
-      ip: request.ip || 'unknown',
+      ip: (request as any).ip || 'unknown',
     });
 
     // Log request start
@@ -81,7 +81,7 @@ export function instrument(
       requestLogger.info('Request started', {
         method: request.method,
         path: request.nextUrl.pathname,
-        userAgent: request.headers.get('user-agent'),
+        userAgent: request.headers.get('user-agent') ?? undefined,
       });
     }
 
@@ -93,7 +93,7 @@ export function instrument(
           'http.method': request.method,
           'http.url': request.url,
           'http.target': request.nextUrl.pathname,
-          'http.client_ip': request.ip || 'unknown',
+          'http.client_ip': (request as any).ip || 'unknown',
         },
       });
     }
@@ -104,28 +104,15 @@ export function instrument(
 
       // Record metrics
       if (config.enableMetrics) {
-        recordHttpRequest(
-          request.method,
-          request.nextUrl.pathname,
-          response.status,
-          duration
-        );
+        recordHttpRequest(request.method, request.nextUrl.pathname, response.status, duration);
       }
 
       // Log completion
       if (config.enableLogging) {
-        requestLogger.http(
-          request.method,
-          request.nextUrl.pathname,
-          response.status,
-          duration
-        );
+        requestLogger.http(request.method, request.nextUrl.pathname, response.status, duration);
 
         // Log slow requests
-        if (
-          config.logSlowRequests &&
-          duration > (config.slowRequestThresholdMs || 1000)
-        ) {
+        if (config.logSlowRequests && duration > (config.slowRequestThresholdMs || 1000)) {
           requestLogger.warn('Slow request detected', {
             durationMs: duration,
             thresholdMs: config.slowRequestThresholdMs,
@@ -151,18 +138,13 @@ export function instrument(
 
       // Record error metrics
       if (config.enableMetrics) {
-        recordHttpRequest(
-          request.method,
-          request.nextUrl.pathname,
-          500,
-          duration
-        );
+        recordHttpRequest(request.method, request.nextUrl.pathname, 500, duration);
       }
 
       // Log error
       if (config.enableLogging) {
         requestLogger.error('Request failed', {
-          error: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error ? error : new Error(String(error)),
           stack: error instanceof Error ? error.stack : undefined,
           durationMs: duration,
         });
@@ -170,7 +152,10 @@ export function instrument(
 
       // Record trace error
       if (config.enableTracing && span) {
-        tracer.endSpan(span, { status: 'error', error: error as Error });
+        tracer.endSpan(span, {
+          status: 'error',
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
       }
 
       throw error;
@@ -201,12 +186,7 @@ export async function instrumentAI<T>(
     const duration = Date.now() - startTime;
 
     // Record metrics
-    recordAIRequest(
-      options.provider,
-      options.model,
-      options.endpoint,
-      duration
-    );
+    recordAIRequest(options.provider, options.model, options.endpoint, duration);
 
     // Log
     logger.info(`AI: ${options.provider}/${options.model}`, {
@@ -219,14 +199,11 @@ export async function instrumentAI<T>(
     const duration = Date.now() - startTime;
 
     // Record error metrics
-    recordAIError(
-      options.provider,
-      error instanceof Error ? error.message : 'unknown'
-    );
+    recordAIError(options.provider, error instanceof Error ? error.message : 'unknown');
 
     // Log error
     logger.error(`AI error: ${options.provider}/${options.model}`, {
-      error: error instanceof Error ? error.message : String(error),
+      error: error instanceof Error ? error : new Error(String(error)),
       durationMs: duration,
     });
 
@@ -271,7 +248,7 @@ export async function instrumentDB<T>(
 
     // Log error
     logger.error(`DB error: ${options.operation} ${options.table}`, {
-      error: error instanceof Error ? error.message : String(error),
+      error: error instanceof Error ? error : new Error(String(error)),
       durationMs: duration,
     });
 
@@ -306,7 +283,7 @@ export function instrumentAuth(
   } else {
     logger.warn('Authentication failed', {
       method: options.method,
-      error: options.error?.message,
+      error: options.error,
     });
   }
 }

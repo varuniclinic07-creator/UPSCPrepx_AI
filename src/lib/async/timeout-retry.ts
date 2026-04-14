@@ -438,4 +438,4 @@ export const defaultRetryOptions: RetryOptions = {
 // EXPORTS
 // ═══════════════════════════════════════════════════════════════
 
-export { CircuitBreaker, CircuitState };
+// CircuitBreaker and CircuitState are already exported at declaration

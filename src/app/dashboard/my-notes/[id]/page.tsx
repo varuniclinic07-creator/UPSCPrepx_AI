@@ -38,12 +38,11 @@ import {
   AlertCircle,
   CheckCircle,
 } from 'lucide-react';
-import { TiptapEditor } from '@/components/studio/tiptap-editor';
 import { EditorToolbar } from '@/components/studio/editor-toolbar';
-import { WordCounter, EnhancedWordCounter } from '@/components/studio/word-counter';
+import { EnhancedWordCounter } from '@/components/studio/word-counter';
 import { ExportMenu } from '@/components/studio/export-menu';
 import { TemplateSelector } from '@/components/studio/template-selector';
-import { useAutoSave } from '@/lib/studio/auto-save';
+// Note: useAutoSave from lib expects (noteId, userId, config) but we manage auto-save inline
 
 // ============================================================================
 // TYPES
@@ -67,7 +66,7 @@ interface Note {
   updated_at: string;
 }
 
-interface Template {
+interface NoteTemplate {
   id: string;
   title_en: string;
   title_hi: string;
@@ -123,8 +122,16 @@ export default function NoteEditorPage() {
       setContentHtml(html);
       setContent(text);
     },
+    editable: isEditing,
     immediatelyRender: false,
   });
+
+  // Sync editor editable state
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(isEditing);
+    }
+  }, [editor, isEditing]);
 
   // Fetch note
   const fetchNote = useCallback(async () => {
@@ -172,20 +179,26 @@ export default function NoteEditorPage() {
     }
   }, [noteId, fetchNote]);
 
-  // Auto-save hook
-  const { startAutoSave, stopAutoSave, lastSaveStatus } = useAutoSave({
-    enabled: isEditing,
-    intervalMs: 30000,
-    onSave: async () => {
-      if (!editor) return null;
+  // Auto-save effect (30s interval when editing)
+  const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  useEffect(() => {
+    if (!isEditing || !editor) {
+      if (autoSaveRef.current) {
+        clearInterval(autoSaveRef.current);
+        autoSaveRef.current = null;
+      }
+      return;
+    }
+
+    autoSaveRef.current = setInterval(async () => {
       setIsSaving(true);
       setSaveError(null);
 
       try {
         const html = editor.getHTML();
         const text = editor.getText();
-        const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+        const wc = text.split(/\s+/).filter((w: string) => w.length > 0).length;
 
         const response = await fetch(`/api/studio/notes/${noteId}`, {
           method: 'PATCH',
@@ -196,7 +209,7 @@ export default function NoteEditorPage() {
             content: text,
             content_html: html,
             subject,
-            word_count: wordCount,
+            word_count: wc,
             character_count: text.length,
             word_limit: wordLimit,
             is_pinned: isPinned,
@@ -210,26 +223,20 @@ export default function NoteEditorPage() {
         }
 
         setLastSaved(new Date());
-        return data.data;
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : 'Save failed');
-        throw err;
       } finally {
         setIsSaving(false);
       }
-    },
-  });
+    }, 30000);
 
-  // Start/stop auto-save based on editing state
-  useEffect(() => {
-    if (isEditing) {
-      startAutoSave();
-    } else {
-      stopAutoSave();
-    }
-
-    return () => stopAutoSave();
-  }, [isEditing, startAutoSave, stopAutoSave]);
+    return () => {
+      if (autoSaveRef.current) {
+        clearInterval(autoSaveRef.current);
+        autoSaveRef.current = null;
+      }
+    };
+  }, [isEditing, editor, noteId, title, subject, wordLimit, isPinned]);
 
   // Manual save
   const handleSave = async () => {
@@ -605,11 +612,12 @@ export default function NoteEditorPage() {
 
         {/* Editor */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <TiptapEditor
-            editor={editor}
-            showHindi={showHindi}
-            readOnly={!isEditing}
-          />
+          {isEditing && editor && (
+            <EditorToolbar editor={editor} showHindi={showHindi} />
+          )}
+          <div className="p-4">
+            <EditorContent editor={editor} />
+          </div>
         </div>
       </main>
 

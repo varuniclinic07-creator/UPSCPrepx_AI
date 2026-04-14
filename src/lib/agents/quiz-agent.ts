@@ -60,6 +60,7 @@ class QuizAgent extends BaseAgent {
         systemPrompt,
         userPrompt,
         skipSimplifiedLanguage: true,
+        providerPreferences: this.getProviderPreferences(),
       });
 
       const questions = this.parseQuestions(rawResponse);

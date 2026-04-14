@@ -10,16 +10,16 @@ import { POST } from '@/app/api/admin/users/route';
 jest.mock('@/lib/supabase/server', () => ({
   createServerSupabaseClient: jest.fn(() =>
     Promise.resolve({
-      auth: { getSession: (...args: any[]) => mockGetSession(...args) },
+      auth: { getSession: () => mockGetSession() },
     })
   ),
 }));
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
-    from: (...args: any[]) => mockFrom(...args),
-    auth: { admin: { updateUserById: (...args: any[]) => mockUpdateUserById(...args) } },
-  })),
+    from: (table: any) => mockFrom(table),
+    auth: { admin: { updateUserById: (id: any, data: any) => mockUpdateUserById(id, data) } },
+  })) as any,
 }));
 
 const mockGetSession = jest.fn();

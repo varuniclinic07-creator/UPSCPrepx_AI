@@ -9,12 +9,12 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _sb: ReturnType<typeof createClient> | null = null;
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
   if (!_sb)
-    _sb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
   return _sb;
@@ -137,8 +137,8 @@ export function sm2Calculate(
  */
 export function calculateMasteryLevel(accuracy: number, attempts: number): MasteryLevel {
   if (attempts === 0) return 'not_started';
-  if (accuracy < 0.3) return 'weak';
-  if (accuracy < 0.55) return 'developing';
+  if (accuracy < 0.5) return 'weak';
+  if (accuracy < 0.65) return 'developing';
   if (accuracy < 0.8) return 'strong';
   return 'mastered';
 }
@@ -165,12 +165,14 @@ export async function updateMastery(
   const supabase = getSupabase();
 
   // Get existing record
-  const { data: existing } = await supabase
+  const { data: existingRaw } = await supabase
     .from('user_mastery')
     .select('*')
     .eq('user_id', userId)
     .eq('node_id', nodeId)
     .maybeSingle();
+
+  const existing = existingRaw as any;
 
   const prevAttempts = existing?.attempts ?? 0;
   const prevCorrect = existing?.correct ?? 0;
@@ -219,8 +221,8 @@ export async function updateMastery(
   let result: MasteryRecord | null = null;
 
   if (existing) {
-    const { data, error } = await supabase
-      .from('user_mastery')
+    const { data, error } = await (supabase
+      .from('user_mastery') as any)
       .update(record)
       .eq('id', existing.id)
       .select()
@@ -228,8 +230,8 @@ export async function updateMastery(
     if (error) { console.error('mastery update error:', error); return null; }
     result = data as MasteryRecord;
   } else {
-    const { data, error } = await supabase
-      .from('user_mastery')
+    const { data, error } = await (supabase
+      .from('user_mastery') as any)
       .insert(record)
       .select()
       .single();
@@ -249,11 +251,12 @@ export async function updateMastery(
   if (existing && existing.mastery_level !== masteryLevel) {
     try {
       const { notifyLevelUp } = await import('@/lib/mastery/mastery-notifications');
-      const { data: node } = await supabase
+      const { data: nodeRaw } = await supabase
         .from('knowledge_nodes')
         .select('title')
         .eq('id', nodeId)
         .single();
+      const node = nodeRaw as any;
       if (node) {
         await notifyLevelUp(userId, node.title, existing.mastery_level, masteryLevel);
       }
@@ -312,11 +315,12 @@ export async function getMasteryStats(userId: string): Promise<MasteryStats> {
   const now = new Date().toISOString();
 
   // All mastery records for user
-  const { data: records, error } = await supabase
+  const { data: recordsRaw, error } = await supabase
     .from('user_mastery')
     .select('mastery_level, accuracy_score, time_spent_seconds, next_revision_at, last_attempted_at')
     .eq('user_id', userId);
 
+  const records = recordsRaw as any[] | null;
   if (error || !records) {
     return {
       total_nodes: 0, not_started: 0, weak: 0, developing: 0,
@@ -415,8 +419,9 @@ export async function getMasteryForNodes(
     .eq('user_id', userId)
     .in('node_id', nodeIds);
 
+  const rows = (data as any[] | null) || [];
   const map = new Map<string, MasteryLevel>();
-  for (const r of data || []) {
+  for (const r of rows) {
     map.set(r.node_id, r.mastery_level as MasteryLevel);
   }
   return map;

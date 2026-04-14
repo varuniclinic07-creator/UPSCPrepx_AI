@@ -111,25 +111,13 @@ export class ImageProcessorService {
         : [language];
       
       // Process with Tesseract
-      const worker = await Tesseract.createWorker({
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            console.debug(`OCR Progress: ${(m.progress * 100).toFixed(0)}%`);
-          }
-        },
-      });
-      
-      // Load languages
-      for (const lang of languages) {
-        await worker.loadLanguage(lang);
-        await worker.initialize(lang);
-      }
+      const worker = await Tesseract.createWorker(languages as any);
       
       // Perform recognition
       const { data } = await worker.recognize(imageSource);
       
       // Process results
-      const words = data.words.map((word) => ({
+      const words = ((data as any).words || []).map((word: { text: string; confidence: number; bbox: { x0: number; y0: number; x1: number; y1: number } }) => ({
         text: word.text,
         confidence: word.confidence,
         bbox: {
@@ -139,16 +127,16 @@ export class ImageProcessorService {
           y1: word.bbox.y1,
         },
       }));
-      
-      const lines = data.lines.map((line) => ({
+
+      const lines = ((data as any).lines || []).map((line: { text: string; confidence: number; words: unknown[] }) => ({
         text: line.text,
         confidence: line.confidence,
         words: line.words.length,
       }));
-      
+
       // Calculate average confidence
       const avgConfidence = words.length > 0
-        ? words.reduce((sum, w) => sum + w.confidence, 0) / words.length
+        ? words.reduce((sum: number, w: { confidence: number }) => sum + w.confidence, 0) / words.length
         : 0;
       
       // Cleanup
@@ -281,7 +269,7 @@ export class ImageProcessorService {
           );
           
           // Perform OCR on cropped region
-          const result = await this.performOCR(canvas);
+          const result = await this.performOCR(canvas.toDataURL() as any);
           resolve(result);
         };
         

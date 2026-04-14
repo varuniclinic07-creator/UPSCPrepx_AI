@@ -214,10 +214,10 @@ export default function ConversionPage() {
                     border: '1px solid #E5E7EB',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number, name: string, props: any) => [
+                  formatter={((value: number, name: string, props: any) => [
                     value.toLocaleString(),
                     name === 'value' ? 'Users' : 'Rate',
-                  ]}
+                  ]) as any}
                 />
                 <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]}>
                   <LabelList dataKey="stage" position="top" fill="#6B7280" fontSize={12} />
@@ -305,7 +305,7 @@ export default function ConversionPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ range, percentage }) => `${range}: ${percentage.toFixed(1)}%`}
+                    label={(props: any) => `${props.range}: ${props.percentage.toFixed(1)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"

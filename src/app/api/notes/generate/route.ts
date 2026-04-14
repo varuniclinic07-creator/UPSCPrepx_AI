@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAgenticNotesGenerator, NotesGenerationOptions } from '@/lib/notes/agentic-notes-generator';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { requireSession } from '@/lib/auth/session';
 import { checkAccess } from '@/lib/auth/check-access';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
@@ -108,8 +109,7 @@ export async function POST(request: NextRequest) {
     // Save to database (if authenticated)
     if (userId !== 'anonymous') {
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
 
@@ -197,8 +197,7 @@ export async function GET(request: NextRequest) {
 
     if (noteId) {
       // Get specific note - scoped to authenticated user
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
 
@@ -217,8 +216,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get authenticated user's notes
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 

@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 export type TaskType =
   | 'generate_notes'
@@ -139,9 +140,8 @@ export class HermesOrchestrator {
       }
 
       case 'generate_quiz': {
-        const { QuizAgent } = await import('./quiz-agent');
-        const agent = new QuizAgent();
-        const data = await agent.execute(params as any);
+        const { quizAgent } = await import('./quiz-agent');
+        const data = await quizAgent.execute(params as any);
         return { success: true, agentType: 'quiz', data };
       }
 
@@ -159,37 +159,32 @@ export class HermesOrchestrator {
       }
 
       case 'ingest_ca': {
-        const { CAIngestionAgent } = await import('./ca-ingestion-agent');
-        const agent = new CAIngestionAgent();
-        const data = await agent.execute(params as any);
+        const { caIngestionAgent } = await import('./ca-ingestion-agent');
+        const data = await caIngestionAgent.execute(params as any);
         return { success: true, agentType: 'ca_ingestion', data };
       }
 
       case 'evaluate_answer': {
-        const { EvaluatorAgent } = await import('./evaluator-agent');
-        const agent = new EvaluatorAgent();
-        const data = await agent.execute(params as any);
+        const { evaluatorAgent } = await import('./evaluator-agent');
+        const data = await evaluatorAgent.execute(params as any);
         return { success: true, agentType: 'evaluator', data };
       }
 
       case 'score_content': {
-        const { QualityAgent } = await import('./quality-agent');
-        const agent = new QualityAgent();
-        const data = await agent.execute(params as any);
+        const { qualityAgent } = await import('./quality-agent');
+        const data = await qualityAgent.execute(params as any);
         return { success: true, agentType: 'quality_check', data };
       }
 
       case 'generate_video': {
-        const { VideoAgent } = await import('./video-agent');
-        const agent = new VideoAgent();
-        const data = await agent.execute(params as any);
+        const { videoAgent } = await import('./video-agent');
+        const data = await videoAgent.execute(params as any);
         return { success: true, agentType: 'video', data };
       }
 
       case 'generate_animation': {
-        const { AnimationAgent } = await import('./animation-agent');
-        const agent = new AnimationAgent();
-        const data = await agent.execute(params as any);
+        const { animationAgent } = await import('./animation-agent');
+        const data = await animationAgent.execute(params as any);
         return { success: true, agentType: 'animation', data };
       }
 

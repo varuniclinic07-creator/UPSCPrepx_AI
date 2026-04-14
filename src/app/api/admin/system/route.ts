@@ -5,11 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { getCurrentUser } from '@/lib/auth/auth-config';
 import { getRedis, isRedisAvailable } from '@/lib/redis/client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       case 'toggle_feature':
         await supabase
           .from('feature_flags')
-          .update({ enabled })
+          .update({ is_enabled: enabled })
           .eq('id', flagId);
         break;
 

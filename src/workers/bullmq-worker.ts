@@ -3,7 +3,7 @@
 // Processes all async jobs (email, AI, subscription, invoices, etc.)
 // ═══════════════════════════════════════════════════════════════
 
-import { WorkerQueueService, JobType, JobHandlers, initializeWorkerQueue } from '@/lib/queue/worker-queue';
+import { WorkerQueueService, JobType, JobHandlers, initializeWorkerQueue, getWorkerQueue } from '@/lib/queue/worker-queue';
 import { logger } from '@/lib/logging/logger';
 import { QueueHelpers } from '@/lib/queue/worker-queue';
 
@@ -269,7 +269,7 @@ async function main() {
 
         // Get queue stats periodically
         const statsInterval = setInterval(async () => {
-            const queue = WorkerQueueService.prototype.constructor.getWorkerQueue?.();
+            const queue = getWorkerQueue();
             if (queue) {
                 try {
                     const stats = await queue.getQueueStats();
@@ -285,7 +285,7 @@ async function main() {
             logger.info('[Worker] Shutting down...', { signal });
             clearInterval(statsInterval);
 
-            const queue = WorkerQueueService.prototype.constructor.getWorkerQueue?.();
+            const queue = getWorkerQueue();
             if (queue) {
                 await queue.close();
             }

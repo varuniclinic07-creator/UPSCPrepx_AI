@@ -12,10 +12,10 @@ const mockGetCategories = jest.fn().mockReturnValue(['Economy', 'Polity', 'Envir
 const mockGenerateCurrentAffairs = jest.fn();
 
 jest.mock('@/lib/services/current-affairs-service', () => ({
-  getCurrentAffairs: (...args: any[]) => mockGetCurrentAffairs(...args),
-  searchCurrentAffairs: (...args: any[]) => mockSearchCurrentAffairs(...args),
+  getCurrentAffairs: (params: any) => mockGetCurrentAffairs(params),
+  searchCurrentAffairs: (query: any) => mockSearchCurrentAffairs(query),
   getCurrentAffairsCategories: () => mockGetCategories(),
-  generateCurrentAffairs: (...args: any[]) => mockGenerateCurrentAffairs(...args),
+  generateCurrentAffairs: (params: any) => mockGenerateCurrentAffairs(params),
 }));
 
 const mockRequireAdmin = jest.fn();
@@ -28,8 +28,8 @@ jest.mock('@/lib/auth/auth-config', () => ({
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitHeaders = jest.fn().mockReturnValue({});
 jest.mock('@/lib/ai/rate-limiter', () => ({
-  checkRateLimit: (...args: any[]) => mockCheckRateLimit(...args),
-  getRateLimitHeaders: (...args: any[]) => mockGetRateLimitHeaders(...args),
+  checkRateLimit: (key: any, opts: any) => mockCheckRateLimit(key, opts),
+  getRateLimitHeaders: (result: any) => mockGetRateLimitHeaders(result),
 }));
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ import { GET, POST } from '@/app/api/current-affairs/route';
 // ---------------------------------------------------------------------------
 
 function makeRequest(method: string, url: string, body?: any): NextRequest {
-  const init: RequestInit = { method };
+  const init: Record<string, any> = { method };
   if (body) {
     init.body = JSON.stringify(body);
     init.headers = { 'Content-Type': 'application/json' };

@@ -88,7 +88,7 @@ export class CostOptimizationService {
    * Analyze costs by AI provider
    */
   async analyzeProviderCosts(periodDays: number = 30): Promise<ProviderCostAnalysis[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const periodStart = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
 
     // Get usage grouped by provider
@@ -242,7 +242,7 @@ export class CostOptimizationService {
    * Analyze costs for a specific user
    */
   async analyzeUserCost(userId: string): Promise<UserCostAnalysis> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const now = new Date();
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1); // Current month
 
@@ -264,8 +264,8 @@ export class CostOptimizationService {
       .eq('user_id', userId)
       .gte('created_at', periodStart.toISOString());
 
-    const totalTokens = usageData?.reduce((sum, u) => sum + (u.total_tokens || 0), 0) || 0;
-    const actualAiCost = usageData?.reduce((sum, u) => sum + (u.cost_usd || 0), 0) || 0;
+    const totalTokens = usageData?.reduce((sum: number, u: { total_tokens?: number }) => sum + (u.total_tokens || 0), 0) || 0;
+    const actualAiCost = usageData?.reduce((sum: number, u: { cost_usd?: number }) => sum + (u.cost_usd || 0), 0) || 0;
 
     // Calculate costs
     const planCost = planPricing.monthlyPrice;

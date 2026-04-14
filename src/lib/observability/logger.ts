@@ -91,7 +91,7 @@ const defaultConfig: LoggerConfig = {
   service: 'upsc-prepx-ai',
   environment: process.env.NODE_ENV || 'development',
   version: process.env.NEXT_PUBLIC_APP_VERSION || 'unknown',
-  minLevel: process.env.LOG_LEVEL as LogLevel || 'info',
+  minLevel: (process.env.LOG_LEVEL as LogLevel) || 'info',
   enableLoki: !!process.env.LOKI_URL,
   lokiUrl: process.env.LOKI_URL,
   enableConsole: true,
@@ -137,11 +137,7 @@ class Logger {
   /**
    * Format log entry
    */
-  private formatEntry(
-    level: LogLevel,
-    message: string,
-    context: LogContext
-  ): LogEntry {
+  private formatEntry(level: LogLevel, message: string, context: LogContext): LogEntry {
     return {
       timestamp: new Date().toISOString(),
       level,
@@ -199,8 +195,8 @@ class Logger {
     if (!this.config.enableDatabase) return;
 
     try {
-      const supabase = createClient();
-      await supabase.from('audit_logs').insert({
+      const supabase = await createClient();
+      await (supabase.from('audit_logs') as any).insert({
         timestamp: entry.timestamp,
         level: entry.level,
         service: entry.service,
@@ -230,8 +226,8 @@ class Logger {
 
     const color = {
       debug: '\x1b[36m', // Cyan
-      info: '\x1b[32m',  // Green
-      warn: '\x1b[33m',  // Yellow
+      info: '\x1b[32m', // Green
+      warn: '\x1b[33m', // Yellow
       error: '\x1b[31m', // Red
       fatal: '\x1b[35m', // Magenta
     }[entry.level];
@@ -249,11 +245,7 @@ class Logger {
   /**
    * Core log method
    */
-  private log(
-    level: LogLevel,
-    message: string,
-    context: LogContext = {}
-  ): void {
+  private log(level: LogLevel, message: string, context: LogContext = {}): void {
     if (!this.shouldLog(level) || !this.shouldSample()) return;
 
     const entry = this.formatEntry(level, message, context);
@@ -342,12 +334,7 @@ class Logger {
   /**
    * Log database query
    */
-  db(
-    table: string,
-    operation: string,
-    durationMs: number,
-    context?: LogContext
-  ): void {
+  db(table: string, operation: string, durationMs: number, context?: LogContext): void {
     const level = durationMs > 1000 ? 'warn' : 'debug';
     this.log(level, `DB: ${operation} ${table}`, {
       table,
@@ -426,7 +413,7 @@ export function withRequestLogging(
       requestId,
       method: request.method,
       url: request.url,
-      ip: request.ip || 'unknown',
+      ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
     });
 
     requestLogger.info('Request started');
@@ -435,12 +422,7 @@ export function withRequestLogging(
       const response = await handler(request);
       const duration = Date.now() - startTime;
 
-      requestLogger.http(
-        request.method,
-        request.nextUrl.pathname,
-        response.status,
-        duration
-      );
+      requestLogger.http(request.method, request.nextUrl.pathname, response.status, duration);
 
       // Add request ID to response headers
       response.headers.set('X-Request-ID', requestId);
@@ -449,7 +431,7 @@ export function withRequestLogging(
     } catch (error) {
       const duration = Date.now() - startTime;
       requestLogger.error('Request failed', {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error : new Error(String(error)),
         durationMs: duration,
       });
       throw error;

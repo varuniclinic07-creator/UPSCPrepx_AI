@@ -1,6 +1,6 @@
 /**
  * MCQ Question Bank Service
- * 
+ *
  * Master Prompt v8.0 - Feature F7 (READ Mode)
  * - Question retrieval with filtering
  * - PYQs (Previous Year Questions)
@@ -77,10 +77,7 @@ const MIN_QUESTIONS_PER_SESSION = 5;
 // ============================================================================
 
 export class QuestionBankService {
-  
-
-  constructor() {
-  }
+  constructor() {}
 
   private async getSupabase() {
     return createClient();
@@ -94,7 +91,7 @@ export class QuestionBankService {
       let query = (await this.getSupabase())
         .from('mcq_questions')
         .select('*')
-        .eq('is_active', true);
+        .eq('is_active' as any, true);
 
       // Apply filters
       if (filters.subject) {
@@ -216,14 +213,32 @@ export class QuestionBankService {
       const csatCount = totalQuestions - gsCount;
 
       // Fetch GS questions by difficulty
-      const gsEasy = await this.getQuestions({ subject: 'GS1' as any, difficulty: 'Easy' }, Math.round(easyCount * 0.25));
-      const gsMedium = await this.getQuestions({ subject: 'GS1' as any, difficulty: 'Medium' }, Math.round(mediumCount * 0.25));
-      const gsHard = await this.getQuestions({ subject: 'GS1' as any, difficulty: 'Hard' }, Math.round(hardCount * 0.25));
+      const gsEasy = await this.getQuestions(
+        { subject: 'GS1' as any, difficulty: 'Easy' },
+        Math.round(easyCount * 0.25)
+      );
+      const gsMedium = await this.getQuestions(
+        { subject: 'GS1' as any, difficulty: 'Medium' },
+        Math.round(mediumCount * 0.25)
+      );
+      const gsHard = await this.getQuestions(
+        { subject: 'GS1' as any, difficulty: 'Hard' },
+        Math.round(hardCount * 0.25)
+      );
 
       // Fetch CSAT questions
-      const csatEasy = await this.getQuestions({ subject: 'CSAT', difficulty: 'Easy' }, Math.round(easyCount * 0.25));
-      const csatMedium = await this.getQuestions({ subject: 'CSAT', difficulty: 'Medium' }, Math.round(mediumCount * 0.25));
-      const csatHard = await this.getQuestions({ subject: 'CSAT', difficulty: 'Hard' }, Math.round(hardCount * 0.25));
+      const csatEasy = await this.getQuestions(
+        { subject: 'CSAT', difficulty: 'Easy' },
+        Math.round(easyCount * 0.25)
+      );
+      const csatMedium = await this.getQuestions(
+        { subject: 'CSAT', difficulty: 'Medium' },
+        Math.round(mediumCount * 0.25)
+      );
+      const csatHard = await this.getQuestions(
+        { subject: 'CSAT', difficulty: 'Hard' },
+        Math.round(hardCount * 0.25)
+      );
 
       questions.push(...gsEasy, ...gsMedium, ...gsHard, ...csatEasy, ...csatMedium, ...csatHard);
 
@@ -263,18 +278,21 @@ export class QuestionBankService {
    */
   async getTopics(subject: McqSubject): Promise<string[]> {
     try {
-      const { data, error } = await (await this.getSupabase())
+      const { data, error } = await (
+        await this.getSupabase()
+      )
         .from('mcq_questions')
         .select('topic')
-        .eq('subject', subject)
-        .group('topic');
+        .eq('subject', subject);
 
       if (error) {
         console.error('Failed to fetch topics:', error);
         return [];
       }
 
-      return data.map(d => d.topic).filter(Boolean) as string[];
+      // Deduplicate topics in JS (PostgREST doesn't support .group())
+      const unique = [...new Set((data as any[]).map((d: { topic: string }) => d.topic).filter(Boolean))];
+      return unique as string[];
     } catch (error) {
       console.error('QuestionBankService.getTopics error:', error);
       return [];
@@ -286,7 +304,9 @@ export class QuestionBankService {
    */
   async getQuestionCount(filters: QuestionFilters): Promise<number> {
     try {
-      let query = (await this.getSupabase()).from('mcq_questions').select('*', { count: 'exact', head: true });
+      let query = (await this.getSupabase())
+        .from('mcq_questions')
+        .select('*', { count: 'exact', head: true });
 
       if (filters.subject) {
         query = query.eq('subject', filters.subject);

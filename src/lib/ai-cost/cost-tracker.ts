@@ -38,6 +38,23 @@ export const PROVIDER_PRICING: Record<string, ProviderPricing> = {
   // Local models (Ollama)
   'ollama-local': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
 
+  // Vision models (Ollama — free local inference)
+  'gemma4:31b-cloud': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'qwen3-vl:235b-instruct-cloud': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+
+  // Kilo AI models (free tier)
+  'bytedance-seed/dola-seed-2.0-pro:free': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'nvidia/nemotron-3-super-120b-a12b:free': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'x-ai/grok-code-fast-1:optimized:free': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'kilo-auto/free': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'openrouter/free': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+
+  // OpenCode models (self-hosted — free)
+  'opencode zen/Big Pickle': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'go/MiniMax M2.7': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'Nemotron 3 Super Free': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+  'MiniMax M2.5 Free': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
+
   // NVIDIA NIM models
   'nvidia-nemotron': { promptCostPer1K: 0.0003, completionCostPer1K: 0.0006, currency: 'USD' },
   'nvidia-llama-70b': { promptCostPer1K: 0.00056, completionCostPer1K: 0.00077, currency: 'USD' },
@@ -211,7 +228,7 @@ export function calculateCostFromEstimate(
  * Record AI usage in database
  */
 export async function recordUsage(usage: TokenUsage): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.from('ai_usage_logs').insert({
     user_id: usage.userId,
@@ -241,7 +258,7 @@ export async function getUsageSummary(
   periodStart: Date,
   periodEnd: Date
 ): Promise<UsageSummary> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Get totals
   const { data: totals } = await supabase
@@ -269,8 +286,8 @@ export async function getUsageSummary(
 
   // Aggregate results
   const summary: UsageSummary = {
-    totalTokens: totals?.reduce((sum, r) => sum + (r.total_tokens || 0), 0) || 0,
-    totalCost: totals?.reduce((sum, r) => sum + (r.cost_usd || 0), 0) || 0,
+    totalTokens: totals?.reduce((sum: number, r: { total_tokens?: number }) => sum + (r.total_tokens || 0), 0) || 0,
+    totalCost: totals?.reduce((sum: number, r: { cost_usd?: number }) => sum + (r.cost_usd || 0), 0) || 0,
     totalRequests: totals?.length || 0,
     byProvider: {},
     byEndpoint: {},
@@ -288,12 +305,13 @@ export async function getUsageSummary(
 
   // Aggregate by endpoint
   for (const record of byEndpoint || []) {
-    if (!summary.byEndpoint[record.endpoint]) {
-      summary.byEndpoint[record.endpoint] = { tokens: 0, cost: 0, requests: 0 };
+    const ep = record.endpoint || 'unknown';
+    if (!summary.byEndpoint[ep]) {
+      summary.byEndpoint[ep] = { tokens: 0, cost: 0, requests: 0 };
     }
-    summary.byEndpoint[record.endpoint].tokens += record.total_tokens || 0;
-    summary.byEndpoint[record.endpoint].cost += record.cost_usd || 0;
-    summary.byEndpoint[record.endpoint].requests += 1;
+    summary.byEndpoint[ep].tokens += record.total_tokens || 0;
+    summary.byEndpoint[ep].cost += record.cost_usd || 0;
+    summary.byEndpoint[ep].requests += 1;
   }
 
   return summary;
@@ -303,14 +321,14 @@ export async function getUsageSummary(
  * Get user's budget status
  */
 export async function getBudgetStatus(userId: string): Promise<BudgetStatus> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Get user's plan
   const { data: userData } = await supabase
     .from('users')
-    .select('role, subscription_plan')
+    .select('*')
     .eq('id', userId)
-    .single();
+    .single() as { data: any };
 
   const plan = userData?.subscription_plan || userData?.role || 'free';
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
@@ -420,7 +438,7 @@ export async function getCostAnalytics(
   startDate: Date,
   endDate: Date
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Total cost across all users
   const { data: totalCost } = await supabase
@@ -439,21 +457,17 @@ export async function getCostAnalytics(
   // Cost by user plan
   const { data: costByPlan } = await supabase
     .from('ai_usage_logs')
-    .select(`
-      cost_usd,
-      user_id,
-      users!inner (subscription_plan)
-    `)
+    .select('cost_usd, user_id')
     .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString());
+    .lte('created_at', endDate.toISOString()) as { data: any[] | null };
 
   // Daily cost trend
-  const { data: dailyCost } = await supabase
-    .from('ai_usage_logs')
+  const { data: dailyCost } = await (supabase
+    .from('ai_usage_logs') as any)
     .select('created_at, cost_usd')
     .gte('created_at', startDate.toISOString())
     .lte('created_at', endDate.toISOString())
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true }) as { data: Array<{ created_at: string; cost_usd: number }> | null };
 
   // Top users by cost
   const { data: topUsers } = await supabase
@@ -469,7 +483,7 @@ export async function getCostAnalytics(
     .limit(10);
 
   // Aggregate results
-  const totalCostValue = totalCost?.reduce((sum, r) => sum + (r.cost_usd || 0), 0) || 0;
+  const totalCostValue = totalCost?.reduce((sum: number, r: { cost_usd?: number }) => sum + (r.cost_usd || 0), 0) || 0;
 
   const providerCosts: Record<string, { cost: number; tokens: number }> = {};
   for (const record of costByProvider || []) {

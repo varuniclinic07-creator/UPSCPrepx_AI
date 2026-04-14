@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
 
     // Check subscription limits
     const { data: userProfile } = await supabase
-      .from('user_profiles')
+      .from('user_profiles' as any)
       .select('subscription_tier, daily_practice_limit')
       .eq('id', user.id)
-      .single();
+      .single() as { data: any };
 
     const dailyLimit = userProfile?.subscription_tier === 'premium' || userProfile?.subscription_tier === 'premium_plus'
       ? 100
@@ -88,11 +88,11 @@ export async function POST(request: NextRequest) {
     // Check today's practice count
     const today = new Date().toISOString().split('T')[0];
     const { count: todayCount } = await supabase
-      .from('mcq_attempts')
+      .from('mcq_attempts' as any)
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('session_type', 'Practice')
-      .gte('created_at', today);
+      .gte('created_at', today) as { count: number | null };
 
     if ((todayCount || 0) >= dailyLimit) {
       return NextResponse.json(
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
 
     // Create attempt record
     const { data: attempt, error: attemptError } = await supabase
-      .from('mcq_attempts')
+      .from('mcq_attempts' as any)
       .insert({
         user_id: user.id,
         session_type: config.isPyy ? 'PYQ' : 'Practice',
@@ -135,9 +135,9 @@ export async function POST(request: NextRequest) {
         difficulty,
         total_questions: questions.length,
         started_at: new Date().toISOString(),
-      })
+      } as any)
       .select()
-      .single();
+      .single() as { data: any; error: any };
 
     if (attemptError) {
       console.error('Failed to create attempt:', attemptError);
@@ -217,11 +217,11 @@ export async function GET(request: NextRequest) {
 
     // Fetch the attempt record
     const { data: attempt, error: attemptError } = await supabase
-      .from('mcq_attempts')
+      .from('mcq_attempts' as any)
       .select('*')
       .eq('id', sessionId)
       .eq('user_id', user.id)
-      .single();
+      .single() as { data: any; error: any };
 
     if (attemptError || !attempt) {
       return NextResponse.json(

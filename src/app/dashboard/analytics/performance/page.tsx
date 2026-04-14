@@ -110,7 +110,7 @@ export default function PerformanceAnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => d.slice(5)} />
                 <YAxis domain={[0, 100]} />
-                <Tooltip formatter={(v: number) => [`${v}%`, 'Score']} />
+                <Tooltip formatter={((v: number) => [`${v}%`, 'Score']) as any} />
                 <Line
                   type="monotone"
                   dataKey="score"

@@ -36,7 +36,7 @@ export interface AnswerCardProps {
     wordCount?: number;
   };
   answerId?: string;
-  onRate?: (rating: { rating?: number; isHelpful?: boolean; isFlagged?: boolean }) => Promise<void>;
+  onRate?: (rating: { rating?: number; isHelpful?: boolean; isFlagged?: boolean; flag_reason?: string }) => Promise<void>;
   onFollowUp?: (question: string) => void;
   isLoading?: boolean;
   showHindi?: boolean;

@@ -1,15 +1,16 @@
 /**
  * Mains Answer Evaluator Service
- * 
+ *
  * AI-powered UPSC Mains answer evaluation with 4-criteria scoring.
  * Response time target: <60 seconds
- * 
+ *
  * Uses SIMPLIFIED_LANGUAGE_PROMPT (Rule 3) and 9Router → Groq → Ollama fallback.
- * 
+ *
  * Master Prompt v8.0 Compliant
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '../onboarding/simplified-language-prompt';
 import { callAI, AIProvider } from '../ai/ai-provider-client';
 import { calculateScores, validateScore, generateImprovementSuggestions } from './scoring-rubric';
@@ -17,8 +18,11 @@ import { calculateScores, validateScore, generateImprovementSuggestions } from '
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(supabaseUrl, supabaseServiceKey); return _sb; }
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() {
+  if (!_sb) _sb = createClient(supabaseUrl, supabaseServiceKey);
+  return _sb;
+}
 
 /**
  * Evaluation request interface
@@ -145,7 +149,7 @@ Return your evaluation in this exact JSON format:
  */
 export async function evaluateAnswer(request: EvaluationRequest): Promise<EvaluationResponse> {
   const startTime = Date.now();
-  
+
   // Step 1: Fetch question details
   const question = await fetchQuestion(request.question_id);
   if (!question) {
@@ -161,7 +165,6 @@ export async function evaluateAnswer(request: EvaluationRequest): Promise<Evalua
     prompt,
     temperature: 0.3, // Lower temperature for consistent evaluation
     maxTokens: 2000,
-    timeout: 30000, // 30 second timeout
   });
   const aiEndTime = Date.now();
 
@@ -180,7 +183,9 @@ export async function evaluateAnswer(request: EvaluationRequest): Promise<Evalua
   const endTime = Date.now();
   const totalTime = (endTime - startTime) / 1000;
 
-  console.debug(`Evaluation completed in ${totalTime.toFixed(2)}s (AI: ${((aiEndTime - aiStartTime) / 1000).toFixed(2)}s)`);
+  console.debug(
+    `Evaluation completed in ${totalTime.toFixed(2)}s (AI: ${((aiEndTime - aiStartTime) / 1000).toFixed(2)}s)`
+  );
 
   // Check if we met the <60s target
   if (totalTime > 60) {
@@ -192,6 +197,7 @@ export async function evaluateAnswer(request: EvaluationRequest): Promise<Evalua
     evaluation: {
       ...evaluation,
       evaluation_time_sec: Math.round(totalTime),
+      ai_model_used: (evaluation as any).ai_model_used || 'ai-provider',
     },
   };
 }
@@ -218,8 +224,7 @@ async function fetchQuestion(questionId: string) {
  * Build evaluation prompt with question and answer details
  */
 function buildEvaluationPrompt(question: any, request: EvaluationRequest): string {
-  return EVALUATION_PROMPT
-    .replace('{question_text}', question.question_text)
+  return EVALUATION_PROMPT.replace('{question_text}', question.question_text)
     .replace('{subject}', question.subject)
     .replace('{marks}', question.marks.toString())
     .replace('{word_limit}', question.word_limit.toString())
@@ -249,14 +254,16 @@ function parseAIResponse(aiResponse: string, aiTimeMs: number) {
       overall_percentage: Math.min(100, Math.max(0, parsed.overall_percentage || 50)),
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
       improvements: Array.isArray(parsed.improvements) ? parsed.improvements : [],
-      model_answer_points: Array.isArray(parsed.model_answer_points) ? parsed.model_answer_points : [],
+      model_answer_points: Array.isArray(parsed.model_answer_points)
+        ? parsed.model_answer_points
+        : [],
       feedback_en: parsed.feedback_en || 'Feedback not available',
       feedback_hi: parsed.feedback_hi || 'प्रतिक्रिया उपलब्ध नहीं है',
       exam_tip: parsed.exam_tip || 'EXAM TIP: Practice more answers on this topic.',
     };
   } catch (error) {
     console.error('Error parsing AI response:', error);
-    
+
     // Return default evaluation on parse error
     return {
       structure_score: 5,
@@ -279,10 +286,11 @@ function parseAIResponse(aiResponse: string, aiTimeMs: number) {
  * Validate evaluation scores are within expected ranges
  */
 function validateEvaluation(evaluation: any) {
-  const { structure_score, content_score, analysis_score, presentation_score, overall_score } = evaluation;
-  
+  const { structure_score, content_score, analysis_score, presentation_score, overall_score } =
+    evaluation;
+
   // Check individual scores
-  [structure_score, content_score, analysis_score, presentation_score].forEach(score => {
+  [structure_score, content_score, analysis_score, presentation_score].forEach((score) => {
     if (score < 0 || score > 10) {
       throw new Error(`Invalid score: ${score}`);
     }
@@ -326,25 +334,23 @@ async function saveAnswer(request: EvaluationRequest): Promise<string> {
  * Save evaluation to database
  */
 async function saveEvaluation(answerId: string, evaluation: any) {
-  const { error } = await getSupabase()
-    .from('mains_evaluations')
-    .insert({
-      answer_id: answerId,
-      structure_score: evaluation.structure_score,
-      content_score: evaluation.content_score,
-      analysis_score: evaluation.analysis_score,
-      presentation_score: evaluation.presentation_score,
-      overall_score: evaluation.overall_score,
-      overall_percentage: evaluation.overall_percentage,
-      strengths: evaluation.strengths,
-      improvements: evaluation.improvements,
-      model_answer_points: evaluation.model_answer_points,
-      feedback_en: evaluation.feedback_en,
-      feedback_hi: evaluation.feedback_hi,
-      exam_tip: evaluation.exam_tip,
-      evaluation_time_sec: evaluation.evaluation_time_sec,
-      ai_model_used: '9Router/Groq/Ollama',
-    });
+  const { error } = await getSupabase().from('mains_evaluations').insert({
+    answer_id: answerId,
+    structure_score: evaluation.structure_score,
+    content_score: evaluation.content_score,
+    analysis_score: evaluation.analysis_score,
+    presentation_score: evaluation.presentation_score,
+    overall_score: evaluation.overall_score,
+    overall_percentage: evaluation.overall_percentage,
+    strengths: evaluation.strengths,
+    improvements: evaluation.improvements,
+    model_answer_points: evaluation.model_answer_points,
+    feedback_en: evaluation.feedback_en,
+    feedback_hi: evaluation.feedback_hi,
+    exam_tip: evaluation.exam_tip,
+    evaluation_time_sec: evaluation.evaluation_time_sec,
+    ai_model_used: '9Router/Groq/Ollama',
+  });
 
   if (error) {
     console.error('Error saving evaluation:', error);
@@ -355,20 +361,24 @@ async function saveEvaluation(answerId: string, evaluation: any) {
 /**
  * Get evaluation history for a user
  */
-export async function getEvaluationHistory(userId: string, filters?: {
-  subject?: string;
-  fromDate?: string;
-  toDate?: string;
-  page?: number;
-  limit?: number;
-}) {
+export async function getEvaluationHistory(
+  userId: string,
+  filters?: {
+    subject?: string;
+    fromDate?: string;
+    toDate?: string;
+    page?: number;
+    limit?: number;
+  }
+) {
   const page = filters?.page || 1;
   const limit = filters?.limit || 20;
   const offset = (page - 1) * limit;
 
-  let query = supabase
+  let query = getSupabase()
     .from('mains_evaluations')
-    .select(`
+    .select(
+      `
       *,
       mains_answers (
         question_id,
@@ -382,14 +392,15 @@ export async function getEvaluationHistory(userId: string, filters?: {
         is_pyq,
         year
       )
-    `)
+    `
+    )
     .eq('mains_answers.user_id', userId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   // Apply filters
   if (filters?.subject) {
-    query = query.eq('mains_questions.subject', filters.subject);
+    query = query.eq('mains_questions.subject', filters.subject as any);
   }
   if (filters?.fromDate) {
     query = query.gte('created_at', filters.fromDate);
@@ -431,7 +442,7 @@ function calculateStats(evaluations: any[]) {
     };
   }
 
-  const scores = evaluations.map(e => e.overall_percentage);
+  const scores = evaluations.map((e) => e.overall_percentage);
   const averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 
   // Calculate trend (compare last 5 vs previous 5)
@@ -439,7 +450,7 @@ function calculateStats(evaluations: any[]) {
   if (evaluations.length >= 10) {
     const recent5 = scores.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
     const previous5 = scores.slice(5, 10).reduce((a, b) => a + b, 0) / 5;
-    
+
     if (recent5 > previous5 + 5) trend = 'improving';
     else if (recent5 < previous5 - 5) trend = 'declining';
   }
@@ -457,7 +468,8 @@ function calculateStats(evaluations: any[]) {
 export async function getEvaluationById(evaluationId: string) {
   const { data, error } = await getSupabase()
     .from('mains_evaluations')
-    .select(`
+    .select(
+      `
       *,
       mains_answers (
         question_id,
@@ -473,7 +485,8 @@ export async function getEvaluationById(evaluationId: string) {
           word_limit
         )
       )
-    `)
+    `
+    )
     .eq('id', evaluationId)
     .single();
 
@@ -488,20 +501,22 @@ export async function getEvaluationById(evaluationId: string) {
 /**
  * Submit feedback on evaluation
  */
-export async function submitFeedback(evaluationId: string, userId: string, feedback: {
-  rating?: number;
-  was_helpful?: boolean;
-  feedback_text?: string;
-}) {
-  const { error } = await getSupabase()
-    .from('mains_feedback')
-    .insert({
-      evaluation_id: evaluationId,
-      user_id: userId,
-      rating: feedback.rating,
-      was_helpful: feedback.was_helpful,
-      feedback_text: feedback.feedback_text,
-    });
+export async function submitFeedback(
+  evaluationId: string,
+  userId: string,
+  feedback: {
+    rating?: number;
+    was_helpful?: boolean;
+    feedback_text?: string;
+  }
+) {
+  const { error } = await getSupabase().from('mains_feedback').insert({
+    evaluation_id: evaluationId,
+    user_id: userId,
+    rating: feedback.rating,
+    was_helpful: feedback.was_helpful,
+    feedback_text: feedback.feedback_text,
+  });
 
   if (error) {
     console.error('Error submitting feedback:', error);

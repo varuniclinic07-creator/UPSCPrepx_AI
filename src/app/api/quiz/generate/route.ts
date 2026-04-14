@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check rate limit (use 'a4f' as default provider)
-    const rateLimitResult = await checkRateLimit('a4f', user.id);
+    const rateLimitResult = await checkRateLimit('groq', user.id);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {

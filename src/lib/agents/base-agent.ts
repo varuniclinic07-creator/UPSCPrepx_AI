@@ -4,24 +4,25 @@
  * per-agent provider preferences, Supabase service-role client, structured logging
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 export type AgentType =
   | 'research' | 'notes' | 'quiz' | 'ca_ingestion'
   | 'normalizer' | 'evaluator' | 'quality_check' | 'video' | 'animation';
 
 /** Per-agent provider preference overrides (spec Section 3) */
-export type ProviderName = 'ollama' | 'groq' | 'nvidia' | 'gemini';
+export type ProviderName = 'ollama' | 'groq' | 'kilo' | 'opencode' | 'nvidia' | 'gemini';
 
 const AGENT_PROVIDER_PREFERENCES: Record<AgentType, ProviderName[]> = {
-  normalizer:    ['ollama', 'groq'],
-  research:      ['ollama', 'nvidia'],
-  notes:         ['ollama', 'nvidia', 'gemini'],
-  quiz:          ['groq', 'ollama'],
-  ca_ingestion:  ['groq', 'ollama'],
-  evaluator:     ['nvidia', 'gemini'],
-  quality_check: ['groq'],
-  video:         ['ollama'],
-  animation:     ['ollama'],
+  normalizer:    ['ollama', 'groq', 'kilo'],
+  research:      ['ollama', 'nvidia', 'kilo'],
+  notes:         ['ollama', 'nvidia', 'kilo', 'gemini'],
+  quiz:          ['groq', 'ollama', 'kilo'],
+  ca_ingestion:  ['groq', 'ollama', 'kilo'],
+  evaluator:     ['nvidia', 'gemini', 'kilo'],
+  quality_check: ['groq', 'kilo'],
+  video:         ['ollama', 'kilo'],
+  animation:     ['ollama', 'kilo'],
 };
 
 export interface AgentRunRecord {
@@ -43,15 +44,14 @@ export abstract class BaseAgent {
 
   constructor(agentType: AgentType) {
     this.agentType = agentType;
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    this.supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     );
   }
 
   /** Get the preferred provider order for this agent (spec Section 3). */
   protected getProviderPreferences(): ProviderName[] {
-    return AGENT_PROVIDER_PREFERENCES[this.agentType] ?? ['ollama', 'groq', 'nvidia', 'gemini'];
+    return AGENT_PROVIDER_PREFERENCES[this.agentType] ?? ['ollama', 'groq', 'kilo', 'opencode', 'nvidia', 'gemini'];
   }
 
   /**

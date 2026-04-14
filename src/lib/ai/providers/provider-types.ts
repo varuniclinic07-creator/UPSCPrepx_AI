@@ -2,7 +2,7 @@
 // AI PROVIDER TYPES - Shared type definitions for all providers
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type AIProvider = 'ollama' | 'groq' | 'nvidia' | 'gemini';
+export type AIProvider = 'ollama' | 'groq' | 'kilo' | 'opencode' | 'nvidia' | 'gemini' | 'a4f';
 
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 

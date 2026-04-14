@@ -18,7 +18,7 @@ jest.mock('@supabase/supabase-js', () => ({
 
 const mockGetMasteryStats = jest.fn();
 jest.mock('@/lib/mastery/mastery-service', () => ({
-  getMasteryStats: (...args: any[]) => mockGetMasteryStats(...args),
+  getMasteryStats: (userId: any) => mockGetMasteryStats(userId),
 }));
 
 const mockCheckStreakMilestones = jest.fn();
@@ -28,12 +28,12 @@ const mockGenerateCATopicAlerts = jest.fn();
 const mockGenerateSubjectInactivityAlerts = jest.fn();
 const mockGenerateAccuracyRegressionAlerts = jest.fn();
 jest.mock('@/lib/mastery/mastery-notifications', () => ({
-  checkStreakMilestones: (...args: any[]) => mockCheckStreakMilestones(...args),
-  generateDueReminders: (...args: any[]) => mockGenerateDueReminders(...args),
-  generateWeeklyDigest: (...args: any[]) => mockGenerateWeeklyDigest(...args),
-  generateCATopicAlerts: (...args: any[]) => mockGenerateCATopicAlerts(...args),
-  generateSubjectInactivityAlerts: (...args: any[]) => mockGenerateSubjectInactivityAlerts(...args),
-  generateAccuracyRegressionAlerts: (...args: any[]) => mockGenerateAccuracyRegressionAlerts(...args),
+  checkStreakMilestones: (userId: any, streak: any) => mockCheckStreakMilestones(userId, streak),
+  generateDueReminders: (userId: any) => mockGenerateDueReminders(userId),
+  generateWeeklyDigest: (userId: any) => mockGenerateWeeklyDigest(userId),
+  generateCATopicAlerts: (userId: any) => mockGenerateCATopicAlerts(userId),
+  generateSubjectInactivityAlerts: (userId: any) => mockGenerateSubjectInactivityAlerts(userId),
+  generateAccuracyRegressionAlerts: (userId: any) => mockGenerateAccuracyRegressionAlerts(userId),
 }));
 
 import { POST } from '@/app/api/cron/mastery-notifications/route';
@@ -123,6 +123,7 @@ describe('POST /api/cron/mastery-notifications', () => {
     const sundayDate = new Date('2024-01-07T06:00:00Z');
     const mockDate = class extends realDate {
       constructor(...args: any[]) {
+        super();
         if (args.length === 0) return sundayDate as any;
         // @ts-ignore
         return new realDate(...args);

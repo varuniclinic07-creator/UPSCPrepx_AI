@@ -104,7 +104,7 @@ export async function getTemplates(
   }
 ): Promise<{ templates: Template[]; total: number }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     let query = supabase
       .from('note_templates')
@@ -156,7 +156,7 @@ export async function getTemplates(
     }
 
     return {
-      templates: templates as Template[],
+      templates: templates as unknown as Template[],
       total: templates?.length || 0,
     };
   } catch (error) {
@@ -173,7 +173,7 @@ export async function getTemplate(
   userId: string
 ): Promise<Template | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: template, error } = await supabase
       .from('note_templates')
@@ -186,7 +186,7 @@ export async function getTemplate(
       return null;
     }
 
-    return template as Template;
+    return template as unknown as Template;
   } catch (error) {
     console.error('Error in getTemplate:', error);
     return null;
@@ -201,7 +201,7 @@ export async function createTemplate(
   data: z.infer<typeof TemplateSchema>
 ): Promise<Template | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const validated = TemplateSchema.parse(data);
 
@@ -230,7 +230,7 @@ export async function createTemplate(
       return null;
     }
 
-    return template as Template;
+    return template as unknown as Template;
   } catch (error) {
     console.error('Error in createTemplate:', error);
     return null;
@@ -246,7 +246,7 @@ export async function updateTemplate(
   data: Partial<z.infer<typeof TemplateSchema>>
 ): Promise<Template | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Check ownership
     const { data: existing } = await supabase
@@ -287,7 +287,7 @@ export async function updateTemplate(
       return null;
     }
 
-    return template as Template;
+    return template as unknown as Template;
   } catch (error) {
     console.error('Error in updateTemplate:', error);
     return null;
@@ -302,7 +302,7 @@ export async function deleteTemplate(
   userId: string
 ): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Check ownership (cannot delete system templates)
     const { data: existing } = await supabase
@@ -338,7 +338,7 @@ export async function rateTemplate(
   rating: number
 ): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Validate rating (1-5)
     if (rating < 1 || rating > 5) {
@@ -376,7 +376,7 @@ export async function rateTemplate(
       .eq('template_id', templateId);
 
     if (stats && stats.length > 0) {
-      const avgRating = stats.reduce((sum, r) => sum + r.rating, 0) / stats.length;
+      const avgRating = stats.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / stats.length;
 
       await supabase
         .from('note_templates')
@@ -399,9 +399,9 @@ export async function rateTemplate(
  */
 export async function incrementTemplateUsage(templateId: string): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
-    await supabase.rpc('increment_template_usage', {
+    await supabase.rpc('increment_template_usage' as any, {
       p_template_id: templateId,
     });
 
@@ -629,7 +629,7 @@ export async function getTemplateByCategory(
   subcategory?: string
 ): Promise<Template | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     let query = supabase
       .from('note_templates')
@@ -649,7 +649,7 @@ export async function getTemplateByCategory(
       return null;
     }
 
-    return template as Template;
+    return template as unknown as Template;
   } catch (error) {
     console.error('Error in getTemplateByCategory:', error);
     return null;
@@ -663,20 +663,25 @@ export async function getTemplateCategories(): Promise<
   Array<{ category: string; count: number }>
 > {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('note_templates')
-      .select('category, count')
-      .eq('is_system', true)
-      .group('category');
+      .select('category')
+      .eq('is_system', true) as { data: any[] | null; error: any };
 
     if (error) {
       console.error('Failed to get categories:', error);
       return [];
     }
 
-    return (data || []) as any[];
+    // Group by category in JS since Supabase doesn't support .group()
+    const categoryCounts: Record<string, number> = {};
+    for (const item of data || []) {
+      const cat = item.category;
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    }
+    return Object.entries(categoryCounts).map(([category, count]) => ({ category, count }));
   } catch (error) {
     console.error('Error in getTemplateCategories:', error);
     return [];

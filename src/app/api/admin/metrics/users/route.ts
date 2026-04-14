@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  * Returns user analytics
  */
 async function getUserAnalytics(params: { period?: string }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const period = params.period || '30d';
   const days = parseInt(period.replace('d', ''), 10) || 30;
 
@@ -23,6 +23,8 @@ async function getUserAnalytics(params: { period?: string }) {
   startDate.setDate(startDate.getDate() - days);
 
   // Parallel fetch user metrics
+  // Cast rpc calls to any — these RPC functions exist in the DB but are not in the generated types
+  const sb = supabase as any;
   const [
     totalUsers,
     newUsers,
@@ -43,25 +45,25 @@ async function getUserAnalytics(params: { period?: string }) {
       .gte('created_at', startDate.toISOString()),
 
     // Active users (last 7 days)
-    supabase.rpc('get_active_users', { minutes_ago: 7 * 24 * 60 }),
+    sb.rpc('get_active_users', { minutes_ago: 7 * 24 * 60 }),
 
     // Users by plan
-    supabase.rpc('get_users_by_plan'),
+    sb.rpc('get_users_by_plan'),
 
     // Daily signups
-    supabase.rpc('get_daily_signups', {
+    sb.rpc('get_daily_signups', {
       start_date: startDate.toISOString(),
       end_date: new Date().toISOString(),
     }),
 
     // Retention rate
-    supabase.rpc('get_retention_rate', { days }),
+    sb.rpc('get_retention_rate', { days }),
 
     // Cohort analysis
-    supabase.rpc('get_cohort_retention', { months: 6 }),
+    sb.rpc('get_cohort_retention', { months: 6 }),
 
     // User segments
-    supabase.rpc('get_user_segments'),
+    sb.rpc('get_user_segments'),
   ]);
 
   return {
@@ -104,7 +106,9 @@ export async function GET(request: NextRequest) {
         console.error('[User Metrics] Error:', error);
 
         // Return mock data for development
-        const days = parseInt(period?.replace('d', '') || '30', 10);
+        const { searchParams: sp } = new URL(request.url);
+        const fallbackPeriod = sp.get('period') || '30d';
+        const days = parseInt(fallbackPeriod.replace('d', '') || '30', 10);
         const dailySignups = Array.from({ length: days }, (_, i) => ({
           date: new Date(Date.now() - (days - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           signups: Math.floor(Math.random() * 100) + 20,

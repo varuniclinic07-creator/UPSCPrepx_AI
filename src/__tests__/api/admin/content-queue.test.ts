@@ -17,7 +17,7 @@ jest.mock('@/lib/security/admin-auth', () => ({
 // ---------------------------------------------------------------------------
 
 function makeRequest(url: string, init?: RequestInit) {
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init);
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as any);
 }
 
 function buildMockQuery(resolvedData: unknown = [], count: number = 0) {

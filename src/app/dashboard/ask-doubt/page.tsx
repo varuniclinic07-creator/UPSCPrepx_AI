@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { DoubtInput } from '@/components/doubt/doubt-input';
+import { QuickGenerate } from '@/components/living-content/quick-generate';
 import { MessageSquare, Search, Filter, Clock, BookOpen, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
 
 // ============================================================================
@@ -310,6 +311,11 @@ export default function DoubtSolverPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Living Content — Quick Generate */}
+        <div className="mb-6">
+          <QuickGenerate mode="doubt_answer" />
+        </div>
+
         {/* View Toggle */}
         <div className="flex gap-2 mb-6">
           <button

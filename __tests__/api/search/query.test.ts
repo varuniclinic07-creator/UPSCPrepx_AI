@@ -15,23 +15,23 @@ const mockFrom = jest.fn(() => ({ insert: mockInsert }));
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(() =>
     Promise.resolve({
-      rpc: (...args: unknown[]) => mockRpc(...args),
-      from: (...args: unknown[]) => mockFrom(...args),
-      auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
+      rpc: (name: any, params: any) => mockRpc(name, params),
+      from: (table: any) => mockFrom(table),
+      auth: { getUser: () => mockGetUser() },
     })
-  ),
+  ) as any,
 }));
 
 const mockGenerate = jest.fn();
 
 jest.mock('@/lib/search/embedding-service', () => ({
-  embeddingService: { generate: (...args: unknown[]) => mockGenerate(...args) },
+  embeddingService: { generate: (text: any) => mockGenerate(text) },
 }));
 
 const mockCallAI = jest.fn();
 
 jest.mock('@/lib/ai/ai-provider-client', () => ({
-  callAI: (...args: unknown[]) => mockCallAI(...args),
+  callAI: (params: any) => mockCallAI(params),
 }));
 
 // ---------------------------------------------------------------------------

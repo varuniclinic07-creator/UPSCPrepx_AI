@@ -5,10 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { getCurrentUser } from '@/lib/auth/auth-config';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       recentJobs,
     ] = await Promise.all([
       // Job stats by type and status
-      supabase.rpc('get_job_queue_stats'),
+      (supabase as any).rpc('get_job_queue_stats'),
       // Worker health status
       supabase
         .from('worker_health')
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'retry_failed':
         // Retry all failed jobs in a queue
-        await supabase.rpc('retry_failed_jobs', { queue_name: queueName });
+        await (supabase.rpc as any)('retry_failed_jobs', { queue_name: queueName });
         break;
 
       case 'retry_job':

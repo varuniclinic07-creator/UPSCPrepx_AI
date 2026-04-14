@@ -9,11 +9,12 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
@@ -35,6 +36,55 @@ export interface MCQ {
   explanationHindi: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   bloomTaxonomy: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
+}
+
+/** Snake_case shape returned by the AI prompt (matches JSON template in prompt) */
+interface RawMCQOption {
+  text: string;
+  text_hindi: string;
+  is_correct: boolean;
+}
+
+interface RawMCQ {
+  question: string;
+  question_hindi: string;
+  options: RawMCQOption[];
+  correct_answer: number;
+  explanation: string;
+  explanation_hindi: string;
+  difficulty: string;
+  bloom_taxonomy: string;
+}
+
+/** Database row shape returned by Supabase for ca_mcqs */
+interface MCQRow {
+  question: string;
+  question_hindi: string;
+  options: string;
+  correct_answer: number;
+  explanation: string;
+  explanation_hindi: string;
+  difficulty: string;
+  bloom_taxonomy: string;
+  [key: string]: unknown;
+}
+
+/** Convert snake_case AI response to camelCase MCQ */
+function rawToMCQ(raw: RawMCQ): MCQ {
+  return {
+    question: raw.question,
+    questionHindi: raw.question_hindi,
+    options: raw.options.map(opt => ({
+      text: opt.text,
+      textHindi: opt.text_hindi,
+      isCorrect: opt.is_correct,
+    })),
+    correctAnswer: raw.correct_answer,
+    explanation: raw.explanation,
+    explanationHindi: raw.explanation_hindi,
+    difficulty: raw.difficulty as MCQ['difficulty'],
+    bloomTaxonomy: raw.bloom_taxonomy as MCQ['bloomTaxonomy'],
+  };
 }
 
 // ============================================================================
@@ -150,25 +200,25 @@ export async function generateMCQsForArticle(
       maxTokens: 2000,
     });
 
-    // Parse JSON response
-    let mcqs: MCQ[];
+    // Parse JSON response (AI returns snake_case fields)
+    let rawMcqs: RawMCQ[];
     try {
-      mcqs = JSON.parse(aiResponse);
+      rawMcqs = JSON.parse(aiResponse);
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
       return [];
     }
 
-    // Validate MCQs
-    const validMcqs = mcqs.filter(mcq => {
+    // Validate raw MCQs before conversion
+    const validRawMcqs = rawMcqs.filter(mcq => {
       // Check required fields
       if (!mcq.question || !mcq.question_hindi) return false;
       if (!Array.isArray(mcq.options) || mcq.options.length !== 4) return false;
       if (typeof mcq.correct_answer !== 'number' || mcq.correct_answer < 0 || mcq.correct_answer > 3) return false;
       if (!mcq.explanation || !mcq.explanation_hindi) return false;
-      
+
       // Check options structure
-      const validOptions = mcq.options.every(opt => 
+      const validOptions = mcq.options.every(opt =>
         opt.text && opt.text_hindi && typeof opt.is_correct === 'boolean'
       );
       if (!validOptions) return false;
@@ -189,9 +239,10 @@ export async function generateMCQsForArticle(
       return true;
     });
 
-    console.debug(`Generated ${validMcqs.length} valid MCQs out of ${mcqs.length}`);
+    console.debug(`Generated ${validRawMcqs.length} valid MCQs out of ${rawMcqs.length}`);
 
-    return validMcqs;
+    // Convert from snake_case to camelCase MCQ type
+    return validRawMcqs.map(rawToMCQ);
   } catch (error) {
     console.error('MCQ generation failed:', error);
     return [];
@@ -214,18 +265,18 @@ export async function saveMCQs(
     const mcqsToInsert = mcqs.map(mcq => ({
       article_id: articleId,
       question: mcq.question,
-      question_hindi: mcq.question_hindi,
+      question_hindi: mcq.questionHindi,
       options: JSON.stringify(mcq.options),
-      correct_answer: mcq.correct_answer,
+      correct_answer: mcq.correctAnswer,
       explanation: mcq.explanation,
-      explanation_hindi: mcq.explanation_hindi,
+      explanation_hindi: mcq.explanationHindi,
       difficulty: mcq.difficulty,
-      bloom_taxonomy: mcq.bloom_taxonomy,
+      bloom_taxonomy: mcq.bloomTaxonomy,
       is_active: true,
     }));
 
-    const { error } = await getSupabase()
-      .from('ca_mcqs')
+    const { error } = await (getSupabase()
+      .from('ca_mcqs') as any)
       .insert(mcqsToInsert);
 
     if (error) throw error;
@@ -314,7 +365,7 @@ export function validateMCQ(mcq: MCQ): {
   if (!mcq.question || mcq.question.length < 10) {
     errors.push('Question too short or missing');
   }
-  if (!mcq.question_hindi || mcq.question_hindi.length < 10) {
+  if (!mcq.questionHindi || mcq.questionHindi.length < 10) {
     errors.push('Hindi question too short or missing');
   }
 
@@ -322,7 +373,7 @@ export function validateMCQ(mcq: MCQ): {
   if (!Array.isArray(mcq.options) || mcq.options.length !== 4) {
     errors.push('Must have exactly 4 options');
   } else {
-    const correctCount = mcq.options.filter(opt => opt.is_correct).length;
+    const correctCount = mcq.options.filter(opt => opt.isCorrect).length;
     if (correctCount === 0) {
       errors.push('No correct answer specified');
     } else if (correctCount > 1) {
@@ -336,11 +387,11 @@ export function validateMCQ(mcq: MCQ): {
       errors.push('Duplicate options detected');
     }
 
-    // Check correct_answer index
-    if (typeof mcq.correct_answer !== 'number' || mcq.correct_answer < 0 || mcq.correct_answer > 3) {
-      errors.push('Invalid correct_answer index');
-    } else if (!mcq.options[mcq.correct_answer]?.is_correct) {
-      errors.push('correct_answer does not match is_correct option');
+    // Check correctAnswer index
+    if (typeof mcq.correctAnswer !== 'number' || mcq.correctAnswer < 0 || mcq.correctAnswer > 3) {
+      errors.push('Invalid correctAnswer index');
+    } else if (!mcq.options[mcq.correctAnswer]?.isCorrect) {
+      errors.push('correctAnswer does not match isCorrect option');
     }
   }
 
@@ -348,7 +399,7 @@ export function validateMCQ(mcq: MCQ): {
   if (!mcq.explanation || mcq.explanation.length < 10) {
     errors.push('Explanation too short or missing');
   }
-  if (!mcq.explanation_hindi || mcq.explanation_hindi.length < 10) {
+  if (!mcq.explanationHindi || mcq.explanationHindi.length < 10) {
     errors.push('Hindi explanation too short or missing');
   }
 
@@ -360,8 +411,8 @@ export function validateMCQ(mcq: MCQ): {
 
   // Check bloom taxonomy
   const validBloomLevels = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
-  if (!validBloomLevels.includes(mcq.bloom_taxonomy)) {
-    errors.push(`Invalid bloom_taxonomy: ${mcq.bloom_taxonomy}`);
+  if (!validBloomLevels.includes(mcq.bloomTaxonomy)) {
+    errors.push(`Invalid bloomTaxonomy: ${mcq.bloomTaxonomy}`);
   }
 
   return {
@@ -389,7 +440,7 @@ Review and improve this MCQ for quality:
 ORIGINAL MCQ:
 Question: ${mcq.question}
 Options: ${JSON.stringify(mcq.options, null, 2)}
-Correct Answer: ${mcq.correct_answer}
+Correct Answer: ${mcq.correctAnswer}
 Explanation: ${mcq.explanation}
 
 ARTICLE CONTENT:
@@ -411,8 +462,9 @@ Return improved MCQ in same JSON format, or return original if no improvements n
       maxTokens: 1000,
     });
 
-    const improvedMcq = JSON.parse(aiResponse);
-    
+    const improvedRaw: RawMCQ = JSON.parse(aiResponse);
+    const improvedMcq = rawToMCQ(improvedRaw);
+
     // Validate improved MCQ
     const validation = validateMCQ(improvedMcq);
     if (validation.isValid) {
@@ -451,15 +503,18 @@ export async function getMCQsForArticle(articleId: string): Promise<MCQ[]> {
     return [];
   }
 
-  // Parse options from JSON string
-  return data.map(mcq => ({
+  // Cast rows from Supabase (table may not be in generated types)
+  const rows = data as unknown as MCQRow[];
+
+  // Parse options from JSON string and convert to camelCase MCQ
+  return rows.map(mcq => ({
     question: mcq.question,
     questionHindi: mcq.question_hindi,
     options: JSON.parse(mcq.options) as MCQOption[],
     correctAnswer: mcq.correct_answer,
     explanation: mcq.explanation,
     explanationHindi: mcq.explanation_hindi,
-    difficulty: mcq.difficulty as 'Easy' | 'Medium' | 'Hard',
+    difficulty: mcq.difficulty as MCQ['difficulty'],
     bloomTaxonomy: mcq.bloom_taxonomy as MCQ['bloomTaxonomy'],
   }));
 }

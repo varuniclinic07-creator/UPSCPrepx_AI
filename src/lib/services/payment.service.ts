@@ -279,7 +279,7 @@ export class PaymentService extends BaseService {
                     .update({ invoice_url: invoiceUrl })
                     .eq('id', paymentId);
             } catch (error) {
-                this.logger.warn('Invoice generation failed (non-critical)', { paymentId }, error as Error);
+                this.logger.warn('Invoice generation failed (non-critical)', { paymentId, error: (error as Error).message });
             }
 
             this.logger.info('Payment verified and subscription created', {

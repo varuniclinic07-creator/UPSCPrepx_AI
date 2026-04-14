@@ -176,7 +176,7 @@ export const usageRecordSchema = z.object({
     resourceId: uuidSchema.optional(),
     resourceType: z.string().optional(),
     tokensUsed: z.number().int().nonnegative().optional().default(0),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -185,7 +185,7 @@ export const usageRecordSchema = z.object({
 export const aiChatSchema = z.object({
     message: z.string().min(1, 'Message is required').max(4000, 'Message too long'),
     sessionId: uuidSchema.optional(),
-    context: z.record(z.unknown()).optional(),
+    context: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -344,7 +344,7 @@ export function validateBody<T extends z.ZodSchema>(
     const result = schema.safeParse(data);
 
     if (!result.success) {
-        const errors = result.error.errors.map((err) => ({
+        const errors = result.error.issues.map((err: z.ZodIssue) => ({
             field: err.path.join('.'),
             message: err.message,
         }));
@@ -364,7 +364,7 @@ export function validateQuery<T extends z.ZodSchema>(
     const result = schema.safeParse(data);
 
     if (!result.success) {
-        const errors = result.error.errors.map((err) => ({
+        const errors = result.error.issues.map((err: z.ZodIssue) => ({
             field: err.path.join('.'),
             message: err.message,
         }));

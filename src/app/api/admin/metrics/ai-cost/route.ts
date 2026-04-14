@@ -27,15 +27,15 @@ async function getAICostAnalytics(params: { period?: string }) {
   const analytics = await getCostAnalytics(startDate, endDate);
 
   // Get revenue for margin calculation
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: revenueData } = await supabase
     .from('payments')
-    .select('amount')
+    .select('total_amount')
     .eq('status', 'completed')
     .gte('created_at', startDate.toISOString())
     .lte('created_at', endDate.toISOString());
 
-  const totalRevenue = revenueData?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+  const totalRevenue = revenueData?.reduce((sum: number, p: { total_amount: number }) => sum + (p.total_amount || 0), 0) || 0;
 
   // Calculate margin
   const aiCost = analytics.totalCost;
@@ -44,7 +44,7 @@ async function getAICostAnalytics(params: { period?: string }) {
   // Get budget alerts
   const { data: usersWithHighUsage } = await supabase
     .from('users')
-    .select('id, email, subscription_plan');
+    .select('id, email, subscription_tier, role');
 
   const budgetAlerts: Array<{
     userId: string;
@@ -62,7 +62,7 @@ async function getAICostAnalytics(params: { period?: string }) {
         budgetAlerts.push({
           userId: user.id,
           email: user.email || '',
-          plan: user.subscription_plan || user.role || 'free',
+          plan: user.subscription_tier || user.role || 'free',
           percentageUsed: budgetStatus.percentageUsed,
           costUsed: budgetStatus.costUsed,
           costLimit: budgetStatus.costLimit,
@@ -136,7 +136,9 @@ export async function GET(request: NextRequest) {
         console.error('[AI Cost Metrics] Error:', error);
 
         // Return mock data for development
-        const days = parseInt(period?.replace('d', '') || '30', 10);
+        const { searchParams: sp } = new URL(request.url);
+        const fallbackPeriod = sp.get('period') || '30d';
+        const days = parseInt(fallbackPeriod.replace('d', '') || '30', 10);
         const dailyCostTrend: Record<string, number> = {};
         for (let i = 0; i < days; i++) {
           const date = new Date(Date.now() - (days - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

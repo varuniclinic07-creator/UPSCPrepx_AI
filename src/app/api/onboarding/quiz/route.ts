@@ -9,13 +9,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 import { generateDiagnosticQuiz } from '@/lib/onboarding/quiz-generator';
 
 export const dynamic = 'force-dynamic';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
@@ -35,11 +36,11 @@ export async function POST(request: NextRequest) {
     const { user_id } = quizRequestSchema.parse(body);
 
     // Fetch user profile for personalized quiz
-    const { data: profile, error: profileError } = await getSupabase()
-      .from('user_profiles')
+    const { data: profile, error: profileError } = await (getSupabase()
+      .from('user_profiles') as any)
       .select('target_year, attempt_number, is_working_professional, study_hours_per_day, optional_subject')
       .eq('user_id', user_id)
-      .single();
+      .single() as { data: any; error: any };
 
     if (profileError || !profile) {
       return NextResponse.json(
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       user_id,
       payload: {
         quiz_id: quizId,
-        questions: questions.map(q => ({
+        questions: questions.map((q: any) => ({
           id: q.id,
           question_text: q.question_text,
           question_text_hi: q.question_text_hi,
@@ -81,15 +82,14 @@ export async function POST(request: NextRequest) {
         })),
       },
       status: 'completed',
-    });
+    } as any);
 
     // Log audit event
     await getSupabase().from('audit_logs').insert({
-      user_id,
+      actor_id: user_id,
       action: 'diagnostic_quiz_generated',
-      resource_type: 'quiz',
-      details: { quiz_id: quizId, question_count: questions.length },
-    });
+      target_type: 'quiz',
+    } as any);
 
     return NextResponse.json({
       success: true,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid request data',
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 }
       );

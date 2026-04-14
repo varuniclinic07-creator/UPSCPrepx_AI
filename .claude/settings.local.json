@@ -104,7 +104,19 @@
       "mcp__claude_ai_supabase__get_project_url",
       "mcp__claude_ai_supabase__get_publishable_keys",
       "mcp__claude_ai_supabase__list_extensions",
-      "Bash(xxd -l 100 \"C:/Users/DR-VARUNI/Desktop/upsc_ai/src/app/layout.tsx\")"
+      "Bash(xxd -l 100 \"C:/Users/DR-VARUNI/Desktop/upsc_ai/src/app/layout.tsx\")",
+      "Bash(git:*)",
+      "Bash(export TZ=\"Asia/Kolkata\")",
+      "Bash(xargs wc:*)",
+      "Bash(sed 's/\\(.*//')",
+      "Bash(sed \"s/\\(.*//\")",
+      "mcp__claude_ai_supabase__generate_typescript_types",
+      "Bash(sed 's/.*error //')",
+      "Bash(sed 's/:.*//')",
+      "Bash(xargs)",
+      "Bash(python3:*)",
+      "Bash(bash /tmp/check_missing.sh)",
+      "Bash(npm info:*)"
     ]
   }
 }

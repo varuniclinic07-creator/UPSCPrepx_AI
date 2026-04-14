@@ -198,13 +198,9 @@ export function can(role: UserRole, action: Action, resource: Resource): boolean
  * Get user's role from database
  */
 export async function getUserRole(userId: string): Promise<UserRole> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single();
+  const { data, error } = await supabase.from('users').select('role').eq('id', userId).single();
 
   if (error || !data) {
     return 'guest';
@@ -218,8 +214,10 @@ export async function getUserRole(userId: string): Promise<UserRole> {
  */
 export async function getCurrentUserRole(request: NextRequest): Promise<UserRole> {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return 'guest';
@@ -250,8 +248,10 @@ export async function withRBAC(
   options: RBACOptions = {}
 ): Promise<NextResponse> {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json(
@@ -320,7 +320,7 @@ export async function requireOwnership(
   resource: Resource,
   resourceId: string
 ): Promise<boolean> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const tableMap: Record<Resource, string> = {
     users: 'users',
@@ -343,7 +343,7 @@ export async function requireOwnership(
 
   const tableName = tableMap[resource] || 'users';
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from(tableName)
     .select('user_id')
     .eq('id', resourceId)
@@ -353,7 +353,7 @@ export async function requireOwnership(
     return false;
   }
 
-  return data.user_id === userId;
+  return (data as any).user_id === userId;
 }
 
 /**

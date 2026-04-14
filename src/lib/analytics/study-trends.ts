@@ -7,9 +7,10 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export async function getStudyTrends(userId: string, range: '7d' | '30d' | '90d') {
@@ -34,7 +35,7 @@ export async function getStudyTrends(userId: string, range: '7d' | '30d' | '90d'
 
   // Group by date and subject
   const dailyMap: Record<string, Record<string, number>> = {};
-  data.forEach((row) => {
+  data.forEach((row: any) => {
     const date = new Date(row.completed_at).toISOString().split('T')[0];
     const subject = row.study_tasks?.subject || 'Other';
     const hours = (row.time_spent_minutes || 0) / 60;

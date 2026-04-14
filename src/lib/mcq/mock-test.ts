@@ -1,6 +1,6 @@
 /**
  * MCQ Mock Test Service
- * 
+ *
  * Master Prompt v8.0 - Feature F7 (READ Mode)
  * - Mock test creation and management
  * - UPSC pattern (100 questions, 200 marks, 120 min)
@@ -93,10 +93,7 @@ const NEGATIVE_MARKS_PER_QUESTION = 0.66; // 1/3 of 2 marks
 // ============================================================================
 
 export class MockTestService {
-  
-
-  constructor() {
-  }
+  constructor() {}
 
   private async getSupabase() {
     return createClient();
@@ -164,7 +161,9 @@ export class MockTestService {
         ...config,
       };
 
-      const { data, error } = await (await this.getSupabase())
+      const { data, error } = await (
+        await this.getSupabase()
+      )
         .from('mcq_mock_tests')
         .insert({
           title: mockConfig.title,
@@ -195,7 +194,10 @@ export class MockTestService {
   /**
    * Start mock test attempt
    */
-  async startMockAttempt(userId: string, mockId: string): Promise<{ attemptId: string; mock: MockTest } | null> {
+  async startMockAttempt(
+    userId: string,
+    mockId: string
+  ): Promise<{ attemptId: string; mock: MockTest } | null> {
     try {
       // Get mock test details
       const mock = await this.getMockTestById(mockId);
@@ -217,7 +219,9 @@ export class MockTestService {
       }
 
       // Create attempt record
-      const { data, error } = await (await this.getSupabase())
+      const { data, error } = await (
+        await this.getSupabase()
+      )
         .from('mcq_attempts')
         .insert({
           user_id: userId,
@@ -272,7 +276,9 @@ export class MockTestService {
       const timeTakenSec = Math.floor((Date.now() - new Date(attempt.started_at).getTime()) / 1000);
 
       // Update attempt with final stats (trigger will calculate from answers)
-      await (await this.getSupabase())
+      await (
+        await this.getSupabase()
+      )
         .from('mcq_attempts')
         .update({
           completed_at: new Date().toISOString(),
@@ -282,19 +288,17 @@ export class MockTestService {
 
       // Insert answers (trigger will update attempt stats)
       for (const answer of submission.answers) {
-        await (await this.getSupabase())
-          .from('mcq_answers')
-          .insert({
-            attempt_id: attemptId,
-            question_id: answer.questionId,
-            selected_option: answer.selectedOption,
-            time_spent_sec: answer.timeSpent,
-            marked_for_review: answer.markedForReview || false,
-          });
+        await (await this.getSupabase()).from('mcq_answers').insert({
+          attempt_id: attemptId,
+          question_id: answer.questionId,
+          selected_option: answer.selectedOption,
+          time_spent_sec: answer.timeSpent,
+          marked_for_review: answer.markedForReview || false,
+        });
       }
 
       // Wait for trigger to update stats, then fetch final results
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const { data: finalAttempt } = await (await this.getSupabase())
         .from('mcq_attempts')
@@ -309,7 +313,7 @@ export class MockTestService {
       // Calculate percentile and rank
       const { percentile, rank } = await this.calculatePercentileAndRank(
         finalAttempt.net_marks,
-        attempt.mock_id
+        attempt.mock_id as string
       );
 
       // Update attempt with percentile and rank
@@ -319,7 +323,9 @@ export class MockTestService {
         .eq('id', attemptId);
 
       // Update mock test attempt count
-      await (await this.getSupabase()).rpc('increment_mock_attempt_count', { p_mock_id: attempt.mock_id });
+      await (
+        await this.getSupabase()
+      ).rpc('increment_mock_attempt_count' as any, { p_mock_id: attempt.mock_id });
 
       return {
         netMarks: finalAttempt.net_marks,
@@ -338,16 +344,20 @@ export class MockTestService {
    */
   async getUserMockHistory(userId: string, limit: number = 10): Promise<MockAttempt[]> {
     try {
-      const { data, error } = await (await this.getSupabase())
+      const { data, error } = await (
+        await this.getSupabase()
+      )
         .from('mcq_attempts')
-        .select(`
+        .select(
+          `
           *,
           mock:mcq_mock_tests(
             title,
             total_marks,
             duration_min
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
         .eq('session_type', 'Mock')
         .not('completed_at', 'is', null)
@@ -389,7 +399,7 @@ export class MockTestService {
       }
 
       // Find rank (1-based)
-      const rank = attempts.findIndex(a => a.net_marks <= score) + 1 || attempts.length;
+      const rank = attempts.findIndex((a) => a.net_marks <= score) + 1 || attempts.length;
 
       // Calculate percentile
       const percentile = ((attempts.length - rank + 1) / attempts.length) * 100;

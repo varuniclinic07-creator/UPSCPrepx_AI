@@ -8,12 +8,12 @@ import { GET, PATCH } from '@/app/api/admin/leads/route';
 // ---------------------------------------------------------------------------
 
 jest.mock('@/lib/auth/auth-config', () => ({
-  getCurrentUser: (...args: any[]) => mockGetCurrentUser(...args),
+  getCurrentUser: (req: any) => mockGetCurrentUser(req),
 }));
 
 jest.mock('@/lib/admin/admin-service', () => ({
-  getLeads: (...args: any[]) => mockGetLeads(...args),
-  updateLead: (...args: any[]) => mockUpdateLead(...args),
+  getLeads: (params: any) => mockGetLeads(params),
+  updateLead: (id: any, data: any) => mockUpdateLead(id, data),
 }));
 
 const mockGetCurrentUser = jest.fn();
@@ -25,7 +25,7 @@ const mockUpdateLead = jest.fn();
 // ---------------------------------------------------------------------------
 
 function buildRequest(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init);
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as any);
 }
 
 function mockAdmin() {

@@ -141,7 +141,7 @@ export default function AIUsagePage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Tokens</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {(metrics?.totalTokens / 1000000).toFixed(2)}M
+                  {((metrics?.totalTokens ?? 0) / 1000000).toFixed(2)}M
                 </p>
               </div>
               <div className="p-3 bg-purple-50 rounded-lg">
@@ -239,7 +239,7 @@ export default function AIUsagePage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ provider, percentage }) => `${provider}: ${percentage.toFixed(1)}%`}
+                    label={(props: any) => `${props.provider}: ${props.percentage.toFixed(1)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="requests"
@@ -269,7 +269,7 @@ export default function AIUsagePage() {
                       border: '1px solid #E5E7EB',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
+                    formatter={((value: number) => [`$${value.toFixed(2)}`, 'Cost']) as any}
                   />
                   <Bar dataKey="totalCost" fill="#3B82F6" name="Cost ($)" />
                 </BarChart>

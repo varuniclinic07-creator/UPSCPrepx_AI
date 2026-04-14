@@ -55,7 +55,7 @@ export class AgenticOrchestrator {
                     sources.push({
                         type: 'doc_thinker' as AgenticServiceType,
                         title: 'Document Analysis',
-                        excerpt: docResults.summary || '',
+                        excerpt: docResults || '',
                         relevanceScore: 0.9,
                     });
                 }
@@ -68,7 +68,7 @@ export class AgenticOrchestrator {
 
                 sources.push(...fileResults.map(r => ({
                     type: 'file_search' as AgenticServiceType,
-                    title: r.file_path,
+                    title: r.filePath,
                     excerpt: r.content,
                     relevanceScore: 0.85,
                 })));

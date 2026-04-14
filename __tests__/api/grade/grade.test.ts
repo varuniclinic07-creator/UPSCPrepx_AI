@@ -15,14 +15,14 @@ const mockGradeAnswer = jest.fn();
 const mockSaveGradingResult = jest.fn();
 const mockGetGradingHistory = jest.fn();
 jest.mock('@/lib/grading/grader-service', () => ({
-  gradeAnswer: (...args: any[]) => mockGradeAnswer(...args),
-  saveGradingResult: (...args: any[]) => mockSaveGradingResult(...args),
-  getGradingHistory: (...args: any[]) => mockGetGradingHistory(...args),
+  gradeAnswer: (q: any, a: any) => mockGradeAnswer(q, a),
+  saveGradingResult: (userId: any, q: any, a: any, result: any) => mockSaveGradingResult(userId, q, a, result),
+  getGradingHistory: (userId: any) => mockGetGradingHistory(userId),
 }));
 
 const mockCheckRateLimit = jest.fn();
 jest.mock('@/lib/security/rate-limiter', () => ({
-  checkRateLimit: (...args: any[]) => mockCheckRateLimit(...args),
+  checkRateLimit: (key: any, opts: any) => mockCheckRateLimit(key, opts),
   RATE_LIMITS: { aiGenerate: { maxRequests: 10, windowMs: 60000 } },
 }));
 
@@ -50,7 +50,7 @@ import { GET, POST } from '@/app/api/grade/route';
 // ---------------------------------------------------------------------------
 
 function makeRequest(method: string, url: string, body?: any): NextRequest {
-  const init: RequestInit = { method };
+  const init: Record<string, any> = { method };
   if (body) {
     init.body = JSON.stringify(body);
     init.headers = { 'Content-Type': 'application/json' };

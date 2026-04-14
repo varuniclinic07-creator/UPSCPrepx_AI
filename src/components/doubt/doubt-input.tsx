@@ -66,7 +66,7 @@ const MAX_ATTACHMENTS = 3;
 
 export function DoubtInput({ onSubmit, isLoading = false, showHindi = false }: DoubtInputProps) {
   // Form state
-  const [subject, setSubject] = useState<DoubtInputProps['onSubmit'] extends (d: infer D) => any ? D['subject'] : 'GS1'>('GS1' as any);
+  const [subject, setSubject] = useState<'GS1' | 'GS2' | 'GS3' | 'GS4' | 'Essay' | 'Optional' | 'CSAT' | 'General'>('GS1');
   const [topic, setTopic] = useState('');
   const [question, setQuestion] = useState('');
   const [title, setTitle] = useState('');

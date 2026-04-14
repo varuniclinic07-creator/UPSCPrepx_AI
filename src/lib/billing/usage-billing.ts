@@ -133,7 +133,7 @@ export class UsageBillingService {
    * Get user's current usage summary
    */
   async getUsageSummary(userId: string): Promise<UsageSummary> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get user's subscription
     const { data: subscription } = await supabase
@@ -156,8 +156,8 @@ export class UsageBillingService {
       .gte('created_at', period.start.toISOString())
       .lte('created_at', period.end.toISOString());
 
-    const tokensUsed = usageData?.reduce((sum, u) => sum + (u.total_tokens || 0), 0) || 0;
-    const providerCost = usageData?.reduce((sum, u) => sum + (u.cost_usd || 0), 0) || 0;
+    const tokensUsed = usageData?.reduce((sum: number, u: { total_tokens?: number }) => sum + (u.total_tokens || 0), 0) || 0;
+    const providerCost = usageData?.reduce((sum: number, u: { cost_usd?: number }) => sum + (u.cost_usd || 0), 0) || 0;
 
     // Calculate requests (count records)
     const requestsMade = usageData?.length || 0;
@@ -200,7 +200,7 @@ export class UsageBillingService {
     periodStart: Date,
     periodEnd: Date
   ): Promise<InvoiceGenerationResult> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get user's subscription
     const { data: subscription } = await supabase
@@ -221,8 +221,8 @@ export class UsageBillingService {
       .gte('created_at', periodStart.toISOString())
       .lte('created_at', periodEnd.toISOString());
 
-    const tokensUsed = usageData?.reduce((sum, u) => sum + (u.total_tokens || 0), 0) || 0;
-    const providerCost = usageData?.reduce((sum, u) => sum + (u.cost_usd || 0), 0) || 0;
+    const tokensUsed = usageData?.reduce((sum: number, u: { total_tokens?: number }) => sum + (u.total_tokens || 0), 0) || 0;
+    const providerCost = usageData?.reduce((sum: number, u: { cost_usd?: number }) => sum + (u.cost_usd || 0), 0) || 0;
     const requestsMade = usageData?.length || 0;
 
     // Calculate overage
@@ -316,7 +316,7 @@ export class UsageBillingService {
    * Save invoice to database
    */
   async saveInvoice(invoice: Invoice): Promise<void> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('invoices')
@@ -336,7 +336,7 @@ export class UsageBillingService {
         status: invoice.status,
         due_date: invoice.due_date,
         metadata: invoice.metadata,
-      });
+      } as any);
 
     if (error) {
       throw new Error(`Failed to save invoice: ${error.message}`);
@@ -347,7 +347,7 @@ export class UsageBillingService {
    * Save usage record to database
    */
   async saveUsageRecord(usageRecord: UsageRecord): Promise<void> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('usage_records')
@@ -375,7 +375,7 @@ export class UsageBillingService {
    * Get user's invoice history
    */
   async getInvoiceHistory(userId: string, limit: number = 12): Promise<Invoice[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('invoices')
@@ -388,14 +388,14 @@ export class UsageBillingService {
       throw new Error(`Failed to fetch invoices: ${error.message}`);
     }
 
-    return data as Invoice[];
+    return data as unknown as Invoice[];
   }
 
   /**
    * Get invoice by ID
    */
   async getInvoice(userId: string, invoiceNumber: string): Promise<Invoice | null> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('invoices')
@@ -408,23 +408,22 @@ export class UsageBillingService {
       return null;
     }
 
-    return data as Invoice;
+    return data as unknown as Invoice;
   }
 
   /**
    * Mark invoice as paid
    */
   async markInvoicePaid(invoiceNumber: string, paymentId: string): Promise<void> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('invoices')
       .update({
         status: 'paid',
-        amount_paid: 'amount_due', // Full payment
         paid_at: new Date().toISOString(),
         metadata: { payment_id: paymentId },
-      })
+      } as any)
       .eq('invoice_number', invoiceNumber);
 
     if (error) {
@@ -444,7 +443,7 @@ export class UsageBillingService {
     totalAmount: number;
     errors: string[];
   }> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const errors: string[] = [];
     let processed = 0;
     let totalAmount = 0;
@@ -452,8 +451,8 @@ export class UsageBillingService {
     // Get all active subscriptions
     const { data: subscriptions } = await supabase
       .from('subscriptions')
-      .select('user_id, current_period_end')
-      .eq('status', 'active');
+      .select('*')
+      .eq('status', 'active') as { data: any[] | null };
 
     if (!subscriptions) {
       return { processed: 0, totalAmount: 0, errors: ['Failed to fetch subscriptions'] };
@@ -501,20 +500,22 @@ export class UsageBillingService {
     overdueInvoices: number;
     topSpenders: Array<{ user_id: string; total: number }>;
   }> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const now = new Date();
     const start = periodStart ?? new Date(now.getFullYear(), now.getMonth(), 1);
     const end = periodEnd ?? new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Get invoices for period
-    const { data: invoices } = await supabase
+    const { data: invoicesRaw } = await supabase
       .from('invoices')
       .select('*')
       .gte('period_start', start.toISOString())
       .lte('period_end', end.toISOString());
 
-    if (!invoices || invoices.length === 0) {
+    const invoices = (invoicesRaw || []) as any[];
+
+    if (invoices.length === 0) {
       return {
         totalRevenue: 0,
         totalOverage: 0,
@@ -526,11 +527,11 @@ export class UsageBillingService {
       };
     }
 
-    const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
-    const totalOverage = invoices.reduce((sum, inv) => sum + (inv.overage_charge || 0), 0);
-    const uniqueUsers = new Set(invoices.map((inv) => inv.user_id)).size;
-    const paidInvoices = invoices.filter((inv) => inv.status === 'paid').length;
-    const overdueInvoices = invoices.filter((inv) => inv.status === 'overdue').length;
+    const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + (inv.amount_paid || 0), 0);
+    const totalOverage = invoices.reduce((sum: number, inv: any) => sum + (inv.overage_charge || 0), 0);
+    const uniqueUsers = new Set(invoices.map((inv: any) => inv.user_id)).size;
+    const paidInvoices = invoices.filter((inv: any) => inv.status === 'paid').length;
+    const overdueInvoices = invoices.filter((inv: any) => inv.status === 'overdue').length;
 
     // Top spenders
     const userSpending: Record<string, number> = {};

@@ -154,7 +154,6 @@ export function StreamingChat({
                   <button
                     onClick={() => {
                       reset();
-                      setError(null);
                     }}
                     className="mt-2 text-sm text-red-700 underline"
                   >

@@ -36,7 +36,7 @@ class VideoAgent extends BaseAgent {
 
       const userPrompt = `Topic: ${params.topic}${params.subject ? `\nSubject: ${params.subject}` : ''}${params.style ? `\nStyle: ${params.style}` : ''}\n\nGenerate a 5-scene video script (hook, concept1, concept2, example, CTA).`;
 
-      const raw = await callAI({ systemPrompt, userPrompt });
+      const raw = await callAI({ systemPrompt, userPrompt, providerPreferences: this.getProviderPreferences() });
 
       let parsed: { script: string; scenes: VideoScene[] };
 

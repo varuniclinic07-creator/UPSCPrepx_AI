@@ -25,13 +25,12 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('mains_questions')
       .select('id, question_text, question_text_hi, subject, topic, marks, word_limit, time_limit_min, is_pyq, year, difficulty, tags')
-      .eq('is_active', true)
       .order('subject')
       .order('year', { ascending: false, nullsFirst: false })
       .limit(100);
 
     if (subject && ['GS1', 'GS2', 'GS3', 'GS4', 'Essay'].includes(subject)) {
-      query = query.eq('subject', subject);
+      query = query.eq('subject', subject as any);
     }
 
     const { data, error } = await query;

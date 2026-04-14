@@ -5,10 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 
     // Parallel fetch all analytics data
+    // Cast rpc calls to any — these RPC functions exist in the DB but are not in the generated types
+    const sb = supabase as any;
     const [
       revenueData,
       subscriptionData,
@@ -39,23 +41,23 @@ export async function GET(request: NextRequest) {
       providerData,
     ] = await Promise.all([
       // Revenue Analytics
-      supabase.rpc('get_revenue_analytics', {
+      sb.rpc('get_revenue_analytics', {
         start_date: startDate.toISOString(),
         end_date: now.toISOString(),
         group_by: 'day',
       }),
       // Subscription Analytics
-      supabase.rpc('get_subscription_analytics', {
+      sb.rpc('get_subscription_analytics', {
         start_date: startDate.toISOString(),
         end_date: now.toISOString(),
       }),
       // User Analytics
-      supabase.rpc('get_user_analytics', {
+      sb.rpc('get_user_analytics', {
         start_date: startDate.toISOString(),
         end_date: now.toISOString(),
       }),
       // AI Usage Analytics
-      supabase.rpc('get_ai_usage_analytics', {
+      sb.rpc('get_ai_usage_analytics', {
         start_date: startDate.toISOString(),
         end_date: now.toISOString(),
       }),

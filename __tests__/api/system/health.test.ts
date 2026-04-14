@@ -8,17 +8,17 @@ import { GET } from '@/app/api/health/route';
 
 jest.mock('@/lib/supabase/server', () => ({
   createServerSupabaseClient: jest.fn(() =>
-    Promise.resolve({ from: (...args: any[]) => mockFrom(...args) })
-  ),
+    Promise.resolve({ from: (table: any) => mockFrom(table) })
+  ) as any,
 }));
 
 jest.mock('@/lib/redis/client', () => ({
   getRedis: jest.fn(),
-  isRedisAvailable: (...args: any[]) => mockIsRedisAvailable(...args),
+  isRedisAvailable: () => mockIsRedisAvailable(),
 }));
 
 jest.mock('@/lib/resilience/circuit-breaker', () => ({
-  getCircuitBreakerStatus: (...args: any[]) => mockGetCircuitBreakerStatus(...args),
+  getCircuitBreakerStatus: () => mockGetCircuitBreakerStatus(),
 }));
 
 const mockSelect = jest.fn().mockReturnThis();

@@ -7,6 +7,7 @@
 
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 // Configure VAPID keys if available
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -17,11 +18,10 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   );
 }
 
-let _sb: ReturnType<typeof createClient> | null = null;
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
   if (!_sb)
-    _sb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
   return _sb;

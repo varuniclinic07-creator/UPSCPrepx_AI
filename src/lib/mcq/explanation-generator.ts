@@ -1,6 +1,6 @@
 /**
  * MCQ Explanation Generator Service
- * 
+ *
  * Master Prompt v8.0 - Feature F7 (READ Mode)
  * - AI-powered answer explanations
  * - Bilingual (EN+HI) with SIMPLIFIED_LANGUAGE_PROMPT
@@ -131,10 +131,20 @@ export class ExplanationGeneratorService {
       const relatedContent = await this.findRelatedContent(question, userId);
 
       // Build final explanation
-      return this.buildExplanation(question, aiExplanation, relatedContent, selectedOption, isCorrect);
+      return this.buildExplanation(
+        question,
+        aiExplanation,
+        relatedContent,
+        selectedOption,
+        isCorrect
+      );
     } catch (error) {
       console.error('ExplanationGeneratorService.generateExplanation error:', error);
-      return this.getFallbackExplanation(request.question, request.selectedOption, request.isCorrect);
+      return this.getFallbackExplanation(
+        request.question,
+        request.selectedOption,
+        request.isCorrect
+      );
     }
   }
 
@@ -221,9 +231,12 @@ KEY_POINTS:
 
       const en = enMatch ? enMatch[1].trim() : response;
       const hi = hiMatch ? hiMatch[1].trim() : 'व्याख्या उपलब्ध नहीं है';
-      
+
       const keyPoints = pointsMatch
-        ? pointsMatch[1].split('\n').filter(line => line.trim().startsWith('-')).map(line => line.replace(/^-\s*/, '').trim())
+        ? pointsMatch[1]
+            .split('\n')
+            .filter((line) => line.trim().startsWith('-'))
+            .map((line) => line.replace(/^-\s*/, '').trim())
         : ['Key concept explained'];
 
       return { en, hi, keyPoints };
@@ -240,7 +253,10 @@ KEY_POINTS:
   /**
    * Find related content from content library (RAG)
    */
-  private async findRelatedContent(question: Question, userId: string): Promise<{
+  private async findRelatedContent(
+    question: Question,
+    userId: string
+  ): Promise<{
     notes: Array<{ title: string; id: string }>;
     currentAffairs: Array<{ title: string; id: string }>;
     videos: Array<{ title: string; id: string }>;
@@ -271,9 +287,21 @@ KEY_POINTS:
         .limit(3);
 
       return {
-        notes: notes?.map(n => ({ title: typeof n.title === 'string' ? n.title : n.title?.en || 'Note', id: n.id })) || [],
-        currentAffairs: ca?.map(c => ({ title: typeof c.title === 'string' ? c.title : c.title?.en || 'Article', id: c.id })) || [],
-        videos: videos?.map(v => ({ title: typeof v.title === 'string' ? v.title : v.title?.en || 'Video', id: v.id })) || [],
+        notes:
+          notes?.map((n) => ({
+            title: typeof n.title === 'string' ? n.title : (n.title as any)?.en || 'Note',
+            id: n.id,
+          })) || [],
+        currentAffairs:
+          ca?.map((c) => ({
+            title: typeof c.title === 'string' ? c.title : (c.title as any)?.en || 'Article',
+            id: c.id,
+          })) || [],
+        videos:
+          videos?.map((v) => ({
+            title: typeof v.title === 'string' ? v.title : (v.title as any)?.en || 'Video',
+            id: v.id,
+          })) || [],
       };
     } catch (error) {
       console.error('ExplanationGeneratorService.findRelatedContent error:', error);
@@ -310,17 +338,26 @@ KEY_POINTS:
         hi: `विकल्प ${question.correctOption} सही है क्योंकि: ${question.options[question.correctOption - 1].text.hi}`,
       },
       whyIncorrect: {
-        en: isCorrect 
-          ? `Your answer (Option ${selectedOption}) is correct!` 
+        en: isCorrect
+          ? `Your answer (Option ${selectedOption}) is correct!`
           : `Option ${selectedOption} is incorrect. ${selectedOptionText}`,
         hi: isCorrect
           ? `आपका उत्तर (विकल्प ${selectedOption}) सही है!`
           : `विकल्प ${selectedOption} गलत है। ${selectedOptionText}`,
       },
       relatedConcepts: [
-        ...relatedContent.notes.map(n => ({ title: n.title, type: 'note' as const })),
-        ...relatedContent.currentAffairs.map(c => ({ title: c.title, type: 'ca' as const })),
-        ...relatedContent.videos.map(v => ({ title: v.title, type: 'video' as const })),
+        ...relatedContent.notes.map((n: { title: string; id: string }) => ({
+          title: n.title,
+          type: 'note' as const,
+        })),
+        ...relatedContent.currentAffairs.map((c: { title: string; id: string }) => ({
+          title: c.title,
+          type: 'ca' as const,
+        })),
+        ...relatedContent.videos.map((v: { title: string; id: string }) => ({
+          title: v.title,
+          type: 'video' as const,
+        })),
       ],
       sources: question.sourceReferences || [],
       generatedAt: new Date().toISOString(),
@@ -355,8 +392,8 @@ KEY_POINTS:
         hi: `विकल्प ${question.correctOption} सही है: ${question.options[question.correctOption - 1].text.hi}`,
       },
       whyIncorrect: {
-        en: isCorrect 
-          ? `Your answer (Option ${selectedOption}) is correct!` 
+        en: isCorrect
+          ? `Your answer (Option ${selectedOption}) is correct!`
           : `Option ${selectedOption} is incorrect: ${selectedOptionText}`,
         hi: isCorrect
           ? `आपका उत्तर (विकल्प ${selectedOption}) सही है!`
@@ -371,7 +408,11 @@ KEY_POINTS:
   /**
    * Get fallback explanation when AI fails
    */
-  private getFallbackExplanation(question: Question, selectedOption: number, isCorrect: boolean): Explanation {
+  private getFallbackExplanation(
+    question: Question,
+    selectedOption: number,
+    isCorrect: boolean
+  ): Explanation {
     const correctOptionText = question.options[question.correctOption - 1].text.en;
     const selectedOptionText = question.options[selectedOption - 1]?.text.en || 'Not answered';
 
@@ -391,8 +432,8 @@ KEY_POINTS:
         hi: `विकल्प ${question.correctOption} सही है: ${question.options[question.correctOption - 1].text.hi}`,
       },
       whyIncorrect: {
-        en: isCorrect 
-          ? `Your answer is correct!` 
+        en: isCorrect
+          ? `Your answer is correct!`
           : `Option ${selectedOption} is incorrect: ${selectedOptionText}`,
         hi: isCorrect
           ? `आपका उत्तर सही है!`

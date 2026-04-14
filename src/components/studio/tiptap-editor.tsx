@@ -1,9 +1,9 @@
 /**
  * TipTap Editor - User Content Studio (Feature F4)
- * 
+ *
  * Main rich text editor component for notes and answers
  * Master Prompt v8.0 - READ Mode
- * 
+ *
  * Features:
  * - Full TipTap editor with extensions
  * - Bilingual support (EN+HI)
@@ -11,7 +11,7 @@
  * - Word/character counter
  * - Template support
  * - Export integration
- * 
+ *
  * AI Provider: 9Router → Groq → Ollama
  */
 
@@ -19,8 +19,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { BubbleMenu } from '@tiptap/extension-bubble-menu';
-import { FloatingMenu } from '@tiptap/extension-floating-menu';
+// @ts-ignore - BubbleMenu/FloatingMenu may be in a separate package in some @tiptap/react versions
+import { BubbleMenu, FloatingMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -193,11 +193,11 @@ export function TipTapEditor({
   // Update placeholder when language changes
   useEffect(() => {
     if (editor) {
-      editor.extensionManager.extensions.find(
-        (ext: any) => ext.name === 'placeholder'
-      )?.configure({
-        placeholder: showHindi ? placeholder.hi : placeholder.en,
-      });
+      editor.extensionManager.extensions
+        .find((ext: any) => ext.name === 'placeholder')
+        ?.configure({
+          placeholder: showHindi ? placeholder.hi : placeholder.en,
+        });
     }
   }, [editor, showHindi, placeholder]);
 
@@ -245,11 +245,7 @@ export function TipTapEditor({
 
   const addTable = useCallback(() => {
     if (editor) {
-      editor
-        .chain()
-        .focus()
-        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-        .run();
+      editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     }
   }, [editor]);
 
@@ -344,18 +340,14 @@ export function TipTapEditor({
           className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 flex gap-2"
         >
           <button
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 1 }).run()
-            }
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('heading', { level: 1 }) ? 'bg-saffron-100 text-saffron-600' : ''}`}
             title="H1"
           >
             H1
           </button>
           <button
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
-            }
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('heading', { level: 2 }) ? 'bg-saffron-100 text-saffron-600' : ''}`}
             title="H2"
           >
@@ -384,9 +376,7 @@ export function TipTapEditor({
         {/* Time limit (if applicable) */}
         {timeLimit && (
           <div className="text-sm text-gray-600">
-            <span className="font-medium">
-              {showHindi ? 'समय सीमा:' : 'Time limit:'}
-            </span>{' '}
+            <span className="font-medium">{showHindi ? 'समय सीमा:' : 'Time limit:'}</span>{' '}
             {Math.floor(timeLimit / 60)} {showHindi ? 'मिनट' : 'min'}
           </div>
         )}
@@ -403,8 +393,8 @@ export function TipTapEditor({
                 ? 'सहेजा जा रहा है...'
                 : 'Saving...'
               : showHindi
-              ? 'सहेजें'
-              : 'Save'}
+                ? 'सहेजें'
+                : 'Save'}
           </button>
         </div>
       </div>

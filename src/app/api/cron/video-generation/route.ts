@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     );
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
           type: 'generate_video',
           nodeId: node.id,
           topic: node.title,
-          subject: node.subject,
+          subject: node.subject ?? undefined,
         });
         if (video.success) results.videos++;
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
             type: 'generate_animation',
             nodeId: node.id,
             topic: node.title,
-            subject: node.subject,
+            subject: node.subject ?? undefined,
             payload: { animationType: node.subject === 'GS4' ? 'case_study' : 'concept' },
           });
           if (animation.success) results.animations++;

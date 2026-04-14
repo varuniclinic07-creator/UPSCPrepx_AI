@@ -339,8 +339,21 @@ export default function MyNotesPage() {
           folderId: n.folder_id,
           tags: n.tags,
         }))}
-        folders={folders}
-        templates={templates}
+        folders={folders.map(f => ({
+          id: f.id,
+          name: f.name,
+          color: f.color,
+          icon: '📁',
+          noteCount: f.note_count,
+        }))}
+        templates={templates.map(t => ({
+          id: t.id,
+          title: { en: t.title_en, hi: t.title_hi },
+          category: t.category,
+          usageCount: t.usage_count,
+          rating: t.rating,
+          isSystem: t.is_system,
+        }))}
         selectedNoteId={selectedNoteId || undefined}
         selectedFolderId={selectedFolderId || undefined}
         showHindi={showHindi}

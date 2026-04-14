@@ -17,6 +17,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
@@ -92,6 +93,8 @@ interface DigestData {
     GS4: number;
     Essay: number;
   };
+  isPublished?: boolean;
+  publishedAt?: string;
 }
 
 // ============================================================================

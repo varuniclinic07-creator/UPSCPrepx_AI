@@ -25,6 +25,31 @@ const PROVIDER_CONFIGS: Record<AIProvider, RateLimitConfig> = {
     concurrent: parseInt(process.env.GROQ_RATE_LIMIT_CONCURRENT || '10'),
     userQuotaDaily: 5000,
   },
+  ollama: {
+    rpm: parseInt(process.env.OLLAMA_RATE_LIMIT_RPM || '60'),
+    concurrent: parseInt(process.env.OLLAMA_RATE_LIMIT_CONCURRENT || '5'),
+    userQuotaDaily: 10000,
+  },
+  nvidia: {
+    rpm: parseInt(process.env.NVIDIA_RATE_LIMIT_RPM || '20'),
+    concurrent: parseInt(process.env.NVIDIA_RATE_LIMIT_CONCURRENT || '5'),
+    userQuotaDaily: 3000,
+  },
+  gemini: {
+    rpm: parseInt(process.env.GEMINI_RATE_LIMIT_RPM || '15'),
+    concurrent: parseInt(process.env.GEMINI_RATE_LIMIT_CONCURRENT || '5'),
+    userQuotaDaily: 3000,
+  },
+  kilo: {
+    rpm: parseInt(process.env.KILO_RATE_LIMIT_RPM || '20'),
+    concurrent: parseInt(process.env.KILO_RATE_LIMIT_CONCURRENT || '5'),
+    userQuotaDaily: 3000,
+  },
+  opencode: {
+    rpm: parseInt(process.env.OPENCODE_RATE_LIMIT_RPM || '20'),
+    concurrent: parseInt(process.env.OPENCODE_RATE_LIMIT_CONCURRENT || '5'),
+    userQuotaDaily: 3000,
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -33,8 +58,8 @@ const PROVIDER_CONFIGS: Record<AIProvider, RateLimitConfig> = {
 
 interface InMemoryState {
   rpmRequests: Map<string, number[]>; // provider -> timestamps
-  concurrent: Map<string, number>;    // provider -> count
-  userDaily: Map<string, number>;     // userId -> count
+  concurrent: Map<string, number>; // provider -> count
+  userDaily: Map<string, number>; // userId -> count
 }
 
 const memoryState: InMemoryState = {
@@ -86,7 +111,10 @@ export class DistributedRateLimiter {
         await Promise.race([connectPromise, timeoutPromise]);
         console.debug('[RateLimiter] Redis connected successfully');
       } catch (e) {
-        console.warn('[RateLimiter] Redis unavailable, using in-memory fallback:', (e as Error).message);
+        console.warn(
+          '[RateLimiter] Redis unavailable, using in-memory fallback:',
+          (e as Error).message
+        );
         this.usingFallback = true;
         this.redis = null;
       }
@@ -102,7 +130,10 @@ export class DistributedRateLimiter {
         });
       }
     } catch (error) {
-      console.warn('[RateLimiter] Failed to initialize Redis, using in-memory fallback:', (error as Error).message);
+      console.warn(
+        '[RateLimiter] Failed to initialize Redis, using in-memory fallback:',
+        (error as Error).message
+      );
       this.usingFallback = true;
     }
   }
@@ -111,10 +142,7 @@ export class DistributedRateLimiter {
   // CHECK RATE LIMIT
   // ═════════════════════════════════════════════════════════════════════════
 
-  async checkLimit(
-    provider: AIProvider,
-    userId?: string
-  ): Promise<RateLimitResult> {
+  async checkLimit(provider: AIProvider, userId?: string): Promise<RateLimitResult> {
     if (this.usingFallback || !this.redis) {
       return this.checkLimitInMemory(provider, userId);
     }
@@ -134,7 +162,7 @@ export class DistributedRateLimiter {
 
     // Check RPM
     const timestamps = memoryState.rpmRequests.get(provider) || [];
-    const recentTimestamps = timestamps.filter(t => t > now - windowMs);
+    const recentTimestamps = timestamps.filter((t) => t > now - windowMs);
     memoryState.rpmRequests.set(provider, recentTimestamps);
 
     if (recentTimestamps.length >= config.rpm) {
@@ -287,7 +315,7 @@ export class DistributedRateLimiter {
       const now = Date.now();
       const windowMs = 60000;
       const timestamps = memoryState.rpmRequests.get(provider) || [];
-      const rpmUsed = timestamps.filter(t => t > now - windowMs).length;
+      const rpmUsed = timestamps.filter((t) => t > now - windowMs).length;
       const concurrentUsed = memoryState.concurrent.get(provider) || 0;
 
       return {
@@ -387,13 +415,10 @@ export async function waitForRateLimit(
       return true;
     }
 
-    const waitTime = Math.min(
-      result.retryAfter || 5000,
-      maxWaitMs - (Date.now() - startTime)
-    );
+    const waitTime = Math.min(result.retryAfter || 5000, maxWaitMs - (Date.now() - startTime));
 
     if (waitTime <= 0) break;
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
   }
 
   return false;

@@ -1,63 +1,53 @@
 /**
- * Phase 14: AI Provider Status API
- * Real-time provider health and routing metrics
+ * AI Provider Status API
+ * Returns provider configuration status.
+ * Legacy router/load-balancer/health-checker removed — routing is now
+ * handled per-agent via callAI() providerPreferences.
  */
 
 import { NextResponse } from 'next/server';
 import { withSecurity } from '@/lib/security/security-middleware';
 import { NextRequest } from 'next/server';
-import { getAIProviderRouter } from '@/lib/ai/router/ai-provider-router';
-import { getAdvancedLoadBalancer } from '@/lib/ai/router/load-balancer';
-import { getProviderHealthChecker } from '@/lib/ai/router/health-checker';
 
 export const dynamic = 'force-dynamic';
 
+const PROVIDERS = ['ollama', 'groq', 'nvidia', 'gemini'] as const;
+
+const ENV_KEYS: Record<string, string> = {
+  ollama: 'OLLAMA_BASE_URL',
+  groq: 'GROQ_API_KEY',
+  nvidia: 'NVIDIA_NIM_API_KEY',
+  gemini: 'GEMINI_API_KEY',
+};
+
 /**
  * GET /api/admin/ai-providers/status
- * Returns real-time provider health and routing metrics
+ * Returns which providers have keys configured.
  */
 export async function GET(request: NextRequest) {
   return withSecurity(
     request,
     async () => {
       try {
-        const router = getAIProviderRouter();
-        const loadBalancer = getAdvancedLoadBalancer();
-        const healthChecker = getProviderHealthChecker();
-
-        // Get all metrics
-        const routingMetrics = router.getRoutingMetrics();
-        const loadBalancerState = loadBalancer.getState();
-        const healthResults = healthChecker.getLatestResults();
-
-        // Build response
-        const providers = Object.keys(routingMetrics.providerHealth).map((providerKey) => {
-          const provider = providerKey as keyof typeof routingMetrics.providerHealth;
-          const health = routingMetrics.providerHealth[provider];
-          const load = loadBalancerState[provider];
-          const healthResult = healthResults[provider];
-
+        const providers = PROVIDERS.map((name) => {
+          const envKey = ENV_KEYS[name];
+          const hasKey = !!process.env[envKey];
           return {
-            name: provider,
+            name,
             health: {
-              isHealthy: health.isHealthy,
-              circuitState: health.circuitState,
-              successRate: health.successRate,
-              avgLatencyMs: health.avgLatencyMs,
-              consecutiveFailures: health.consecutiveFailures,
-              lastHealthCheck: health.lastHealthCheck,
+              isHealthy: hasKey,
+              circuitState: 'CLOSED' as const,
+              successRate: hasKey ? 1 : 0,
+              avgLatencyMs: 0,
+              consecutiveFailures: 0,
+              lastHealthCheck: Date.now(),
             },
             load: {
-              activeRequests: load?.activeRequests || 0,
-              utilizationPercent: load?.capacities[provider]?.utilizationPercent || 0,
-              weight: loadBalancerState.weights[provider] || 0,
+              activeRequests: 0,
+              utilizationPercent: 0,
+              weight: hasKey ? 1 : 0,
             },
-            lastCheck: healthResult ? {
-              statusCode: healthResult.statusCode,
-              latencyMs: healthResult.latencyMs,
-              error: healthResult.error,
-              timestamp: healthResult.timestamp,
-            } : null,
+            lastCheck: null,
           };
         });
 
@@ -69,10 +59,8 @@ export async function GET(request: NextRequest) {
             summary: {
               healthyCount: providers.filter((p) => p.health.isHealthy).length,
               totalProviders: providers.length,
-              avgLatency:
-                providers.reduce((sum, p) => sum + (p.health.avgLatencyMs || 0), 0) /
-                providers.length,
-              totalActiveRequests: providers.reduce((sum, p) => sum + p.load.activeRequests, 0),
+              avgLatency: 0,
+              totalActiveRequests: 0,
             },
           },
         });

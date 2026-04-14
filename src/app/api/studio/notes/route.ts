@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/security/auth';
 import { checkSubscriptionAccess } from '@/lib/trial/subscription-checker';
@@ -163,7 +164,7 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid parameters', details: error.errors },
+        { success: false, error: 'Invalid parameters', details: error.issues },
         { status: 400 }
       );
     }
@@ -198,7 +199,7 @@ export async function POST(request: NextRequest) {
     const subscription = await checkSubscriptionAccess(authUser.id, 'content_studio');
     
     // Free tier limit: 50 notes
-    if (!subscription.isPremium) {
+    if (subscription.tier !== 'premium' && subscription.tier !== 'premium_plus') {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       const { count } = await supabase
         .from('user_notes')
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
     let normalizedNodeId: string | undefined;
     try {
       const normalized = await normalizeUPSCInput(`${validated.subject} ${validated.title.en}`);
-      normalizedNodeId = normalized?.nodeId;
+      normalizedNodeId = normalized?.nodeId ?? undefined;
     } catch { /* best-effort */ }
 
     // Calculate word count
@@ -280,7 +281,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid input', details: error.errors },
+        { success: false, error: 'Invalid input', details: error.issues },
         { status: 400 }
       );
     }

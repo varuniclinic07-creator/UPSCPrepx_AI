@@ -198,7 +198,7 @@ export default function AdminDashboard() {
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                formatter={((value: number) => [`₹${value.toLocaleString()}`, 'Revenue']) as any}
               />
               <Area
                 type="monotone"
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ plan, percentage }) => `${plan}: ${percentage}%`}
+                label={({ plan, percentage }: any) => `${plan}: ${percentage}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="count"
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
               className="w-full p-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center gap-3 border border-gray-200"
             >
               <span className="p-1.5 bg-white rounded shadow-sm">
-                <Shield className="w-4 h-4 text-gray-600" />
+                <ShieldCheck className="w-4 h-4 text-gray-600" />
               </span>
               Feature Flags
             </Link>
@@ -403,7 +403,7 @@ function StatCard({
 }: {
   title: string;
   value: string | number;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   trend: string;
   trendUp: boolean;

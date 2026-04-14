@@ -1,6 +1,6 @@
 /**
  * Mentor Chat Service
- * 
+ *
  * Master Prompt v8.0 - Feature F10 (READ Mode)
  * - Chat with contextual user data
  * - 9Router -> Groq -> Ollama fallback
@@ -9,11 +9,18 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { callAI } from '@/lib/ai/ai-provider-client';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() {
+  if (!_sb)
+    _sb = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  return _sb;
+}
 
 export interface MentorMessage {
   id?: string;
@@ -35,14 +42,16 @@ export interface UserContext {
 export class MentorChatService {
   async sendMessage(userId: string, sessionId: string, content: string, context?: UserContext) {
     const timestamp = new Date().toISOString();
-    
+
     // Save user message
-    await getSupabase().from('mentor_messages').insert({
-      session_id: sessionId,
-      role: 'user',
-      content,
-      context_snapshot: context || {},
-    });
+    await getSupabase()
+      .from('mentor_messages')
+      .insert({
+        session_id: sessionId,
+        role: 'user',
+        content,
+        context_snapshot: context || {},
+      });
 
     // Build context prompt
     let contextText = '';
@@ -74,7 +83,7 @@ RESPONSE:`;
 
     const reply = await callAI({
       prompt,
-      provider: '9router',
+      providerPreferences: ['a4f'],
       maxTokens: 1500,
     });
 
@@ -94,7 +103,7 @@ RESPONSE:`;
       .select('*')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
-    return data || [];
+    return (data || []) as unknown as MentorMessage[];
   }
 
   async getSessions(userId: string) {

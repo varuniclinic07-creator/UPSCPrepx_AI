@@ -67,3 +67,7 @@ logs/
 secrets.env
 *.pem
 *.key
+apikey-upsc.txt
+.env.production.deploy
+
+superpowers/

@@ -662,7 +662,7 @@ export function getOrGenerateRequestId(headers: Headers): string {
 export function withApiResponse<T>(
     handler: () => Promise<NextResponse<ApiResponse<T>>>
 ): () => Promise<NextResponse<ApiResponse<T>>> {
-    return async () => {
+    return (async () => {
         const requestId = generateRequestId();
         const startTime = Date.now();
 
@@ -677,9 +677,9 @@ export function withApiResponse<T>(
             return response;
         } catch (error) {
             const duration = Date.now() - startTime;
-            const errorResponse = errorResponse(error as Error, requestId);
-            errorResponse.headers.set('X-Response-Time', `${duration}ms`);
-            return errorResponse;
+            const errResp = errorResponse(error as Error, requestId);
+            errResp.headers.set('X-Response-Time', `${duration}ms`);
+            return errResp as NextResponse<ApiResponse<T>>;
         }
-    };
+    }) as () => Promise<NextResponse<ApiResponse<T>>>;
 }

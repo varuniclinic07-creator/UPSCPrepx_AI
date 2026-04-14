@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 import {
   calculateQuizScore,
@@ -25,8 +26,8 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
@@ -55,10 +56,10 @@ export async function POST(request: NextRequest) {
 
     // Fetch user profile
     const { data: profile, error: profileError } = await getSupabase()
-      .from('user_profiles')
+      .from('user_profiles' as any)
       .select('*')
       .eq('user_id', user_id)
-      .single();
+      .single() as { data: any; error: any };
 
     if (profileError || !profile) {
       return NextResponse.json(
@@ -72,13 +73,13 @@ export async function POST(request: NextRequest) {
 
     // Fetch quiz questions for validation
     const { data: jobData } = await getSupabase()
-      .from('jobs')
+      .from('jobs' as any)
       .select('payload')
       .eq('user_id', user_id)
       .eq('job_type', 'diagnostic_quiz')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .single() as { data: any };
 
     if (!jobData?.payload?.questions) {
       return NextResponse.json(
@@ -142,8 +143,8 @@ export async function POST(request: NextRequest) {
     await awardOnboardingXP(user_id);
 
     // Mark onboarding as completed
-    await getSupabase()
-      .from('user_profiles')
+    await (getSupabase()
+      .from('user_profiles' as any) as any)
       .update({
         onboarding_completed: true,
         preparation_stage: preparationStage,
@@ -152,24 +153,24 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user_id);
 
     // Store quiz attempt
-    await getSupabase().from('quiz_attempts').insert({
+    await getSupabase().from('quiz_attempts' as any).insert({
       user_id,
       quiz_type: 'diagnostic',
       questions: storedQuestions,
       score,
       total_questions: totalQuestions,
       correct_answers: correctCount,
-      time_taken_sec: answers.reduce((sum, a) => sum + a.time_spent_sec, 0),
+      time_taken_sec: answers.reduce((sum: number, a: { time_spent_sec: number }) => sum + a.time_spent_sec, 0),
       ai_evaluation: {
         strengths,
         weaknesses,
         subject_accuracy: subjectAccuracy,
         preparation_stage: preparationStage,
       },
-    });
+    } as any);
 
     // Log audit event
-    await getSupabase().from('audit_logs').insert({
+    await getSupabase().from('audit_logs' as any).insert({
       user_id,
       action: 'onboarding_completed',
       resource_type: 'user_profile',
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
         preparation_stage: preparationStage,
         trial_expires_at: trial.trial_expires_at,
       },
-    });
+    } as any);
 
     return NextResponse.json({
       success: true,
@@ -221,7 +222,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid request data',
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 }
       );

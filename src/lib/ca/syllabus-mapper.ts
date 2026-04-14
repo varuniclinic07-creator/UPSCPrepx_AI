@@ -9,11 +9,12 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
@@ -172,8 +173,8 @@ export async function mapArticleToSyllabus(
       const validSubjects = ['GS1', 'GS2', 'GS3', 'GS4', 'Essay'];
       return (
         validSubjects.includes(m.subject) &&
-        m.relevance_score >= 60 &&
-        m.relevance_score <= 100 &&
+        m.relevanceScore >= 60 &&
+        m.relevanceScore <= 100 &&
         m.topic &&
         m.topic.length > 0 &&
         Array.isArray(m.keywords)
@@ -214,7 +215,7 @@ async function findSyllabusNode(
       .ilike('name', `%${topic}%`)
       .eq('subject', subject)
       .limit(1)
-      .single();
+      .single() as { data: any; error: any };
 
     if (error || !data) {
       // Try fuzzy search with keywords
@@ -226,7 +227,7 @@ async function findSyllabusNode(
           .ilike('name', `%${keyword}%`)
           .eq('subject', subject)
           .limit(1)
-          .single();
+          .single() as { data: any; error: any };
 
         if (fuzzyData) {
           return fuzzyData.id;
@@ -260,7 +261,7 @@ export async function saveSyllabusMappings(
       syllabus_node_id: m.syllabusNodeId,
       subject: m.subject,
       topic: m.topic,
-      relevance_score: m.relevance_score,
+      relevance_score: m.relevanceScore,
     }));
 
     const { error } = await getSupabase()
@@ -401,13 +402,13 @@ export async function findRelatedNotes(
     .select('id, title, syllabus_mapping')
     .in('syllabus_node_id', syllabusNodeIds)
     .eq('status', 'published')
-    .limit(5);
+    .limit(5) as { data: any[] | null; error: any };
 
   if (!relatedNotes) {
     return [];
   }
 
-  return relatedNotes.map(note => ({
+  return relatedNotes.map((note: any) => ({
     noteId: note.id,
     title: note.title,
     relevanceScore: 80, // Default high relevance since syllabus matches

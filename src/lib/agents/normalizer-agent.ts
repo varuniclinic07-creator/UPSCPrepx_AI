@@ -137,10 +137,10 @@ export class NormalizerAgent extends BaseAgent {
   /** Write result to normalizer cache */
   private async writeCache(hash: string, rawInput: string, result: NormalizationResult): Promise<void> {
     try {
+      // raw_input_hash is a DB-generated column (md5(lower(trim(raw_input)))) — do NOT send it
       await this.supabase
         .from('upsc_input_normalizations')
         .upsert({
-          raw_input_hash: hash,
           raw_input: rawInput.slice(0, 500),
           resolved_subject: result.subject,
           resolved_topic: result.topic,
@@ -220,6 +220,7 @@ Return ONLY valid JSON, no other text.`,
         temperature: 0.2,
         maxTokens: 200,
         skipSimplifiedLanguage: true,
+        providerPreferences: this.getProviderPreferences(),
       });
 
       // Parse AI response — extract JSON from potentially wrapped output

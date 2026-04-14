@@ -7,9 +7,10 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface WeekMetrics {
@@ -44,32 +45,32 @@ export async function getWeeklyComparison(userId: string): Promise<{ current: We
   // MCQ accuracy for both weeks
   const { data: currentMCQ } = await getSupabase()
     .from('mcq_attempts')
-    .select('is_correct')
+    .select('*')
     .eq('user_id', userId)
-    .gte('created_at', currentWeekStart.toISOString());
+    .gte('created_at', currentWeekStart.toISOString()) as { data: any[] | null };
 
   const { data: previousMCQ } = await getSupabase()
     .from('mcq_attempts')
-    .select('is_correct')
+    .select('*')
     .eq('user_id', userId)
     .gte('created_at', previousWeekStart.toISOString())
-    .lt('created_at', currentWeekStart.toISOString());
+    .lt('created_at', currentWeekStart.toISOString()) as { data: any[] | null };
 
   // Mock tests
   const { data: currentMocks } = await getSupabase()
     .from('study_tasks')
     .select('id')
-    .eq('task_type', 'mock_test')
-    .eq('status', 'completed')
-    .gte('created_at', currentWeekStart.toISOString());
+    .eq('task_type' as any, 'mock_test')
+    .eq('status' as any, 'completed')
+    .gte('created_at', currentWeekStart.toISOString()) as { data: any[] | null };
 
   const { data: previousMocks } = await getSupabase()
     .from('study_tasks')
     .select('id')
-    .eq('task_type', 'mock_test')
-    .eq('status', 'completed')
+    .eq('task_type' as any, 'mock_test')
+    .eq('status' as any, 'completed')
     .gte('created_at', previousWeekStart.toISOString())
-    .lt('created_at', currentWeekStart.toISOString());
+    .lt('created_at', currentWeekStart.toISOString()) as { data: any[] | null };
 
   const streak = await getCurrentStreak(userId);
 
@@ -81,7 +82,7 @@ export async function getWeeklyComparison(userId: string): Promise<{ current: We
   const current: WeekMetrics = {
     hours: calcHours(currentCompletions),
     tasks: currentCompletions?.length || 0,
-    accuracy: currentMCQ?.length > 0 ? Math.round((currentMCQ.filter(m => m.is_correct).length / currentMCQ.length) * 100) : 0,
+    accuracy: (currentMCQ && currentMCQ.length > 0) ? Math.round((currentMCQ.filter((m: any) => m.is_correct).length / currentMCQ.length) * 100) : 0,
     streak,
     mockTests: currentMocks?.length || 0,
   };
@@ -89,7 +90,7 @@ export async function getWeeklyComparison(userId: string): Promise<{ current: We
   const previous: WeekMetrics = {
     hours: calcHours(previousCompletions),
     tasks: previousCompletions?.length || 0,
-    accuracy: previousMCQ?.length > 0 ? Math.round((previousMCQ.filter(m => m.is_correct).length / previousMCQ.length) * 100) : 0,
+    accuracy: (previousMCQ && previousMCQ.length > 0) ? Math.round((previousMCQ.filter((m: any) => m.is_correct).length / previousMCQ.length) * 100) : 0,
     streak: 0,
     mockTests: previousMocks?.length || 0,
   };
@@ -102,22 +103,22 @@ export async function getCurrentStreak(userId: string): Promise<number> {
     .from('study_completions')
     .select('completed_at')
     .eq('user_id', userId)
-    .order('completed_at', { ascending: false });
+    .order('completed_at', { ascending: false }) as { data: any[] | null };
 
   if (!data || data.length === 0) return 0;
 
   let streak = 0;
-  const dates = [...new Set(data.map(d => d.completed_at?.split('T')[0]))].filter(Boolean).sort().reverse();
+  const dates = [...new Set(data.map((d: any) => d.completed_at?.split('T')[0]))].filter(Boolean).sort().reverse();
 
   const today = new Date().toISOString().split('T')[0];
   for (let i = 0; i < dates.length; i++) {
     if (i === 0) {
       // Allow today or yesterday to start streak
-      const diff = Math.floor((new Date(today).getTime() - new Date(dates[i]).getTime()) / (1000 * 60 * 60 * 24));
+      const diff = Math.floor((new Date(today).getTime() - new Date(dates[i] as string).getTime()) / (1000 * 60 * 60 * 24));
       if (diff > 1) return 0;
     } else {
-      const prev = new Date(dates[i - 1]);
-      const curr = new Date(dates[i]);
+      const prev = new Date(dates[i - 1] as string);
+      const curr = new Date(dates[i] as string);
       const diff = Math.floor((prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24));
       if (diff !== 1) break;
     }

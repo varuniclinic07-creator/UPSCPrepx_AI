@@ -7,9 +7,10 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 export interface SubjectPerformance {
@@ -25,18 +26,18 @@ export async function getSubjectPerformance(userId: string): Promise<SubjectPerf
   const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const prev30 = new Date(past30.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const { data: recent } = await getSupabase()
-    .from('mcq_attempts')
-    .select('subject, is_correct')
+  const { data: recent } = await (getSupabase()
+    .from('mcq_attempts') as any)
+    .select('subject, accuracy_percent')
     .eq('user_id', userId)
-    .gte('created_at', past30.toISOString());
+    .gte('created_at', past30.toISOString()) as { data: Array<{ subject: string; accuracy_percent: number }> | null };
 
-  const { data: previous } = await getSupabase()
-    .from('mcq_attempts')
-    .select('subject, is_correct')
+  const { data: previous } = await (getSupabase()
+    .from('mcq_attempts') as any)
+    .select('subject, accuracy_percent')
     .eq('user_id', userId)
     .gte('created_at', prev30.toISOString())
-    .lt('created_at', past30.toISOString());
+    .lt('created_at', past30.toISOString()) as { data: Array<{ subject: string; accuracy_percent: number }> | null };
 
   const subjects: string[] = ['GS1', 'GS2', 'GS3', 'GS4', 'CSAT', 'Current Affairs'];
 
@@ -45,11 +46,11 @@ export async function getSubjectPerformance(userId: string): Promise<SubjectPerf
     const prevSub = previous?.filter((a) => a.subject === subject) || [];
 
     const recentAccuracy = recentSub.length > 0
-      ? Math.round((recentSub.filter((a) => a.is_correct).length / recentSub.length) * 100)
+      ? Math.round(recentSub.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / recentSub.length)
       : 0;
 
     const prevAccuracy = prevSub.length > 0
-      ? Math.round((prevSub.filter((a) => a.is_correct).length / prevSub.length) * 100)
+      ? Math.round(prevSub.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / prevSub.length)
       : 0;
 
     const change = recentAccuracy - prevAccuracy;

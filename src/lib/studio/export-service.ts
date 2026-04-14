@@ -1,10 +1,10 @@
 /**
  * Export Service - User Content Studio (Feature F4)
- * 
+ *
  * PDF, Word, Markdown export functionality
  * Master Prompt v8.0 - READ Mode
  * TipTap Rich Text Editor
- * 
+ *
  * AI Provider: 9Router → Groq → Ollama
  */
 
@@ -78,16 +78,17 @@ export async function exportToPDF(
   options?: ExportOptions
 ): Promise<ExportResult> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get the note
-    const { data: note } = await supabase
+    const { data: noteData } = await supabase
       .from('user_notes')
       .select()
       .eq('id', noteId)
       .eq('user_id', userId)
       .single();
 
+    const note = noteData as any;
     if (!note) {
       return { success: false, error: 'Note not found' };
     }
@@ -96,17 +97,13 @@ export async function exportToPDF(
     const html = generateHTML(note.content, TIP_TAP_EXTENSIONS);
 
     // Convert HTML to pdfmake document definition
-    const docDefinition = convertHTMLToPDFDefinition(
-      note.title.en || 'Untitled',
-      html,
-      options
-    );
+    const docDefinition = convertHTMLToPDFDefinition(note.title.en || 'Untitled', html, options);
 
     // In production, use pdfmake server-side or cloud function
     // For now, create a record and return URL for client-side generation
     const fileName = `${sanitizeFileName(note.title.en)}.pdf`;
 
-    const { data: exportRecord, error } = await supabase
+    const { data: exportRecordData, error } = await supabase
       .from('note_exports')
       .insert({
         user_id: userId,
@@ -116,10 +113,11 @@ export async function exportToPDF(
         status: 'completed',
         file_url: `/api/studio/export/${noteId}/pdf`,
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      })
+      } as any)
       .select()
       .single();
 
+    const exportRecord = exportRecordData as any;
     if (error) {
       console.error('Failed to create export record:', error);
       return { success: false, error: error.message };
@@ -150,16 +148,17 @@ export async function exportToWord(
   options?: ExportOptions
 ): Promise<ExportResult> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get the note
-    const { data: note } = await supabase
+    const { data: noteData } = await supabase
       .from('user_notes')
       .select()
       .eq('id', noteId)
       .eq('user_id', userId)
       .single();
 
+    const note = noteData as any;
     if (!note) {
       return { success: false, error: 'Note not found' };
     }
@@ -171,7 +170,7 @@ export async function exportToWord(
     // For now, create a record and return URL for client-side generation
     const fileName = `${sanitizeFileName(note.title.en)}.docx`;
 
-    const { data: exportRecord, error } = await supabase
+    const { data: exportRecordData, error } = await supabase
       .from('note_exports')
       .insert({
         user_id: userId,
@@ -181,10 +180,11 @@ export async function exportToWord(
         status: 'completed',
         file_url: `/api/studio/export/${noteId}/docx`,
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      })
+      } as any)
       .select()
       .single();
 
+    const exportRecord = exportRecordData as any;
     if (error) {
       console.error('Failed to create export record:', error);
       return { success: false, error: error.message };
@@ -215,22 +215,23 @@ export async function exportToMarkdown(
   options?: ExportOptions
 ): Promise<ExportResult> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get the note
-    const { data: note } = await supabase
+    const { data: noteData } = await supabase
       .from('user_notes')
       .select()
       .eq('id', noteId)
       .eq('user_id', userId)
       .single();
 
+    const note = noteData as any;
     if (!note) {
       return { success: false, error: 'Note not found' };
     }
 
     // Convert TipTap JSON to HTML
-    const html = generateHTML(note.content, TIP_TAP_EXTENSIONS);
+    const html = generateHTML(note.content as any, TIP_TAP_EXTENSIONS);
 
     // Convert HTML to Markdown (client-side with turndown)
     // For server-side, use turndown Node.js package
@@ -239,10 +240,12 @@ export async function exportToMarkdown(
     // Add metadata if requested
     let content = markdown;
     if (options?.includeMetadata) {
+      const titleEn = note.title?.en || 'Untitled';
+      const tags = Array.isArray(note.tags) ? note.tags.join(', ') : '';
       content = `---
-title: ${note.title.en}
+title: ${titleEn}
 subject: ${note.subject}
-tags: ${note.tags.join(', ')}
+tags: ${tags}
 word_count: ${note.word_count}
 created: ${new Date(note.created_at).toLocaleDateString()}
 ---
@@ -250,7 +253,8 @@ created: ${new Date(note.created_at).toLocaleDateString()}
 ${markdown}`;
     }
 
-    const fileName = `${sanitizeFileName(note.title.en)}.md`;
+    const titleEn = note.title?.en || 'Untitled';
+    const fileName = `${sanitizeFileName(titleEn)}.md`;
 
     // Store in Supabase Storage
     const { data: storageData, error: uploadError } = await supabase.storage
@@ -263,7 +267,7 @@ ${markdown}`;
     if (uploadError) {
       console.error('Failed to upload to storage:', uploadError);
       // Fallback: create record without file storage
-      const { data: exportRecord } = await supabase
+      const { data: exportRecordData } = await supabase
         .from('note_exports')
         .insert({
           user_id: userId,
@@ -273,14 +277,15 @@ ${markdown}`;
           status: 'completed',
           file_url: `data:text/markdown;base64,${Buffer.from(content).toString('base64')}`,
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        })
+        } as any)
         .select()
         .single();
 
+      const exportRecordFallback = exportRecordData as any;
       return {
         success: true,
-        exportId: exportRecord?.id,
-        fileUrl: exportRecord?.file_url,
+        exportId: exportRecordFallback?.id,
+        fileUrl: exportRecordFallback?.file_url ?? undefined,
         fileName,
       };
     }
@@ -290,7 +295,7 @@ ${markdown}`;
       .from('note-exports')
       .getPublicUrl(`${userId}/${fileName}`);
 
-    const { data: exportRecord, error } = await supabase
+    const { data: exportRecordData2, error } = await supabase
       .from('note_exports')
       .insert({
         user_id: userId,
@@ -301,9 +306,11 @@ ${markdown}`;
         file_size_bytes: content.length,
         status: 'completed',
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      })
+      } as any)
       .select()
       .single();
+
+    const exportRecord = exportRecordData2 as any;
 
     if (error) {
       console.error('Failed to create export record:', error);
@@ -371,22 +378,21 @@ export async function batchExportNotes(
 /**
  * Get export history for a user
  */
-export async function getExportHistory(
-  userId: string,
-  limit: number = 20
-): Promise<any[]> {
+export async function getExportHistory(userId: string, limit: number = 20): Promise<any[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('note_exports')
-      .select(`
+      .select(
+        `
         *,
         user_notes (
           title,
           subject
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -411,7 +417,7 @@ export async function downloadExport(
   userId: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get export record
     const { data: exportRecord, error } = await supabase
@@ -426,7 +432,7 @@ export async function downloadExport(
     }
 
     // Check if expired
-    if (new Date(exportRecord.expires_at) < new Date()) {
+    if (new Date(exportRecord.expires_at as string) < new Date()) {
       return { success: false, error: 'Export has expired' };
     }
 
@@ -434,9 +440,9 @@ export async function downloadExport(
     await supabase
       .from('note_exports')
       .update({
-        download_count: (exportRecord.download_count || 0) + 1,
+        download_count: ((exportRecord as any).download_count || 0) + 1,
         downloaded_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('id', exportId);
 
     return {
@@ -459,11 +465,7 @@ export async function downloadExport(
 /**
  * Convert HTML to pdfmake document definition
  */
-function convertHTMLToPDFDefinition(
-  title: string,
-  html: string,
-  options?: ExportOptions
-): any {
+function convertHTMLToPDFDefinition(title: string, html: string, options?: ExportOptions): any {
   // Simplified conversion - in production use html-to-pdfmake
   return {
     content: [
@@ -502,17 +504,17 @@ function htmlToMarkdown(html: string): string {
   markdown = markdown.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
   markdown = markdown.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
   markdown = markdown.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
-  markdown = markdown.replace(/<ul[^>]*>(.*?)<\/ul>/gis, (match, p1) => {
+  markdown = markdown.replace(/<ul[^>]*>([\s\S]*?)<\/ul>/gi, (match, p1) => {
     return p1.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
   });
-  markdown = markdown.replace(/<ol[^>]*>(.*?)<\/ol>/gis, (match, p1) => {
+  markdown = markdown.replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, (match, p1) => {
     let index = 1;
     return p1.replace(/<li[^>]*>(.*?)<\/li>/gi, () => `${index++}. $1\n`);
   });
   markdown = markdown.replace(/<a[^>]*href="(.*?)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
   markdown = markdown.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
-  markdown = markdown.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '```\n$1\n```');
-  markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, '> $1');
+  markdown = markdown.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '```\n$1\n```');
+  markdown = markdown.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, '> $1');
   markdown = markdown.replace(/<img[^>]*src="(.*?)"[^>]*alt="(.*?)"[^>]*>/gi, '![$2]($1)');
   markdown = markdown.replace(/<hr[^>]*>/gi, '---\n');
   markdown = markdown.replace(/<br[^>]*>/gi, '\n');

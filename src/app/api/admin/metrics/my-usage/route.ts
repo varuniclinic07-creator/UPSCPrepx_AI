@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
  * Returns current user's AI usage and budget status
  */
 async function getMyUsage(userId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Get budget status
   const budgetStatus = await costTracker.getBudgetStatus(userId);
@@ -40,7 +40,9 @@ async function getMyUsage(userId: string) {
   // Aggregate by day
   const dailyBreakdown: Record<string, { tokens: number; cost: number }> = {};
   for (const record of dailyUsage || []) {
-    const date = new Date(record.created_at).toISOString().split('T')[0];
+    const date = record.created_at
+      ? new Date(record.created_at).toISOString().split('T')[0]
+      : 'unknown';
     if (!dailyBreakdown[date]) {
       dailyBreakdown[date] = { tokens: 0, cost: 0 };
     }
@@ -58,12 +60,13 @@ async function getMyUsage(userId: string) {
 
   const endpointUsage: Record<string, { tokens: number; cost: number; count: number }> = {};
   for (const record of byEndpoint || []) {
-    if (!endpointUsage[record.endpoint]) {
-      endpointUsage[record.endpoint] = { tokens: 0, cost: 0, count: 0 };
+    const ep = record.endpoint ?? 'unknown';
+    if (!endpointUsage[ep]) {
+      endpointUsage[ep] = { tokens: 0, cost: 0, count: 0 };
     }
-    endpointUsage[record.endpoint].tokens += record.total_tokens || 0;
-    endpointUsage[record.endpoint].cost += record.cost_usd || 0;
-    endpointUsage[record.endpoint].count += 1;
+    endpointUsage[ep].tokens += record.total_tokens || 0;
+    endpointUsage[ep].cost += record.cost_usd || 0;
+    endpointUsage[ep].count += 1;
   }
 
   return {
@@ -90,7 +93,7 @@ export async function GET(request: NextRequest) {
     request,
     async () => {
       try {
-        const supabase = createClient();
+        const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {

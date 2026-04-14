@@ -29,7 +29,7 @@ interface Question {
 interface Evaluation {
   id: string;
   question_text: string;
-  subject: string;
+  subject: 'GS1' | 'GS2' | 'GS3' | 'GS4' | 'Essay';
   topic: string;
   overall_percentage: number;
   grade: string;
@@ -253,7 +253,16 @@ export default function AnswerPracticePage() {
                 .map(question => (
                   <MainsQuestionCard
                     key={question.id}
-                    {...question}
+                    id={question.id}
+                    questionText={question.question_text}
+                    questionTextHindi={question.question_text_hindi}
+                    subject={question.subject}
+                    topic={question.topic}
+                    wordLimit={question.word_limit}
+                    timeLimitMin={question.time_limit_min}
+                    marks={question.marks}
+                    year={question.year}
+                    isPYQ={question.is_pyo}
                     onStart={() => handleStartWriting(question)}
                   />
                 ))}
@@ -270,7 +279,18 @@ export default function AnswerPracticePage() {
             >
               ← Back to Questions
             </button>
-            <MainsQuestionCard {...selectedQuestion} />
+            <MainsQuestionCard
+              id={selectedQuestion.id}
+              questionText={selectedQuestion.question_text}
+              questionTextHindi={selectedQuestion.question_text_hindi}
+              subject={selectedQuestion.subject}
+              topic={selectedQuestion.topic}
+              wordLimit={selectedQuestion.word_limit}
+              timeLimitMin={selectedQuestion.time_limit_min}
+              marks={selectedQuestion.marks}
+              year={selectedQuestion.year}
+              isPYQ={selectedQuestion.is_pyo}
+            />
             {/* Answer editor would be rendered here */}
             <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
               <p className="text-gray-600 mb-4">Answer editor would be loaded here</p>

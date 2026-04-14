@@ -13,6 +13,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { requireSession } from '@/lib/auth/session';
 import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
@@ -57,14 +58,17 @@ export async function POST(request: NextRequest) {
     const body: LivingContentRequest = await request.json();
 
     if (!body.topic || !body.contentType) {
-      return NextResponse.json<LivingContentResponse>({
-        success: false,
-        generatedNow: false,
-        error: 'topic and contentType are required',
-      }, { status: 400 });
+      return NextResponse.json<LivingContentResponse>(
+        {
+          success: false,
+          generatedNow: false,
+          error: 'topic and contentType are required',
+        },
+        { status: 400 }
+      );
     }
 
-    const supabase = createClient(
+    const supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     );
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         // Check freshness — content less than 7 days old is fresh
-        const age = Date.now() - new Date(existing.created_at).getTime();
+        const age = Date.now() - new Date(existing.created_at as string).getTime();
         const isFresh = age < 7 * 24 * 60 * 60 * 1000;
 
         if (isFresh) {
@@ -95,7 +99,7 @@ export async function POST(request: NextRequest) {
             success: true,
             content: existing.generated_content,
             nodeId: normalized.nodeId,
-            freshness: existing.confidence_score,
+            freshness: existing.confidence_score ?? undefined,
             generatedNow: false,
           });
         }
@@ -108,12 +112,15 @@ export async function POST(request: NextRequest) {
         .eq('id', normalized.nodeId)
         .single();
 
-      if (nodeData?.content && nodeData.freshness_score > 0.5 && !body.forceRefresh) {
+      if (nodeData?.content && (nodeData.freshness_score ?? 0) > 0.5 && !body.forceRefresh) {
         return NextResponse.json<LivingContentResponse>({
           success: true,
-          content: { content: nodeData.content, ...(nodeData.metadata || {}) },
+          content: {
+            content: nodeData.content,
+            ...((nodeData.metadata as Record<string, unknown>) || {}),
+          },
           nodeId: normalized.nodeId,
-          freshness: nodeData.freshness_score,
+          freshness: nodeData.freshness_score ?? undefined,
           generatedNow: false,
         });
       }
@@ -204,11 +211,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!result || !result.success) {
-      return NextResponse.json<LivingContentResponse>({
-        success: false,
-        generatedNow: true,
-        error: result?.error || 'Content generation failed',
-      }, { status: 500 });
+      return NextResponse.json<LivingContentResponse>(
+        {
+          success: false,
+          generatedNow: true,
+          error: result?.error || 'Content generation failed',
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json<LivingContentResponse>({
@@ -220,11 +230,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[api/content/living] Failed:', error);
-    return NextResponse.json<LivingContentResponse>({
-      success: false,
-      generatedNow: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    return NextResponse.json<LivingContentResponse>(
+      {
+        success: false,
+        generatedNow: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }
 

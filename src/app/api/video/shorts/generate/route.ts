@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVideoShortsGenerator } from '@/lib/video/shorts-generator';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
@@ -68,8 +69,7 @@ export async function POST(request: NextRequest) {
     } catch (e) { /* non-blocking enrichment */ }
 
     // Create queue entry
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
         title: `UPSC ${body.topic} in 60 Seconds`,
         script: '',
         duration: 60,
-        status: queueData.status,
-        estimatedCompletionTime: queueData.estimated_completion_at,
+        status: queueData.status || 'pending',
+        estimatedCompletionTime: queueData.estimated_completion_at ?? undefined,
       },
     });
 
@@ -133,8 +133,7 @@ async function generateVideoAsync(
   options: GenerateVideoShortRequest,
   userId: string
 ) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
@@ -248,8 +247,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'queueId parameter required' }, { status: 400 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 

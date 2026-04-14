@@ -76,7 +76,7 @@ class CAIngestionAgent extends BaseAgent {
                 sourceUrl: extracted.sourceUrl || source.url,
                 subject: extracted.subject,
                 topics: extracted.topics,
-                nodeId,
+                nodeId: nodeId ?? undefined,
               };
 
               // Insert into current_affairs table
@@ -216,6 +216,7 @@ class CAIngestionAgent extends BaseAgent {
         systemPrompt,
         userPrompt: `Source: ${source.name}\n\nRaw content:\n${content}`,
         skipSimplifiedLanguage: true,
+        providerPreferences: this.getProviderPreferences(),
       });
 
       return this.parseExtractedArticle(response);

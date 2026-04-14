@@ -49,6 +49,11 @@ export class AIProviderClient {
   private currentGroqKeyIndex: number = 0;
   private geminiKeys: string[];
   private currentGeminiKeyIndex: number = 0;
+  private kiloKeys: string[];
+  private currentKiloKeyIndex: number = 0;
+  private kiloModels: string[];
+  private currentKiloModelIndex: number = 0;
+  private opencodeModels: string[];
 
   constructor() {
     // CRITICAL: AI Provider Priority — Ollama primary, Groq fallback
@@ -98,6 +103,31 @@ export class AIProviderClient {
           process.env.GEMINI_API_KEY_4
         ),
       },
+      {
+        name: 'kilo',
+        baseUrl: process.env.KILO_API_BASE_URL || 'https://api.kilo.ai/api/gateway',
+        apiKey: '', // Resolved via key rotation at call time
+        model: process.env.KILO_MODEL || 'bytedance-seed/dola-seed-2.0-pro:free',
+        priority: 5, // After Gemini
+        rateLimitRPM: 30,
+        rateLimitConcurrent: 10,
+        isActive: Boolean(
+          process.env.KILO_API_KEY_1 ||
+          process.env.KILO_API_KEY_2 ||
+          process.env.KILO_API_KEY_3 ||
+          process.env.KILO_API_KEY_4
+        ),
+      },
+      {
+        name: 'opencode',
+        baseUrl: process.env.OPENCODE_API_BASE_URL || 'http://localhost:3100',
+        apiKey: process.env.OPENCODE_API_KEY || '',
+        model: process.env.OPENCODE_MODEL || 'opencode zen/Big Pickle',
+        priority: 6, // After Kilo
+        rateLimitRPM: 60,
+        rateLimitConcurrent: 10,
+        isActive: Boolean(process.env.OPENCODE_API_KEY),
+      },
     ];
 
     // Groq multi-key rotation: GROQ_API_KEY_1 through _7, fallback to single GROQ_API_KEY
@@ -122,6 +152,44 @@ export class AIProviderClient {
       process.env.GEMINI_API_KEY_3,
       process.env.GEMINI_API_KEY_4,
     ].filter((k): k is string => !!k);
+
+    // Kilo multi-key rotation: KILO_API_KEY_1 through _4
+    this.kiloKeys = [
+      process.env.KILO_API_KEY_1,
+      process.env.KILO_API_KEY_2,
+      process.env.KILO_API_KEY_3,
+      process.env.KILO_API_KEY_4,
+    ].filter((k): k is string => !!k);
+
+    // Kilo model fallback order (5 models, cycled on failure)
+    this.kiloModels = [
+      'bytedance-seed/dola-seed-2.0-pro:free',
+      'nvidia/nemotron-3-super-120b-a12b:free',
+      'x-ai/grok-code-fast-1:optimized:free',
+      'kilo-auto/free',
+      'openrouter/free',
+    ];
+
+    // OpenCode model fallback order (16 models, cycled on failure)
+    this.opencodeModels = [
+      'opencode zen/Big Pickle',
+      'go/MiniMax M2.7',
+      'Nemotron 3 Super Free',
+      'MiniMax M2.5 Free',
+      'Nvidia/Kimi K2.5',
+      'Nvidia/Qwen3.5-397B-A17B',
+      'Nvidia/Llama 3.3 Nemotron Super 49b V1.5',
+      'Nvidia/Mistral Large 3 675B Instruct 2512',
+      'Nvidia/NeMo Retriever OCR v1',
+      'Nvidia/Llama 4 Maverick 17b 128e Instruct',
+      'Nvidia/MiniMax-M2.5',
+      'Nvidia/Devstral-2-123B-Instruct-2512',
+      'Nvidia/GLM-4.7',
+      'Nvidia/GLM5',
+      'Nvidia/DeepSeek V3.1 Terminus',
+      'Nvidia/GPT-OSS-120B',
+      'Nvidia/Step 3.5 Flash',
+    ];
 
     // Initialize health status
     this.providers.forEach(p => this.providerHealth.set(p.name, true));
@@ -412,6 +480,44 @@ export class AIProviderClient {
     }
   }
 
+  /**
+   * Get current Kilo key (rotation)
+   */
+  getKiloKey(): string {
+    if (this.kiloKeys.length === 0) return '';
+    return this.kiloKeys[this.currentKiloKeyIndex];
+  }
+
+  /**
+   * Rotate to next Kilo key
+   */
+  private rotateKiloKey(): void {
+    if (this.kiloKeys.length > 0) {
+      this.currentKiloKeyIndex = (this.currentKiloKeyIndex + 1) % this.kiloKeys.length;
+    }
+  }
+
+  /**
+   * Get current Kilo model (fallback rotation)
+   */
+  getKiloModel(): string {
+    return this.kiloModels[this.currentKiloModelIndex];
+  }
+
+  /**
+   * Cycle to next Kilo model on failure
+   */
+  cycleKiloModel(): void {
+    this.currentKiloModelIndex = (this.currentKiloModelIndex + 1) % this.kiloModels.length;
+  }
+
+  /**
+   * Get OpenCode models list for fallback iteration
+   */
+  getOpencodeModels(): string[] {
+    return this.opencodeModels;
+  }
+
   /** Returns provider names in priority order */
   getProviderNames(): string[] {
     return [...this.providers]
@@ -423,6 +529,7 @@ export class AIProviderClient {
   getProviderKey(name: string): string {
     if (name === 'groq') return this.getGroqKey();
     if (name === 'gemini') return this.getGeminiKey();
+    if (name === 'kilo') return this.getKiloKey();
     return this.providers.find(p => p.name === name)?.apiKey ?? '';
   }
 
@@ -430,7 +537,7 @@ export class AIProviderClient {
    * Get max tokens for brevity level
    */
   private getMaxTokensForBrevity(level: string): number {
-    const tokenMap = {
+    const tokenMap: Record<string, number> = {
       '100': 150,
       '250': 350,
       '500': 700,
@@ -460,16 +567,38 @@ export function getAIProviderClient(): AIProviderClient {
 // callAIStream() — True streaming support for real-time AI responses
 // ============================================================================
 
-export type AIProvider = 'ollama' | 'groq' | 'nvidia' | 'gemini';
+export type AIProvider = 'ollama' | 'groq' | 'kilo' | 'opencode' | 'nvidia' | 'gemini' | 'a4f';
+
+// ============================================================================
+// Vision Model Configuration — multi-modal image + text support
+// ============================================================================
+
+export interface VisionModelConfig {
+  name: string;
+  model: string;
+  provider: AIProvider;
+  supportsImages: boolean;
+}
+
+export const VISION_MODELS: VisionModelConfig[] = [
+  { name: 'gemma4-vision', model: 'gemma4:31b-cloud', provider: 'ollama', supportsImages: true },
+  { name: 'qwen3-vl', model: 'qwen3-vl:235b-instruct-cloud', provider: 'ollama', supportsImages: true },
+];
 
 interface CallAIOptions {
   prompt?: string;
+  /** Alias for `prompt` — used by Hermes agents */
+  userPrompt?: string;
   messages?: Array<{ role: string; content: string }>;
   system?: string;
+  /** Alias for `system` — used by Hermes agents */
+  systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
   /** Set true to skip SIMPLIFIED_LANGUAGE_PROMPT (for non-user-facing calls like JSON parsing) */
   skipSimplifiedLanguage?: boolean;
+  /** Per-agent provider preference order (spec Section 3). Overrides default priority sort. */
+  providerPreferences?: AIProvider[];
 }
 
 interface CallAIStreamOptions extends CallAIOptions {
@@ -534,22 +663,39 @@ export async function callAI(
         }
       }
     } else {
-      const baseSystem = promptOrOptions.system || 'You are an expert UPSC CSE educator.';
+      // Support both `system`/`prompt` and `systemPrompt`/`userPrompt` aliases
+      const baseSystem = promptOrOptions.system || promptOrOptions.systemPrompt || 'You are an expert UPSC CSE educator.';
+      const userContent = promptOrOptions.prompt || promptOrOptions.userPrompt || '';
       messages = [
         {
           role: 'system',
           content: skipSimplified ? baseSystem : `${SIMPLIFIED_LANGUAGE_PROMPT}\n\n${baseSystem}`,
         },
-        { role: 'user', content: promptOrOptions.prompt || '' },
+        { role: 'user', content: userContent },
       ];
     }
     temperature = promptOrOptions.temperature ?? 0.7;
     maxTokens = promptOrOptions.maxTokens ?? 2000;
   }
 
-  // Try providers in priority order (Ollama → Groq)
+  // Try providers in priority order — use per-agent preferences if provided (spec Section 3)
   const providers = (client as any).providers as AIProviderConfig[];
-  const sortedProviders = [...providers].sort((a, b) => a.priority - b.priority);
+  const preferenceOrder = typeof promptOrOptions !== 'string' ? promptOrOptions.providerPreferences : undefined;
+
+  let sortedProviders: AIProviderConfig[];
+  if (preferenceOrder && preferenceOrder.length > 0) {
+    // Reorder: preferred providers first (in given order), then remaining by default priority
+    const preferredSet = new Set(preferenceOrder);
+    const preferred = preferenceOrder
+      .map(name => providers.find(p => p.name === name))
+      .filter((p): p is AIProviderConfig => !!p);
+    const rest = providers
+      .filter(p => !preferredSet.has(p.name as AIProvider))
+      .sort((a, b) => a.priority - b.priority);
+    sortedProviders = [...preferred, ...rest];
+  } else {
+    sortedProviders = [...providers].sort((a, b) => a.priority - b.priority);
+  }
 
   for (const provider of sortedProviders) {
     if (!provider.isActive) continue;
@@ -558,10 +704,13 @@ export async function callAI(
     if (health.get(provider.name) === false) continue;
 
     try {
+      // Resolve API key based on provider type
       const apiKey = provider.name === 'groq'
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
         : provider.name === 'gemini'
         ? client.getGeminiKey()
+        : provider.name === 'kilo'
+        ? client.getKiloKey()
         : provider.apiKey;
 
       if (provider.name !== 'ollama' && !apiKey) {
@@ -587,6 +736,75 @@ export async function callAI(
         return content;
       }
 
+      // Kilo: try multiple models in fallback order, rotate keys on each attempt
+      if (provider.name === 'kilo') {
+        const kiloModels = (client as any).kiloModels as string[];
+        let lastError: Error | null = null;
+        for (let i = 0; i < kiloModels.length; i++) {
+          const model = client.getKiloModel();
+          try {
+            const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!response.ok) {
+              client.cycleKiloModel();
+              lastError = new Error(`Kilo model ${model} returned ${response.status}`);
+              continue;
+            }
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '';
+            const failures = (client as any).providerFailures as Map<string, number>;
+            failures.set(provider.name, 0);
+            health.set(provider.name, true);
+            (client as any).rotateKiloKey();
+            return content;
+          } catch (e) {
+            client.cycleKiloModel();
+            lastError = e as Error;
+          }
+        }
+        throw lastError || new Error('All Kilo models failed');
+      }
+
+      // OpenCode: try multiple models in fallback order
+      if (provider.name === 'opencode') {
+        const opencodeModels = client.getOpencodeModels();
+        let lastError: Error | null = null;
+        for (const model of opencodeModels) {
+          try {
+            const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
+              signal: AbortSignal.timeout(45000), // Longer timeout for local inference
+            });
+            if (!response.ok) {
+              lastError = new Error(`OpenCode model ${model} returned ${response.status}`);
+              continue;
+            }
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '';
+            const failures = (client as any).providerFailures as Map<string, number>;
+            failures.set(provider.name, 0);
+            health.set(provider.name, true);
+            return content;
+          } catch (e) {
+            lastError = e as Error;
+          }
+        }
+        throw lastError || new Error('All OpenCode models failed');
+      }
+
+      // Standard OpenAI-compatible provider (Ollama, Groq, NVIDIA)
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -826,4 +1044,123 @@ export async function callAIStream(
   const allFailedError = new Error('All AI providers failed — service temporarily unavailable');
   onError?.(allFailedError);
   throw allFailedError;
+}
+
+// ============================================================================
+// callAIVision() — Multi-modal AI call with image support
+// Tries vision-capable models (gemma4 → qwen3-vl) then falls back to callAI()
+// ============================================================================
+
+interface CallAIVisionOptions {
+  prompt: string;
+  imageBase64?: string;
+  imageUrl?: string;
+  system?: string;
+  /** Override which vision model to use (must be a model string from VISION_MODELS) */
+  model?: string;
+}
+
+export async function callAIVision(options: CallAIVisionOptions): Promise<string> {
+  const { prompt, imageBase64, imageUrl, system, model: modelOverride } = options;
+
+  // If no image provided, fall back to regular callAI
+  if (!imageBase64 && !imageUrl) {
+    return callAI({ prompt, system, skipSimplifiedLanguage: true });
+  }
+
+  const client = getAIProviderClient();
+  const health = (client as any).providerHealth as Map<string, boolean>;
+  const failures = (client as any).providerFailures as Map<string, number>;
+
+  // Determine which vision models to try
+  const modelsToTry = modelOverride
+    ? VISION_MODELS.filter(vm => vm.model === modelOverride)
+    : VISION_MODELS;
+
+  // Build multi-modal user message content parts
+  const contentParts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+
+  // Add image part
+  if (imageBase64) {
+    contentParts.push({
+      type: 'image_url',
+      image_url: { url: `data:image/png;base64,${imageBase64}` },
+    });
+  } else if (imageUrl) {
+    contentParts.push({
+      type: 'image_url',
+      image_url: { url: imageUrl },
+    });
+  }
+
+  // Add text part
+  contentParts.push({ type: 'text', text: prompt });
+
+  const messages = [
+    ...(system ? [{ role: 'system', content: system }] : []),
+    { role: 'user', content: contentParts },
+  ];
+
+  // Try each vision model in order
+  for (const visionModel of modelsToTry) {
+    // Resolve the provider config for this vision model
+    const providers = (client as any).providers as AIProviderConfig[];
+    const provider = providers.find(p => p.name === visionModel.provider);
+    if (!provider || !provider.isActive) continue;
+    if (health.get(provider.name) === false) continue;
+
+    try {
+      const apiKey = provider.name === 'groq'
+        ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
+        : provider.name === 'gemini'
+        ? client.getGeminiKey()
+        : provider.apiKey;
+
+      if (provider.name !== 'ollama' && !apiKey) continue;
+
+      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: visionModel.model,
+          messages,
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+        signal: AbortSignal.timeout(60000), // Vision calls may take longer
+      });
+
+      if (!response.ok) {
+        throw new Error(`Vision model ${visionModel.name} returned ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+
+      // Reset failure count on success
+      failures.set(provider.name, 0);
+      health.set(provider.name, true);
+
+      return content;
+    } catch (error) {
+      console.error(`callAIVision: Vision model ${visionModel.name} failed:`, error);
+
+      const count = (failures.get(provider.name) || 0) + 1;
+      failures.set(provider.name, count);
+
+      if (count >= 3) {
+        health.set(provider.name, false);
+        console.warn(`callAIVision: Provider ${provider.name} marked unhealthy after ${count} failures`);
+      }
+
+      continue;
+    }
+  }
+
+  // All vision models failed — fall back to text-only callAI
+  console.warn('callAIVision: All vision models failed, falling back to text-only callAI');
+  return callAI({ prompt, system, skipSimplifiedLanguage: true });
 }

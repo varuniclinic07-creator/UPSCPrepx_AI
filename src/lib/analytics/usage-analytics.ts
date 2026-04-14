@@ -96,7 +96,7 @@ export class UsageAnalyticsService {
    * Get comprehensive usage analytics
    */
   async getUsageAnalytics(periodDays: number = 30): Promise<UsageAnalytics> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const now = new Date();
     const periodStart = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);
 
@@ -107,12 +107,12 @@ export class UsageAnalyticsService {
       .gte('created_at', periodStart.toISOString());
 
     // Get unique users
-    const uniqueUsers = new Set(usageData?.map((u) => u.user_id) || []);
+    const uniqueUsers = new Set(usageData?.map((u: { user_id: string }) => u.user_id) || []);
 
     // Calculate totals
-    const totalTokens = usageData?.reduce((sum, u) => sum + (u.total_tokens || 0), 0) || 0;
+    const totalTokens = usageData?.reduce((sum: number, u: { total_tokens?: number }) => sum + (u.total_tokens || 0), 0) || 0;
     const totalRequests = usageData?.length || 0;
-    const totalCost = usageData?.reduce((sum, u) => sum + (u.cost_usd || 0), 0) || 0;
+    const totalCost = usageData?.reduce((sum: number, u: { cost_usd?: number }) => sum + (u.cost_usd || 0), 0) || 0;
 
     // Calculate active users (DAU, WAU, MAU)
     const nowTs = now.getTime();
@@ -122,21 +122,21 @@ export class UsageAnalyticsService {
 
     const dailyActiveUsers = new Set(
       usageData
-        ?.filter((u) => new Date(u.created_at).getTime() > dayAgo)
-        .map((u) => u.user_id) || []
+        ?.filter((u: any) => new Date(u.created_at).getTime() > dayAgo)
+        .map((u: any) => u.user_id) || []
     );
 
     const weeklyActiveUsers = new Set(
       usageData
-        ?.filter((u) => new Date(u.created_at).getTime() > weekAgo)
-        .map((u) => u.user_id) || []
+        ?.filter((u: any) => new Date(u.created_at).getTime() > weekAgo)
+        .map((u: any) => u.user_id) || []
     );
 
     const monthlyActiveUsers = uniqueUsers;
 
     // Calculate peak usage hour
     const hourCounts: Record<number, number> = {};
-    usageData?.forEach((u) => {
+    usageData?.forEach((u: any) => {
       const hour = new Date(u.created_at).getHours();
       hourCounts[hour] = (hourCounts[hour] || 0) + 1;
     });
@@ -148,7 +148,7 @@ export class UsageAnalyticsService {
 
     // Calculate peak day of week
     const dayCounts: Record<number, number> = {};
-    usageData?.forEach((u) => {
+    usageData?.forEach((u: any) => {
       const day = new Date(u.created_at).getDay();
       dayCounts[day] = (dayCounts[day] || 0) + 1;
     });
@@ -167,8 +167,8 @@ export class UsageAnalyticsService {
       .gte('created_at', previousPeriodStart.toISOString())
       .lte('created_at', periodStart.toISOString());
 
-    const prevTokens = previousData?.reduce((sum, u) => sum + (u.total_tokens || 0), 0) || 1;
-    const prevCost = previousData?.reduce((sum, u) => sum + (u.cost_usd || 0), 0) || 1;
+    const prevTokens = previousData?.reduce((sum: number, u: { total_tokens?: number }) => sum + (u.total_tokens || 0), 0) || 1;
+    const prevCost = previousData?.reduce((sum: number, u: { cost_usd?: number }) => sum + (u.cost_usd || 0), 0) || 1;
 
     const tokensGrowth = ((totalTokens - prevTokens) / prevTokens) * 100;
     const revenueGrowth = ((totalCost - prevCost) / prevCost) * 100;
@@ -212,7 +212,7 @@ export class UsageAnalyticsService {
    * Analyze usage pattern for a user
    */
   async analyzeUsagePattern(userId: string): Promise<UsagePattern> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get user's usage data (last 30 days)
     const now = new Date();
@@ -244,7 +244,7 @@ export class UsageAnalyticsService {
     let lastRequest: number | null = null;
     const SESSION_GAP_MS = 30 * 60 * 1000; // 30 minutes
 
-    for (const usage of usageData) {
+    for (const usage of usageData as any[]) {
       const date = new Date(usage.created_at);
       const hour = date.getHours();
       const day = date.getDay();
@@ -306,7 +306,7 @@ export class UsageAnalyticsService {
 
     // Check for burst pattern (high variance in daily usage)
     const dailyTotals: Record<string, number> = {};
-    for (const usage of usageData) {
+    for (const usage of usageData as any[]) {
       const dayKey = new Date(usage.created_at).toISOString().split('T')[0];
       dailyTotals[dayKey] = (dailyTotals[dayKey] || 0) + (usage.total_tokens || 0);
     }
@@ -356,7 +356,7 @@ export class UsageAnalyticsService {
    * Get usage trends for a user
    */
   async getUsageTrends(userId: string, periods: number = 6): Promise<UsageTrend[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const trends: UsageTrend[] = [];
 
     const now = new Date();
@@ -373,9 +373,9 @@ export class UsageAnalyticsService {
         .gte('created_at', periodStart.toISOString())
         .lte('created_at', periodEnd.toISOString());
 
-      const tokensUsed = usageData?.reduce((sum, u) => sum + (u.total_tokens || 0), 0) || 0;
+      const tokensUsed = usageData?.reduce((sum: number, u: { total_tokens?: number }) => sum + (u.total_tokens || 0), 0) || 0;
       const requestsMade = usageData?.length || 0;
-      const cost = usageData?.reduce((sum, u) => sum + (u.cost_usd || 0), 0) || 0;
+      const cost = usageData?.reduce((sum: number, u: { cost_usd?: number }) => sum + (u.cost_usd || 0), 0) || 0;
 
       // Calculate growth rate from previous period
       let growthRate = 0;
@@ -486,7 +486,7 @@ export class UsageAnalyticsService {
    * Perform cohort analysis
    */
   async getCohortAnalysis(cohortType: 'signup_month' | 'plan_upgrade'): Promise<CohortData[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const cohorts: CohortData[] = [];
 
     if (cohortType === 'signup_month') {
@@ -500,7 +500,7 @@ export class UsageAnalyticsService {
 
       // Group by month
       const cohortMap: Record<string, string[]> = {};
-      for (const sub of subscriptions) {
+      for (const sub of subscriptions as any[]) {
         const monthKey = new Date(sub.created_at).toISOString().slice(0, 7); // YYYY-MM
         if (!cohortMap[monthKey]) {
           cohortMap[monthKey] = [];
@@ -532,7 +532,7 @@ export class UsageAnalyticsService {
         const day7Ago = cohortDate.getTime() + 7 * 24 * 60 * 60 * 1000;
         const day30Ago = cohortDate.getTime() + 30 * 24 * 60 * 60 * 1000;
 
-        for (const usage of usageData || []) {
+        for (const usage of (usageData || []) as any[]) {
           const usageTs = new Date(usage.created_at).getTime();
           if (usageTs <= day1Ago) activeUsers.day1.add(usage.user_id);
           if (usageTs <= day7Ago) activeUsers.day7.add(usage.user_id);
@@ -540,7 +540,7 @@ export class UsageAnalyticsService {
         }
 
         const totalUsage = usageData?.reduce(
-          (acc, u) => ({
+          (acc: { tokens: number; requests: number; cost: number }, u: { total_tokens?: number; cost_usd?: number }) => ({
             tokens: acc.tokens + (u.total_tokens || 0),
             requests: acc.requests + 1,
             cost: acc.cost + (u.cost_usd || 0),

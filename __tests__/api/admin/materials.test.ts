@@ -8,10 +8,10 @@ import { GET, POST, DELETE } from '@/app/api/admin/materials/route';
 // ---------------------------------------------------------------------------
 
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(() =>
+  createClient: jest.fn<any, any>(() =>
     Promise.resolve({
-      from: (...args: any[]) => mockFrom(...args),
-      auth: { getUser: (...args: any[]) => mockGetUser(...args) },
+      from: (table: any) => mockFrom(table),
+      auth: { getUser: () => mockGetUser() },
     })
   ),
 }));
@@ -21,12 +21,12 @@ jest.mock('@/lib/storage/minio', () => ({
 }));
 
 jest.mock('@/lib/security', () => ({
-  requireAdmin: (...args: any[]) => mockRequireAdmin(...args),
+  requireAdmin: (req: any) => mockRequireAdmin(req),
   withRateLimit: jest.fn((_req: unknown, _limits: unknown, handler: () => Promise<Response>) => handler()),
   validateRequest: jest.fn((_schema: unknown, data: unknown) => ({ success: true, data })),
   schemas: { filter: {} },
   RATE_LIMITS: { admin: {} },
-}));
+} as any));
 
 const mockSelect = jest.fn().mockReturnThis();
 const mockOrder = jest.fn().mockReturnThis();
@@ -61,7 +61,7 @@ const mockRequireAdmin = jest.fn(() => Promise.resolve({ id: 'admin-1', role: 'a
 // ---------------------------------------------------------------------------
 
 function buildRequest(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init);
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as any);
 }
 
 // ---------------------------------------------------------------------------
@@ -205,8 +205,8 @@ describe('DELETE /api/admin/materials/:id', () => {
   it('returns 401 when not authenticated', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: null } });
 
-    const req = buildRequest('/api/admin/materials', { method: 'DELETE' });
-    const res = await DELETE(req, { params: { id: 'm-1' } });
+    const req = buildRequest('/api/admin/materials?id=m-1', { method: 'DELETE' });
+    const res = await DELETE(req);
 
     expect(res.status).toBe(401);
   });
@@ -214,8 +214,8 @@ describe('DELETE /api/admin/materials/:id', () => {
   it('deletes material successfully', async () => {
     mockEq.mockResolvedValueOnce({ error: null });
 
-    const req = buildRequest('/api/admin/materials', { method: 'DELETE' });
-    const res = await DELETE(req, { params: { id: 'm-1' } });
+    const req = buildRequest('/api/admin/materials?id=m-1', { method: 'DELETE' });
+    const res = await DELETE(req);
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -225,8 +225,8 @@ describe('DELETE /api/admin/materials/:id', () => {
   it('returns 500 on database error', async () => {
     mockEq.mockResolvedValueOnce({ error: new Error('FK constraint') });
 
-    const req = buildRequest('/api/admin/materials', { method: 'DELETE' });
-    const res = await DELETE(req, { params: { id: 'm-1' } });
+    const req = buildRequest('/api/admin/materials?id=m-1', { method: 'DELETE' });
+    const res = await DELETE(req);
     const json = await res.json();
 
     expect(res.status).toBe(500);

@@ -9,6 +9,7 @@ import { getQuizzesByUser } from '@/lib/services/quiz-service';
 import { StatCard, ProgressStatCard } from '@/components/magic-ui/stat-card';
 import { BentoGrid } from '@/components/magic-ui/bento-grid';
 import { ShimmerButton } from '@/components/magic-ui/shimmer-button';
+import { QuickGenerate } from '@/components/living-content/quick-generate';
 import type { Quiz } from '@/types';
 
 export const metadata = {
@@ -236,6 +237,9 @@ export default function QuizPage() {
           </ShimmerButton>
         </Link>
       </header>
+
+      {/* Living Content — Quick Generate */}
+      <QuickGenerate mode="quiz" />
 
       {/* Stats */}
       <QuizStats />

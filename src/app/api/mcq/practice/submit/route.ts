@@ -63,11 +63,11 @@ export async function POST(request: NextRequest) {
 
     // Get attempt details
     const { data: attempt, error: attemptError } = await supabase
-      .from('mcq_attempts')
+      .from('mcq_attempts' as any)
       .select('*')
       .eq('id', sessionId)
       .eq('user_id', user.id)
-      .single();
+      .single() as { data: any; error: any };
 
     if (attemptError || !attempt) {
       return NextResponse.json(
@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
     // Get questions with correct answers
     const questionIds = answers.map(a => a.questionId);
     const { data: questions } = await supabase
-      .from('mcq_questions')
+      .from('mcq_questions' as any)
       .select('id, correct_option, options, explanation, subject, topic, difficulty, marks, negative_marks')
-      .in('id', questionIds);
+      .in('id', questionIds) as { data: any[] | null };
 
     if (!questions || questions.length === 0) {
       return NextResponse.json(
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
       // Insert answer record
       await supabase
-        .from('mcq_answers')
+        .from('mcq_answers' as any)
         .insert({
           attempt_id: sessionId,
           question_id: answer.questionId,
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
           is_skipped: isSkipped,
           time_spent_sec: answer.timeSpent,
           marked_for_review: answer.markedForReview || false,
-        });
+        } as any);
 
       // Calculate marks
       if (isCorrect) {
@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
           subject: question.subject,
           topic: question.topic,
           difficulty: question.difficulty,
+          bloomLevel: 'Remember',
           timeEstimateSec: 90,
           marks: question.marks || 2,
           negativeMarks: question.negative_marks || 0.66,
@@ -166,8 +167,8 @@ export async function POST(request: NextRequest) {
       : 0;
 
     // Update attempt with final stats
-    await supabase
-      .from('mcq_attempts')
+    await (supabase
+      .from('mcq_attempts' as any) as any)
       .update({
         completed_at: new Date().toISOString(),
         attempted_questions: answers.length,
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     // Award XP (Gamification F13)
     const xpEarned = correctAnswers * 10 + Math.round(accuracy / 10);
-    await supabase.rpc('award_xp', {
+    await (supabase.rpc as any)('award_xp', {
       p_user_id: user.id,
       p_amount: xpEarned,
       p_source: 'mcq_practice',
@@ -210,11 +211,11 @@ export async function POST(request: NextRequest) {
       // Find matching knowledge_nodes and update mastery
       for (const [topic, stats] of topicGroups) {
         const { data: node } = await supabase
-          .from('knowledge_nodes')
+          .from('knowledge_nodes' as any)
           .select('id')
           .ilike('title', `%${topic}%`)
           .limit(1)
-          .maybeSingle();
+          .maybeSingle() as { data: any };
 
         if (node) {
           await updateMastery(user.id, node.id, stats.correct, stats.total, stats.time);
@@ -226,7 +227,7 @@ export async function POST(request: NextRequest) {
 
     // Update daily analytics
     await supabase
-      .from('mcq_analytics')
+      .from('mcq_analytics' as any)
       .upsert({
         user_id: user.id,
         date: new Date().toISOString().split('T')[0],
@@ -236,7 +237,7 @@ export async function POST(request: NextRequest) {
         accuracy_percent: accuracy,
         avg_time_sec: avgTimePerQuestion,
         difficulty_distribution: { [attempt.difficulty]: answers.length },
-      }, {
+      } as any, {
         onConflict: 'user_id,date,subject,topic',
       });
 

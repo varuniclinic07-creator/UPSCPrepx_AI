@@ -9,12 +9,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
@@ -35,11 +36,11 @@ export async function POST(request: NextRequest) {
     const { user_id, email } = startOnboardingSchema.parse(body);
 
     // Check if user already has onboarding in progress
-    const { data: existingProfile } = await getSupabase()
-      .from('user_profiles')
+    const { data: existingProfile } = await (getSupabase()
+      .from('user_profiles') as any)
       .select('user_id, onboarding_completed')
       .eq('user_id', user_id)
-      .single();
+      .single() as { data: any; error: any };
 
     if (existingProfile?.onboarding_completed) {
       return NextResponse.json(
@@ -53,13 +54,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update user profile
-    const { error: profileError } = await getSupabase()
-      .from('user_profiles')
+    const { error: profileError } = await (getSupabase()
+      .from('user_profiles') as any)
       .upsert({
         user_id,
         onboarding_completed: false,
         created_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('user_id', user_id);
 
     if (profileError) {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       .select('id, status, trial_expires_at')
       .eq('user_id', user_id)
       .eq('status', 'trial')
-      .single();
+      .single() as { data: any; error: any };
 
     let trial_expires_at: string;
 
@@ -99,13 +100,14 @@ export async function POST(request: NextRequest) {
         .insert({
           user_id,
           plan_id: freePlan.id,
+          plan_type: 'free',
           status: 'trial',
           trial_started_at: new Date().toISOString(),
           trial_expires_at: trialExpiresAt.toISOString(),
           auto_renew: false,
-        })
+        } as any)
         .select('trial_expires_at')
-        .single();
+        .single() as { data: any; error: any };
 
       if (subError || !newSubscription) {
         throw subError || new Error('Failed to create trial subscription');
@@ -116,11 +118,10 @@ export async function POST(request: NextRequest) {
 
     // Log audit event
     await getSupabase().from('audit_logs').insert({
-      user_id,
+      actor_id: user_id,
       action: 'onboarding_started',
-      resource_type: 'user_profile',
-      details: { email },
-    });
+      target_type: 'user_profile',
+    } as any);
 
     return NextResponse.json({
       success: true,
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid request data',
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 }
       );

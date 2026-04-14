@@ -1,9 +1,9 @@
 /**
  * Quiz Generator Service - F1 Smart Onboarding
- * 
+ *
  * Generates 10-question diagnostic quiz for UPSC aspirants.
  * Uses AI with SIMPLIFIED_LANGUAGE_PROMPT for question generation.
- * 
+ *
  * Question Distribution (per Master Prompt v8.0):
  * - GS1 (History): 2 questions
  * - GS1 (Geography): 1 question
@@ -15,11 +15,18 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { withSimplifiedLanguage } from './simplified-language-prompt';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() {
+  if (!_sb)
+    _sb = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  return _sb;
+}
 
 /**
  * Quiz question structure
@@ -103,7 +110,7 @@ FORMAT: Return valid JSON only, no markdown.
 
 /**
  * Generate 10-question diagnostic quiz
- * 
+ *
  * @param config - User configuration for personalized quiz
  * @returns Array of 10 quiz questions
  */
@@ -112,16 +119,16 @@ export async function generateDiagnosticQuiz(config: QuizConfig): Promise<QuizQu
     // Check if user already has a quiz (prevent regeneration)
     const { data: existingQuiz } = await getSupabase()
       .from('quiz_attempts')
-      .select('id, questions')
+      .select('id, questions' as any)
       .eq('user_id', config.user_id)
-      .eq('quiz_type', 'diagnostic')
+      .eq('quiz_type' as any, 'diagnostic')
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
     if (existingQuiz) {
       // Return existing quiz questions
-      return existingQuiz.questions as QuizQuestion[];
+      return (existingQuiz as any).questions as QuizQuestion[];
     }
 
     // Generate quiz using AI
@@ -151,7 +158,7 @@ export async function generateDiagnosticQuiz(config: QuizConfig): Promise<QuizQu
 
     // Call AI provider (9Router → Groq → Ollama fallback)
     const aiResponse = await callAIProvider(prompt);
-    
+
     // Parse AI response
     const parsedResponse = JSON.parse(aiResponse);
     const questions: QuizQuestion[] = parsedResponse.questions.map((q: any, index: number) => ({
@@ -165,20 +172,22 @@ export async function generateDiagnosticQuiz(config: QuizConfig): Promise<QuizQu
     }
 
     // Store questions in database for reuse
-    await getSupabase().from('questions').upsert(
-      questions.map(q => ({
-        question_type: 'mcq' as const,
-        question_text: q.question_text,
-        question_text_hi: q.question_text_hi,
-        options: q.options,
-        correct_answer: q.correct_answer,
-        explanation: q.explanation,
-        explanation_hi: q.explanation_hi,
-        subject: q.subject,
-        difficulty: q.difficulty,
-        source: 'diagnostic_quiz',
-      }))
-    );
+    await getSupabase()
+      .from('questions')
+      .upsert(
+        questions.map((q) => ({
+          question_type: 'mcq' as const,
+          question_text: q.question_text,
+          question_text_hi: q.question_text_hi,
+          options: q.options,
+          correct_answer: q.correct_answer,
+          explanation: q.explanation,
+          explanation_hi: q.explanation_hi,
+          subject: q.subject,
+          difficulty: q.difficulty,
+          source: 'diagnostic_quiz',
+        }))
+      );
 
     return questions;
   } catch (error) {
@@ -193,17 +202,17 @@ export async function generateDiagnosticQuiz(config: QuizConfig): Promise<QuizQu
 async function callAIProvider(prompt: string): Promise<string> {
   // Use existing AI provider client
   const { callAI } = await import('../ai/ai-provider-client');
-  
+
   const response = await callAI({
     messages: [
       { role: 'system', content: 'You are an expert UPSC exam question creator.' },
       { role: 'user', content: prompt },
     ],
     temperature: 0.7,
-    max_tokens: 2000,
+    maxTokens: 2000,
   });
 
-  return response.content;
+  return response;
 }
 
 /**
@@ -216,8 +225,8 @@ export function calculateQuizScore(
   let correctCount = 0;
   const subjectStats: Record<string, { total: number; correct: number }> = {};
 
-  answers.forEach(answer => {
-    const question = questions.find(q => q.id === answer.question_id);
+  answers.forEach((answer) => {
+    const question = questions.find((q) => q.id === answer.question_id);
     if (!question) return;
 
     // Initialize subject stats

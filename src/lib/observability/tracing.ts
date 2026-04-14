@@ -233,10 +233,16 @@ export function setCurrentSpan(span: Span, requestId: string): void {
 }
 
 // Shim for AsyncLocalStorage if not available
-const AsyncLocalStorage = (globalThis as any).AsyncLocalStorage || class {
-  getStore() { return {}; }
-  run(store: any, fn: any) { return fn(); }
-};
+const AsyncLocalStorage =
+  (globalThis as any).AsyncLocalStorage ||
+  class {
+    getStore() {
+      return {};
+    }
+    run(store: any, fn: any) {
+      return fn();
+    }
+  };
 
 // ═══════════════════════════════════════════════════════════
 // TRACE WRAPPER FOR ASYNC FUNCTIONS
@@ -292,8 +298,8 @@ export function withTracing(
         'http.method': request.method,
         'http.url': request.url,
         'http.target': request.nextUrl.pathname,
-        'http.user_agent': request.headers.get('user-agent'),
-        'http.client_ip': request.ip || 'unknown',
+        'http.user_agent': request.headers.get('user-agent') ?? undefined,
+        'http.client_ip': request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
       },
     });
 
@@ -398,7 +404,10 @@ export async function exportTracesToTempo(): Promise<void> {
           resource: {
             attributes: [
               { key: 'service.name', value: { string_value: 'upsc-prepx-ai' } },
-              { key: 'deployment.environment', value: { string_value: process.env.NODE_ENV || 'development' } },
+              {
+                key: 'deployment.environment',
+                value: { string_value: process.env.NODE_ENV || 'development' },
+              },
             ],
           },
           scope_spans: [

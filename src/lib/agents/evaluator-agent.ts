@@ -85,6 +85,7 @@ class EvaluatorAgent extends BaseAgent {
         systemPrompt,
         userPrompt,
         skipSimplifiedLanguage: true,
+        providerPreferences: this.getProviderPreferences(),
       });
 
       const result = this.parseEvaluationResult(rawResponse);
@@ -136,6 +137,7 @@ class EvaluatorAgent extends BaseAgent {
         systemPrompt,
         userPrompt,
         skipSimplifiedLanguage: true,
+        providerPreferences: this.getProviderPreferences(),
       });
 
       const result = this.parseDoubtAnswer(rawResponse);

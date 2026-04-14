@@ -9,6 +9,7 @@ import { StatCard } from '@/components/magic-ui/stat-card';
 import { BentoGrid } from '@/components/magic-ui/bento-grid';
 import { BorderBeamInput } from '@/components/magic-ui/border-beam';
 import { Loading } from '@/components/ui/loading';
+import { QuickGenerate } from '@/components/living-content/quick-generate';
 
 interface MindMap {
     id: string;
@@ -90,6 +91,9 @@ export default function MindMapsPage() {
                     Visualize connections and relationships between UPSC topics
                 </p>
             </header>
+
+            {/* Living Content — Quick Generate */}
+            <QuickGenerate mode="mind_map" />
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

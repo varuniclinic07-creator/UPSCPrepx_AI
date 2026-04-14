@@ -149,10 +149,7 @@ export async function POST(req: NextRequest) {
 // DELETE /api/admin/materials/:id - Delete material
 // ═══════════════════════════════════════════════════════════════════════════
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest) {
     try {
         const supabase = await createClient();
 
@@ -162,11 +159,18 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Get material ID from query params
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+        if (!id) {
+            return NextResponse.json({ error: 'Missing material ID' }, { status: 400 });
+        }
+
         // Delete from database (cascades to chunks)
         const { error } = await (supabase as any)
             .from('static_materials')
             .delete()
-            .eq('id', params.id);
+            .eq('id', id);
 
         if (error) throw error;
 

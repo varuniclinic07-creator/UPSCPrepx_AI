@@ -3,6 +3,7 @@
 // Monitor queue health and job progress
 // ═══════════════════════════════════════════════════════════════
 
+import { Job } from 'bullmq';
 import { lectureQueue, compilationQueue } from './lecture-queue';
 
 export interface QueueStats {
@@ -19,12 +20,15 @@ export interface QueueStats {
  */
 export async function getAllQueueStats(): Promise<QueueStats[]> {
     const queues = [
-        { name: 'lectures', queue: lectureQueue },
-        { name: 'compilation', queue: compilationQueue }
+        { name: 'lectures', queue: lectureQueue.get() },
+        { name: 'compilation', queue: compilationQueue.get() }
     ];
 
     const stats = await Promise.all(
         queues.map(async ({ name, queue }) => {
+            if (!queue) {
+                return { name, waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 };
+            }
             const [waiting, active, completed, failed, delayed] = await Promise.all([
                 queue.getWaitingCount(),
                 queue.getActiveCount(),
@@ -51,9 +55,11 @@ export async function getAllQueueStats(): Promise<QueueStats[]> {
  * Get failed jobs for retry
  */
 export async function getFailedJobs(limit: number = 10) {
-    const failed = await lectureQueue.getFailed(0, limit);
+    const queue = lectureQueue.get();
+    if (!queue) return [];
+    const failed = await queue.getFailed(0, limit);
 
-    return failed.map(job => ({
+    return failed.map((job: Job) => ({
         id: job.id,
         data: job.data,
         failedReason: job.failedReason,
@@ -66,7 +72,9 @@ export async function getFailedJobs(limit: number = 10) {
  * Retry failed job
  */
 export async function retryFailedJob(jobId: string) {
-    const job = await lectureQueue.getJob(jobId);
+    const queue = lectureQueue.get();
+    if (!queue) return false;
+    const job = await queue.getJob(jobId);
 
     if (job) {
         await job.retry();
@@ -81,20 +89,28 @@ export async function retryFailedJob(jobId: string) {
  */
 export async function cleanOldJobs(olderThan: number = 7 * 24 * 60 * 60 * 1000) {
     const grace = olderThan;
+    const lq = lectureQueue.get();
+    const cq = compilationQueue.get();
 
-    await lectureQueue.clean(grace, 1000, 'completed');
-    await lectureQueue.clean(grace, 1000, 'failed');
-    await compilationQueue.clean(grace, 1000, 'completed');
-    await compilationQueue.clean(grace, 1000, 'failed');
+    if (lq) {
+        await lq.clean(grace, 1000, 'completed');
+        await lq.clean(grace, 1000, 'failed');
+    }
+    if (cq) {
+        await cq.clean(grace, 1000, 'completed');
+        await cq.clean(grace, 1000, 'failed');
+    }
 }
 
 /**
  * Get active jobs with progress
  */
 export async function getActiveJobs() {
-    const active = await lectureQueue.getActive();
+    const queue = lectureQueue.get();
+    if (!queue) return [];
+    const active = await queue.getActive();
 
-    return active.map(job => ({
+    return active.map((job: Job) => ({
         id: job.id,
         data: job.data,
         progress: job.progress,

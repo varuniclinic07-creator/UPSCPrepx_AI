@@ -9,12 +9,12 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _sb: ReturnType<typeof createClient> | null = null;
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
   if (!_sb)
-    _sb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
   return _sb;
@@ -52,7 +52,7 @@ export async function checkStreakMilestones(userId: string, currentStreak: numbe
   const title = `${currentStreak}-day Study Streak!`;
   const body = messages[currentStreak] || `Amazing ${currentStreak}-day streak!`;
 
-  await supabase.from('notifications').insert({
+  await (supabase.from('notifications') as any).insert({
     user_id: userId,
     type: 'achievement',
     title,
@@ -92,7 +92,7 @@ export async function notifyLevelUp(
   const title = `Level Up: ${label}!`;
   const body = `Your mastery of "${nodeTitle}" has reached ${label} level. Keep it up!`;
 
-  await supabase.from('notifications').insert({
+  await (supabase.from('notifications') as any).insert({
     user_id: userId,
     type: 'success',
     title,
@@ -139,7 +139,7 @@ export async function generateDueReminders(userId: string): Promise<number> {
   const title = `${dueCount} topic${dueCount > 1 ? 's' : ''} ready for revision`;
   const body = `You have ${dueCount} topic${dueCount > 1 ? 's' : ''} due for spaced repetition review. Revise now to strengthen your memory!`;
 
-  await supabase.from('notifications').insert({
+  await (supabase.from('notifications') as any).insert({
     user_id: userId,
     type: 'info',
     title,
@@ -165,17 +165,19 @@ export async function generateWeeklyDigest(userId: string): Promise<void> {
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
   // Get this week's activity
-  const { data: recentActivity } = await supabase
+  const { data: recentActivityRaw } = await supabase
     .from('user_mastery')
     .select('mastery_level, accuracy_score, attempts, correct, time_spent_seconds')
     .eq('user_id', userId)
     .gte('last_attempted_at', weekAgo);
 
+  const recentActivity = recentActivityRaw as any[] | null;
+
   if (!recentActivity || recentActivity.length === 0) {
     // No activity — gentle nudge
     const nudgeTitle = 'Weekly Study Reminder';
     const nudgeBody = 'You haven\'t studied this week. Even 15 minutes a day makes a difference for UPSC preparation!';
-    await supabase.from('notifications').insert({
+    await (supabase.from('notifications') as any).insert({
       user_id: userId,
       type: 'info',
       title: nudgeTitle,
@@ -207,7 +209,7 @@ export async function generateWeeklyDigest(userId: string): Promise<void> {
     mastered > 0 ? `Topics mastered: ${mastered}` : null,
   ].filter(Boolean).join(' | ');
 
-  await supabase.from('notifications').insert({
+  await (supabase.from('notifications') as any).insert({
     user_id: userId,
     type: 'success',
     title: digestTitle,
@@ -236,27 +238,29 @@ export async function generateCATopicAlerts(userId: string): Promise<number> {
   const today = new Date().toISOString().split('T')[0];
 
   // Get today's CA articles that are linked to a knowledge node
-  const { data: caArticles } = await supabase
+  const { data: caArticlesRaw } = await supabase
     .from('current_affairs')
     .select('id, title, node_id')
     .not('node_id', 'is', null)
     .gte('created_at', today);
 
+  const caArticles = caArticlesRaw as any[] | null;
   if (!caArticles || caArticles.length === 0) return 0;
 
-  const nodeIds = caArticles.map((ca) => ca.node_id).filter(Boolean);
+  const nodeIds = caArticles.map((ca: any) => ca.node_id).filter(Boolean);
 
   // Check which of these nodes are weak or developing for this user
-  const { data: weakNodes } = await supabase
+  const { data: weakNodesRaw } = await supabase
     .from('user_mastery')
     .select('node_id, mastery_level')
     .eq('user_id', userId)
     .in('node_id', nodeIds)
     .in('mastery_level', ['weak', 'developing']);
 
+  const weakNodes = weakNodesRaw as any[] | null;
   if (!weakNodes || weakNodes.length === 0) return 0;
 
-  const weakNodeIds = new Set(weakNodes.map((n) => n.node_id));
+  const weakNodeIds = new Set(weakNodes.map((n: any) => n.node_id));
   let created = 0;
 
   for (const ca of caArticles) {
@@ -277,7 +281,7 @@ export async function generateCATopicAlerts(userId: string): Promise<number> {
     const title = `New CA linked to your weak topic: ${ca.title}`;
     const body = `New CA linked to your weak topic: ${ca.title} — revise now`;
 
-    await supabase.from('notifications').insert({
+    await (supabase.from('notifications') as any).insert({
       user_id: userId,
       type: 'info',
       title,
@@ -310,11 +314,12 @@ export async function generateSubjectInactivityAlerts(userId: string): Promise<n
   const today = new Date().toISOString().split('T')[0];
 
   // Get user mastery with subject info from knowledge_nodes
-  const { data: masteryRows } = await supabase
+  const { data: masteryRowsRaw } = await supabase
     .from('user_mastery')
     .select('node_id, last_attempted_at, knowledge_nodes(subject)')
     .eq('user_id', userId);
 
+  const masteryRows = masteryRowsRaw as any[] | null;
   if (!masteryRows || masteryRows.length === 0) return 0;
 
   // Group by subject and find max last_attempted_at
@@ -370,7 +375,7 @@ export async function generateSubjectInactivityAlerts(userId: string): Promise<n
     const title = `You haven't studied ${subject} in ${daysSince} days`;
     const body = `You haven't studied ${subject} in ${daysSince} days — ${linkedCAs} new CAs linked`;
 
-    await supabase.from('notifications').insert({
+    await (supabase.from('notifications') as any).insert({
       user_id: userId,
       type: 'info',
       title,
@@ -468,7 +473,7 @@ export async function generateAccuracyRegressionAlerts(userId: string): Promise<
     const title = `${subject} accuracy dropped`;
     const body = `Your ${subject} accuracy dropped from ${oldPct}% to ${newPct}% — 15-min revision suggested`;
 
-    await supabase.from('notifications').insert({
+    await (supabase.from('notifications') as any).insert({
       user_id: userId,
       type: 'warning',
       title,

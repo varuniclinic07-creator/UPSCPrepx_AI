@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRBAC, UserRole, Permission, can } from './rbac';
 import { withRateLimit, RATE_LIMITS, RateLimitConfig } from './enhanced-rate-limiter';
-import { validateCSRFToken, extractCSRFToken } from './csrf';
+import { validateCSRFToken } from './csrf';
 import { sanitizeInput } from './headers';
 import { validateRequestOrigin } from './csrf';
 import { createClient } from '@/lib/supabase/server';
@@ -73,7 +73,7 @@ export type SecurityEventType =
 
 export interface SecurityEvent {
   type: SecurityEventType;
-  timestamp: string;
+  timestamp?: string;
   requestId: string;
   userId?: string;
   ip: string;
@@ -121,6 +121,13 @@ function generateRequestId(): string {
     .join('');
 }
 
+/** Extract IP from request (NextRequest doesn't have .ip in all environments) */
+function getRequestIp(request: NextRequest): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+}
+
 // ═══════════════════════════════════════════════════════════
 // COMPREHENSIVE SECURITY MIDDLEWARE
 // ═══════════════════════════════════════════════════════════
@@ -133,25 +140,24 @@ export async function withSecurity(
   const options = { ...DEFAULT_CONFIG, ...config };
   const requestId = generateRequestId();
   const startTime = Date.now();
+  let userId: string | undefined = undefined;
+  let userRole: UserRole = 'guest';
 
   try {
     // ═══════════════════════════════════════════════════════
     // 1. AUTHENTICATION
     // ═══════════════════════════════════════════════════════
 
-    let userId: string | null = null;
-    let userRole: UserRole = 'guest';
-
     if (options.requireAuth) {
       try {
-        const supabase = createClient();
+        const supabase = await createClient();
         const { data: { user }, error } = await supabase.auth.getUser();
 
         if (error || !user) {
           logSecurityEvent({
             type: 'auth_failure',
             requestId,
-            ip: request.ip || 'unknown',
+            ip: getRequestIp(request),
             userAgent: request.headers.get('user-agent') || 'unknown',
             endpoint: request.nextUrl.pathname,
             method: request.method,
@@ -190,7 +196,7 @@ export async function withSecurity(
               type: 'authorization_failure',
               requestId,
               userId,
-              ip: request.ip || 'unknown',
+              ip: getRequestIp(request),
               userAgent: request.headers.get('user-agent') || 'unknown',
               endpoint: request.nextUrl.pathname,
               method: request.method,
@@ -223,7 +229,7 @@ export async function withSecurity(
               type: 'authorization_failure',
               requestId,
               userId,
-              ip: request.ip || 'unknown',
+              ip: getRequestIp(request),
               userAgent: request.headers.get('user-agent') || 'unknown',
               endpoint: request.nextUrl.pathname,
               method: request.method,
@@ -248,7 +254,7 @@ export async function withSecurity(
           type: 'auth_success',
           requestId,
           userId,
-          ip: request.ip || 'unknown',
+          ip: getRequestIp(request),
           userAgent: request.headers.get('user-agent') || 'unknown',
           endpoint: request.nextUrl.pathname,
           method: request.method,
@@ -258,7 +264,7 @@ export async function withSecurity(
         logSecurityEvent({
           type: 'auth_failure',
           requestId,
-          ip: request.ip || 'unknown',
+          ip: getRequestIp(request),
           userAgent: request.headers.get('user-agent') || 'unknown',
           endpoint: request.nextUrl.pathname,
           method: request.method,
@@ -289,7 +295,7 @@ export async function withSecurity(
         ? RATE_LIMITS[options.rateLimit] || RATE_LIMITS.api
         : options.rateLimit;
 
-      const identifier = userId || `ip:${request.ip || 'unknown'}`;
+      const identifier = userId || `ip:${getRequestIp(request)}`;
       const { checkRateLimit } = await import('./enhanced-rate-limiter');
       const result = await checkRateLimit(identifier, rateLimitConfig);
 
@@ -297,8 +303,8 @@ export async function withSecurity(
         logSecurityEvent({
           type: 'rate_limit_exceeded',
           requestId,
-          userId: userId || undefined,
-          ip: request.ip || 'unknown',
+          userId,
+          ip: getRequestIp(request),
           userAgent: request.headers.get('user-agent') || 'unknown',
           endpoint: request.nextUrl.pathname,
           method: request.method,
@@ -344,8 +350,8 @@ export async function withSecurity(
           logSecurityEvent({
             type: 'csrf_failure',
             requestId,
-            userId: userId || undefined,
-            ip: request.ip || 'unknown',
+            userId,
+            ip: getRequestIp(request),
             userAgent: request.headers.get('user-agent') || 'unknown',
             endpoint: request.nextUrl.pathname,
             method: request.method,
@@ -358,14 +364,14 @@ export async function withSecurity(
           );
         }
 
-        const { valid } = await validateCSRFToken(csrfToken, userId || undefined);
+        const valid = validateCSRFToken(csrfToken, userId);
 
         if (!valid) {
           logSecurityEvent({
             type: 'csrf_failure',
             requestId,
-            userId: userId || undefined,
-            ip: request.ip || 'unknown',
+            userId,
+            ip: getRequestIp(request),
             userAgent: request.headers.get('user-agent') || 'unknown',
             endpoint: request.nextUrl.pathname,
             method: request.method,
@@ -391,8 +397,8 @@ export async function withSecurity(
         logSecurityEvent({
           type: 'origin_validation_failure',
           requestId,
-          userId: userId || undefined,
-          ip: request.ip || 'unknown',
+          userId,
+          ip: getRequestIp(request),
           userAgent: request.headers.get('user-agent') || 'unknown',
           endpoint: request.nextUrl.pathname,
           method: request.method,
@@ -428,8 +434,8 @@ export async function withSecurity(
               logSecurityEvent({
                 type: 'input_validation_failure',
                 requestId,
-                userId: userId || undefined,
-                ip: request.ip || 'unknown',
+                userId,
+                ip: getRequestIp(request),
                 userAgent: request.headers.get('user-agent') || 'unknown',
                 endpoint: request.nextUrl.pathname,
                 method: request.method,
@@ -475,8 +481,8 @@ export async function withSecurity(
     logSecurityEvent({
       type: 'suspicious_activity',
       requestId,
-      userId: userId || undefined,
-      ip: request.ip || 'unknown',
+      userId,
+      ip: getRequestIp(request),
       userAgent: request.headers.get('user-agent') || 'unknown',
       endpoint: request.nextUrl.pathname,
       method: request.method,

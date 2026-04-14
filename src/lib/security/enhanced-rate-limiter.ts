@@ -18,9 +18,9 @@ const memoryStore = new Map<string, { count: number; resetAt: number }>();
 // ═══════════════════════════════════════════════════════════
 
 export interface RateLimitConfig {
-  limit: number;        // Max requests
-  window: number;       // Window in seconds
-  prefix: string;       // Key prefix
+  limit: number; // Max requests
+  window: number; // Window in seconds
+  prefix: string; // Key prefix
   blockDuration?: number; // Block duration after exceeding (seconds)
 }
 
@@ -197,12 +197,15 @@ export interface AdaptiveRateLimitConfig extends RateLimitConfig {
   errorThreshold: number;
 }
 
-const adaptiveState = new Map<string, {
-  currentLimit: number;
-  errorCount: number;
-  successCount: number;
-  lastAdjustment: number;
-}>();
+const adaptiveState = new Map<
+  string,
+  {
+    currentLimit: number;
+    errorCount: number;
+    successCount: number;
+    lastAdjustment: number;
+  }
+>();
 
 export async function checkAdaptiveRateLimit(
   identifier: string,
@@ -222,7 +225,8 @@ export async function checkAdaptiveRateLimit(
   }
 
   // Adjust limits based on error rate
-  if (now - state.lastAdjustment > 60000) { // Every minute
+  if (now - state.lastAdjustment > 60000) {
+    // Every minute
     const errorRate = state.errorCount / (state.errorCount + state.successCount) || 0;
 
     if (errorRate > config.errorThreshold) {
@@ -283,9 +287,10 @@ export async function withRateLimit(
 ): Promise<NextResponse> {
   // Get identifier (user ID for authenticated, IP for others)
   const userId = request.headers.get('x-user-id');
-  const ip = request.ip ||
-             request.headers.get('x-forwarded-for')?.split(',')[0] ||
-             'unknown';
+  const ip =
+    request.headers.get('x-real-ip') ||
+    request.headers.get('x-forwarded-for')?.split(',')[0] ||
+    'unknown';
 
   const identifier = userId || `ip:${ip}`;
   const result = await checkRateLimit(identifier, config);

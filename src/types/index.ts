@@ -1,5 +1,5 @@
 // Re-export database types
-export type { Database, Tables, InsertTables, UpdateTables, Json } from './supabase';
+export type { Database, Tables, TablesInsert, TablesUpdate, Json } from './supabase';
 
 // User types
 export interface User {

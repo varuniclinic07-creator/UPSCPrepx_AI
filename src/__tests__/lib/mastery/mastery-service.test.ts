@@ -87,19 +87,22 @@ describe('Mastery Service — SM-2 Algorithm', () => {
       expect(calculateMasteryLevel(0, 0)).toBe('not_started');
     });
 
-    it('returns weak for < 30% accuracy', () => {
+    it('returns weak for < 50% accuracy', () => {
       expect(calculateMasteryLevel(0.2, 10)).toBe('weak');
+      expect(calculateMasteryLevel(0.4, 10)).toBe('weak');
+      expect(calculateMasteryLevel(0.49, 10)).toBe('weak');
     });
 
-    it('returns developing for 30-55% accuracy', () => {
-      expect(calculateMasteryLevel(0.4, 10)).toBe('developing');
+    it('returns developing for 50-65% accuracy', () => {
+      expect(calculateMasteryLevel(0.5, 10)).toBe('developing');
+      expect(calculateMasteryLevel(0.6, 10)).toBe('developing');
     });
 
-    it('returns strong for 55-80% accuracy', () => {
+    it('returns strong for 65-80% accuracy', () => {
       expect(calculateMasteryLevel(0.7, 10)).toBe('strong');
     });
 
-    it('returns mastered for ≥ 80% accuracy', () => {
+    it('returns mastered for >= 80% accuracy', () => {
       expect(calculateMasteryLevel(0.85, 20)).toBe('mastered');
     });
   });

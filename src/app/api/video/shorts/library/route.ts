@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,8 +44,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
     const search = searchParams.get('search');
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
@@ -99,15 +99,15 @@ export async function GET(request: NextRequest) {
       title: video.title,
       topic: video.topic,
       subject: video.subject,
-      description: video.description,
+      description: video.description || '',
       video_url: video.video_url,
-      thumbnail_url: video.thumbnail_url,
-      duration_seconds: video.duration_seconds,
-      views_count: video.views_count,
-      likes_count: video.likes_count,
-      is_premium: video.is_premium,
+      thumbnail_url: video.thumbnail_url || '',
+      duration_seconds: video.duration_seconds || 0,
+      views_count: video.views_count || 0,
+      likes_count: video.likes_count || 0,
+      is_premium: video.is_premium || false,
       seo_tags: video.seo_tags || [],
-      created_at: video.created_at,
+      created_at: video.created_at || '',
     }));
 
     return NextResponse.json<VideoShortsLibraryResponse>({

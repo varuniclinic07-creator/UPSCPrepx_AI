@@ -1,14 +1,15 @@
 /**
  * Current Affairs Archive API
- * 
+ *
  * GET /api/ca/archive?from=YYYY-MM-DD&to=YYYY-MM-DD&subject=GS1|GS2|GS3|GS4|Essay
  * Returns historical digests with filtering
- * 
+ *
  * Master Prompt v8.0 - Feature F2 (READ Mode)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -17,20 +18,35 @@ export const dynamic = 'force-dynamic';
 // SUPABASE CLIENT
 // ============================================================================
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() {
+  if (!_sb)
+    _sb = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  return _sb;
+}
 
 // ============================================================================
 // VALIDATION SCHEMAS
 // ============================================================================
 
 const queryParamsSchema = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
+    .optional(),
   subject: z.enum(['GS1', 'GS2', 'GS3', 'GS4', 'Essay']).optional(),
   category: z.string().optional(),
-  importance: z.string().regex(/^[1-5]$/, 'Importance must be 1-5').optional(),
+  importance: z
+    .string()
+    .regex(/^[1-5]$/, 'Importance must be 1-5')
+    .optional(),
   page: z.string().regex(/^\d+$/).optional(),
   limit: z.string().regex(/^\d+$/).optional(),
 });
@@ -49,17 +65,18 @@ async function getDigests(filters: {
   page: number;
   limit: number;
 }) {
-  let query = supabase
+  let query = getSupabase()
     .from('daily_ca_digest')
-    .select(`
+    .select(
+      `
       *,
       article_count,
       summary,
       pdf_url,
       published_at
     `,
-    { count: 'exact' }
-  )
+      { count: 'exact' }
+    )
     .eq('is_published', true);
 
   // Date filters
@@ -72,9 +89,7 @@ async function getDigests(filters: {
 
   // Pagination
   const offset = (filters.page - 1) * filters.limit;
-  query = query
-    .order('date', { ascending: false })
-    .range(offset, offset + filters.limit - 1);
+  query = query.order('date', { ascending: false }).range(offset, offset + filters.limit - 1);
 
   const { data, error, count } = await query;
 
@@ -85,38 +100,51 @@ async function getDigests(filters: {
 
   // Get article counts and subject distribution for each digest
   const digestsWithDetails = await Promise.all(
-    (data || []).map(async digest => {
-      // Get subject distribution
-      const { data: articles } = await getSupabase()
-        .from('ca_articles')
-        .select(`
+    ((data || []) as any[]).map(
+      async (digest: {
+        id: string;
+        date: string;
+        title: string;
+        summary: string;
+        article_count: number;
+        pdf_url: string;
+        published_at: string;
+        subjectDistribution?: Record<string, number>;
+      }) => {
+        // Get subject distribution
+        const { data: articles } = await getSupabase()
+          .from('ca_articles')
+          .select(
+            `
           id,
           syllabus_mappings:ca_syllabus_mapping(subject)
-        `)
-        .eq('digest_id', digest.id)
-        .eq('is_published', true);
+        `
+          )
+          .eq('digest_id', digest.id)
+          .eq('is_published', true);
 
-      const distribution = {
-        GS1: 0,
-        GS2: 0,
-        GS3: 0,
-        GS4: 0,
-        Essay: 0,
-      };
+        const distribution = {
+          GS1: 0,
+          GS2: 0,
+          GS3: 0,
+          GS4: 0,
+          Essay: 0,
+        };
 
-      articles?.forEach(article => {
-        article.syllabus_mappings?.forEach((m: any) => {
-          if (m.subject in distribution) {
-            distribution[m.subject as keyof typeof distribution]++;
-          }
+        articles?.forEach((article) => {
+          article.syllabus_mappings?.forEach((m: any) => {
+            if (m.subject in distribution) {
+              distribution[m.subject as keyof typeof distribution]++;
+            }
+          });
         });
-      });
 
-      return {
-        ...digest,
-        subjectDistribution: distribution,
-      };
-    })
+        return {
+          ...digest,
+          subjectDistribution: distribution,
+        };
+      }
+    )
   );
 
   return { data: digestsWithDetails, count: count || 0 };
@@ -125,12 +153,15 @@ async function getDigests(filters: {
 /**
  * Get digests filtered by subject
  */
-async function getDigestsBySubject(subject: string, filters: {
-  from?: string;
-  to?: string;
-  page: number;
-  limit: number;
-}) {
+async function getDigestsBySubject(
+  subject: string,
+  filters: {
+    from?: string;
+    to?: string;
+    page: number;
+    limit: number;
+  }
+) {
   // Find articles with this subject mapping
   const { data: articleMappings } = await getSupabase()
     .from('ca_syllabus_mapping')
@@ -141,9 +172,14 @@ async function getDigestsBySubject(subject: string, filters: {
     return { data: [], count: 0 };
   }
 
-  const digestIds = [...new Set(articleMappings.map(m => m.digest_id))];
+  const digestIds = [...new Set(
+    (articleMappings as any[])
+      .filter(Boolean)
+      .map((m: any) => m.digest_id)
+      .filter((d: unknown): d is string => typeof d === 'string')
+  )];
 
-  let query = supabase
+  let query = getSupabase()
     .from('daily_ca_digest')
     .select('*', { count: 'exact' })
     .in('id', digestIds)
@@ -159,9 +195,7 @@ async function getDigestsBySubject(subject: string, filters: {
 
   // Pagination
   const offset = (filters.page - 1) * filters.limit;
-  query = query
-    .order('date', { ascending: false })
-    .range(offset, offset + filters.limit - 1);
+  query = query.order('date', { ascending: false }).range(offset, offset + filters.limit - 1);
 
   const { data, count } = await query;
 
@@ -242,22 +276,24 @@ export async function GET(request: NextRequest) {
     const response = {
       success: true,
       data: {
-        digests: result.data.map(digest => ({
-          digestId: digest.id,
-          date: digest.date,
-          title: digest.title,
-          summary: digest.summary,
-          articleCount: digest.article_count,
-          subjectDistribution: digest.subjectDistribution || {
-            GS1: 0,
-            GS2: 0,
-            GS3: 0,
-            GS4: 0,
-            Essay: 0,
-          },
-          pdfUrl: digest.pdf_url,
-          publishedAt: digest.published_at,
-        })),
+        digests: (result.data as any[]).map(
+          (digest: any) => ({
+            digestId: digest.id,
+            date: digest.date,
+            title: digest.title,
+            summary: digest.summary,
+            articleCount: digest.article_count,
+            subjectDistribution: digest.subjectDistribution || {
+              GS1: 0,
+              GS2: 0,
+              GS3: 0,
+              GS4: 0,
+              Essay: 0,
+            },
+            pdfUrl: digest.pdf_url,
+            publishedAt: digest.published_at,
+          })
+        ),
         pagination: {
           currentPage: page,
           totalPages,

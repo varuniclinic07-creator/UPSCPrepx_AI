@@ -9,14 +9,15 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { fetchDailyArticles } from './source-fetcher';
 import { processArticlesForSyllabus } from './syllabus-mapper';
 import { processArticlesForMCQs } from './mcq-generator';
 import { callAI } from '@/lib/ai/ai-provider-client';
 import { SIMPLIFIED_LANGUAGE_PROMPT } from '@/lib/onboarding/simplified-language-prompt';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
@@ -322,7 +323,14 @@ export async function generateDailyDigest(date: string): Promise<DailyDigest> {
     
     for (const article of articles.slice(0, 15)) { // Max 15 articles per day
       try {
-        const processed = await processArticle(article);
+        const processed = await processArticle({
+          ...article,
+          title: article.title || '',
+          full_content: article.full_content || '',
+          url: article.url || '',
+          image_url: article.image_url ?? undefined,
+          category: article.category ?? undefined,
+        });
         await updateArticle(processed);
         processedArticles.push(processed);
         console.debug(`✓ Processed: ${processed.title.substring(0, 40)}...`);

@@ -16,9 +16,11 @@ export const revalidate = 0;
  * Returns real-time business metrics
  */
 async function getRealtimeMetrics() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Parallel fetch all metrics
+  // Cast rpc calls to any — these RPC functions exist in the DB but are not in the generated types
+  const sb = supabase as any;
   const [
     activeUsers,
     newSignupsToday,
@@ -28,7 +30,7 @@ async function getRealtimeMetrics() {
     conversionRate,
   ] = await Promise.all([
     // Active users (last 5 minutes)
-    supabase.rpc('get_active_users', {
+    sb.rpc('get_active_users', {
       minutes_ago: 5,
     }),
 
@@ -39,14 +41,14 @@ async function getRealtimeMetrics() {
       .gte('created_at', new Date().toISOString().split('T')[0]),
 
     // Revenue today
-    supabase
-      .from('payments')
-      .select('amount')
+    (supabase
+      .from('payments') as any)
+      .select('total_amount')
       .eq('status', 'completed')
       .gte('created_at', new Date().toISOString().split('T')[0]),
 
     // AI requests today
-    supabase.rpc('get_ai_usage_count', {
+    sb.rpc('get_ai_usage_count', {
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date().toISOString(),
     }),
@@ -55,13 +57,13 @@ async function getRealtimeMetrics() {
     supabase.from('job_queues').select('queue_name, status, count'),
 
     // Conversion rate (last 7 days)
-    supabase.rpc('get_conversion_rate', { days: 7 }),
+    sb.rpc('get_conversion_rate', { days: 7 }),
   ]);
 
   // Calculate metrics
   const activeUsersCount = activeUsers.data?.[0]?.count || 0;
   const newSignupsCount = newSignupsToday.count || 0;
-  const revenueTodayAmount = revenueToday.data?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+  const revenueTodayAmount = revenueToday.data?.reduce((sum: number, p: { total_amount: number }) => sum + (p.total_amount || 0), 0) || 0;
   const aiRequestsCount = aiRequestsToday.data?.[0]?.count || 0;
   const conversionRateValue = conversionRate.data?.[0]?.rate || 0;
 

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       try {
         const metrics = await getMetrics();
 
-        return new Response(metrics, {
+        return new NextResponse(metrics, {
           headers: {
             'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
             'Cache-Control': 'no-cache, no-store, must-revalidate',

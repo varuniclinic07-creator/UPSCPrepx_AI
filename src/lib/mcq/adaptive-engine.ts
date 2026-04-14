@@ -1,6 +1,6 @@
 /**
  * MCQ Adaptive Engine Service
- * 
+ *
  * Master Prompt v8.0 - Feature F7 (READ Mode)
  * - Adaptive difficulty adjustment
  * - Item Response Theory (IRT) implementation
@@ -63,8 +63,8 @@ const DIFFICULTY_SCORES: Record<McqDifficulty, number> = {
 };
 
 const ACCURACY_THRESHOLDS = {
-  INCREASE_DIFFICULTY: 0.80, // 80% accuracy → harder questions
-  DECREASE_DIFFICULTY: 0.50, // 50% accuracy → easier questions
+  INCREASE_DIFFICULTY: 0.8, // 80% accuracy → harder questions
+  DECREASE_DIFFICULTY: 0.5, // 50% accuracy → easier questions
 };
 
 const SPACED_REPETITION_INTERVALS = [1, 3, 7, 14, 30, 60, 90]; // days
@@ -74,10 +74,7 @@ const SPACED_REPETITION_INTERVALS = [1, 3, 7, 14, 30, 60, 90]; // days
 // ============================================================================
 
 export class AdaptiveEngineService {
-  
-
-  constructor() {
-  }
+  constructor() {}
 
   private async getSupabase() {
     return createClient();
@@ -89,9 +86,12 @@ export class AdaptiveEngineService {
   async calculateUserAbility(userId: string): Promise<UserAbility> {
     try {
       // Fetch user's attempt history
-      const { data: attempts } = await (await this.getSupabase())
+      const { data: attempts } = await (
+        await this.getSupabase()
+      )
         .from('mcq_attempts')
-        .select(`
+        .select(
+          `
           *,
           answers:mcq_answers(
             is_correct,
@@ -102,7 +102,8 @@ export class AdaptiveEngineService {
               difficulty
             )
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -113,10 +114,22 @@ export class AdaptiveEngineService {
 
       // Calculate ability by subject
       const bySubject: Record<McqSubject, number> = {
-        GS1: 50, GS2: 50, GS3: 50, GS4: 50, CSAT: 50, Optional: 50, General: 50,
+        GS1: 50,
+        GS2: 50,
+        GS3: 50,
+        GS4: 50,
+        CSAT: 50,
+        Optional: 50,
+        General: 50,
       };
       const subjectCounts: Record<McqSubject, number> = {
-        GS1: 0, GS2: 0, GS3: 0, GS4: 0, CSAT: 0, Optional: 0, General: 0,
+        GS1: 0,
+        GS2: 0,
+        GS3: 0,
+        GS4: 0,
+        CSAT: 0,
+        Optional: 0,
+        General: 0,
       };
 
       // Calculate ability by topic
@@ -135,20 +148,20 @@ export class AdaptiveEngineService {
       // Process each attempt
       for (const attempt of attempts) {
         const answers = attempt.answers || [];
-        
+
         for (const answer of answers) {
           const question = (answer as any).question;
           if (!question) continue;
 
           const isCorrect = answer.is_correct;
           const timeSpent = answer.time_spent_sec || 90;
-          const difficultyScore = DIFFICULTY_SCORES[question.difficulty];
+          const difficultyScore = DIFFICULTY_SCORES[question.difficulty as McqDifficulty];
 
           // Calculate performance score (0-100)
           const accuracyScore = isCorrect ? 100 : 0;
-          const timeBonus = Math.max(0, 100 - (timeSpent / question.time_estimate_sec * 50));
+          const timeBonus = Math.max(0, 100 - (timeSpent / question.time_estimate_sec) * 50);
           const difficultyWeight = difficultyScore / 100;
-          
+
           const performanceScore = (accuracyScore * 0.7 + timeBonus * 0.3) * difficultyWeight;
 
           // Update subject ability
@@ -165,8 +178,8 @@ export class AdaptiveEngineService {
           byTopic[question.topic].count++;
 
           // Update difficulty performance
-          byDifficulty[question.difficulty].sum += accuracyScore;
-          byDifficulty[question.difficulty].count++;
+          byDifficulty[question.difficulty as McqDifficulty].sum += accuracyScore;
+          byDifficulty[question.difficulty as McqDifficulty].count++;
 
           // Update totals
           if (isCorrect) totalCorrect++;
@@ -221,10 +234,8 @@ export class AdaptiveEngineService {
   async getRecommendedDifficulty(userId: string, subject?: McqSubject): Promise<McqDifficulty> {
     try {
       const ability = await this.calculateUserAbility(userId);
-      
-      const abilityScore = subject 
-        ? ability.bySubject[subject] 
-        : ability.overall;
+
+      const abilityScore = subject ? ability.bySubject[subject] : ability.overall;
 
       if (abilityScore >= 75) return 'Hard';
       if (abilityScore >= 50) return 'Medium';
@@ -269,7 +280,7 @@ export class AdaptiveEngineService {
       console.error('AdaptiveEngineService.identifyAreas error:', error);
       return {
         initialDifficulty: 'Medium',
-        adjustmentThreshold: 0.80,
+        adjustmentThreshold: 0.8,
         abilityScore: 50,
         weakAreas: [],
         strongAreas: [],
@@ -295,7 +306,7 @@ export class AdaptiveEngineService {
         .single();
 
       const reviewCount = bookmark?.review_count || 0;
-      const easeFactor = bookmark?.ease_factor || 2.5;
+      const easeFactor = (bookmark as any)?.ease_factor || 2.5;
 
       // SM-2 Algorithm adaptation
       let newEaseFactor = easeFactor;
@@ -308,9 +319,13 @@ export class AdaptiveEngineService {
         } else if (reviewCount === 1) {
           newInterval = 3;
         } else {
-          newInterval = Math.round(SPACED_REPETITION_INTERVALS[Math.min(reviewCount, SPACED_REPETITION_INTERVALS.length - 1)] * easeFactor);
+          newInterval = Math.round(
+            SPACED_REPETITION_INTERVALS[
+              Math.min(reviewCount, SPACED_REPETITION_INTERVALS.length - 1)
+            ] * easeFactor
+          );
         }
-        
+
         // Adjust ease factor
         newEaseFactor = Math.max(1.3, easeFactor + 0.1);
       } else {
@@ -361,7 +376,7 @@ export class AdaptiveEngineService {
         return [];
       }
 
-      return data?.map(d => d.question_id) || [];
+      return data?.map((d) => d.question_id) || [];
     } catch (error) {
       console.error('AdaptiveEngineService.getDueReviews error:', error);
       return [];
@@ -395,17 +410,21 @@ export class AdaptiveEngineService {
       const totalAttempts = attempts.length;
       const correctAnswers = attempts.reduce((sum, a) => sum + (a.correct_answers || 0), 0);
       const incorrectAnswers = attempts.reduce((sum, a) => sum + (a.incorrect_answers || 0), 0);
-      const avgAccuracy = attempts.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / totalAttempts;
-      const avgTimePerQuestion = attempts.reduce((sum, a) => sum + (a.avg_time_per_question || 0), 0) / totalAttempts;
+      const avgAccuracy =
+        attempts.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / totalAttempts;
+      const avgTimePerQuestion =
+        attempts.reduce((sum, a) => sum + (a.avg_time_per_question || 0), 0) / totalAttempts;
 
       // Calculate recent trend (last 10 vs previous 10)
       const recent10 = attempts.slice(0, 10);
       const previous10 = attempts.slice(10, 20);
-      
-      const recentAvg = recent10.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / recent10.length;
-      const previousAvg = previous10.length > 0 
-        ? previous10.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / previous10.length 
-        : recentAvg;
+
+      const recentAvg =
+        recent10.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / recent10.length;
+      const previousAvg =
+        previous10.length > 0
+          ? previous10.reduce((sum, a) => sum + (a.accuracy_percent || 0), 0) / previous10.length
+          : recentAvg;
 
       let recentTrend: 'improving' | 'stable' | 'declining' = 'stable';
       if (recentAvg > previousAvg + 5) recentTrend = 'improving';
@@ -443,7 +462,7 @@ export class AdaptiveEngineService {
   private calculateStreak(attempts: any[]): number {
     if (attempts.length === 0) return 0;
 
-    const dates = new Set(attempts.map(a => new Date(a.created_at).toDateString()));
+    const dates = new Set(attempts.map((a) => new Date(a.created_at).toDateString()));
     let streak = 0;
     let currentDate = new Date();
 

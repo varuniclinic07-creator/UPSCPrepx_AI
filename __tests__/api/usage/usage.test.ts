@@ -24,13 +24,13 @@ mockSelect.mockReturnValue({ eq: mockEq });
 mockEq.mockReturnValue({ gte: mockGte, select: mockSelect });
 
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(() => Promise.resolve({ from: (...args: unknown[]) => mockFrom(...args) })),
+  createClient: jest.fn(() => Promise.resolve({ from: (table: any) => mockFrom(table) })) as any,
 }));
 
 const mockRequireSession = jest.fn();
 
 jest.mock('@/lib/auth/session', () => ({
-  requireSession: (...args: unknown[]) => mockRequireSession(...args),
+  requireSession: () => mockRequireSession(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -38,11 +38,11 @@ jest.mock('@/lib/auth/session', () => ({
 // ---------------------------------------------------------------------------
 
 function buildRequest(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init);
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as any);
 }
 
 // ---------------------------------------------------------------------------
-// Tests – GET /api/usage
+// Tests - GET /api/usage
 // ---------------------------------------------------------------------------
 
 function resetChain() {
@@ -78,7 +78,7 @@ describe('GET /api/usage', () => {
     // First from('usage_tracking'): .select().eq().gte() -> resolves usage rows
     // Second from('usage_limits'): .select().eq() -> resolves limit rows
     let fromCallCount = 0;
-    mockFrom.mockImplementation(() => {
+    mockFrom.mockImplementation((() => {
       fromCallCount++;
       if (fromCallCount === 1) {
         // usage_tracking chain: select -> eq -> gte
@@ -92,7 +92,7 @@ describe('GET /api/usage', () => {
         const select = jest.fn().mockReturnValue({ eq });
         return { select, eq };
       }
-    });
+    }) as any);
 
     const res = await GET(buildRequest('/api/usage'));
     const json = await res.json();
@@ -116,7 +116,7 @@ describe('GET /api/usage', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests – POST /api/usage
+// Tests - POST /api/usage
 // ---------------------------------------------------------------------------
 
 describe('POST /api/usage', () => {

@@ -212,7 +212,7 @@ export default function AnalyticsPage() {
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                  formatter={((value: number) => [`₹${value.toLocaleString()}`, 'Revenue']) as any}
                 />
                 <Area
                   type="monotone"
@@ -235,7 +235,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                   <XAxis dataKey="plan" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']} />
+                  <Tooltip formatter={((value: number) => [`₹${value.toLocaleString()}`, 'Revenue']) as any} />
                   <Bar dataKey="amount" fill="#F97316" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -250,7 +250,7 @@ export default function AnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ plan, percentage }) => `${plan}: ${percentage}%`}
+                    label={(props: any) => `${props.plan}: ${props.percentage}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"
@@ -409,7 +409,7 @@ function KpiCard({
   value: string | number;
   trend: string;
   trendUp: boolean;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

@@ -1,15 +1,22 @@
 /**
  * Gamification XP Service
- * 
+ *
  * Master Prompt v8.0 - Feature F13 (READ Mode)
  * - Earn XP, Check Achievements, Manage Streak
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() {
+  if (!_sb)
+    _sb = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  return _sb;
+}
 
 export interface XPEvent {
   userId: string;
@@ -69,7 +76,7 @@ export class GamificationService {
         .eq('user_id', userId)
         .single();
 
-      if (!stats || stats.current_balance < amount) return false;
+      if (!stats || (stats.current_balance ?? 0) < amount) return false;
 
       // Log negative transaction
       await getSupabase().from('xp_transactions').insert({
@@ -82,7 +89,7 @@ export class GamificationService {
       // Update balance
       await getSupabase()
         .from('user_xp_stats')
-        .update({ current_balance: stats.current_balance - amount })
+        .update({ current_balance: (stats.current_balance ?? 0) - amount })
         .eq('user_id', userId);
 
       return true;

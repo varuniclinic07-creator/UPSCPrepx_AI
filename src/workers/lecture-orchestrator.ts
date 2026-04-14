@@ -87,8 +87,8 @@ export async function orchestrateLecture(lectureJobId: string) {
 
         for (let i = 0; i < chapters.length; i++) {
             const chapter = chapters[i];
-            const content = chapter.content as any;
-            const visualCues = content?.visual_prompts || [];
+            const visualPrompts = chapter.visual_prompts as any;
+            const visualCues = Array.isArray(visualPrompts) ? visualPrompts : [];
 
             if (visualCues.length > 0) {
                 const visuals = await generateVisuals(visualCues);
@@ -113,8 +113,7 @@ export async function orchestrateLecture(lectureJobId: string) {
         for (let i = 0; i < chapters.length; i++) {
             const chapter = chapters[i];
 
-            const content = chapter.content as any;
-            const script = content?.script || '';
+            const script = (chapter.script as string) || '';
 
             const audioPaths = await generateLongTTS(
                 script,

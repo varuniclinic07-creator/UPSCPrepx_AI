@@ -56,7 +56,7 @@ const JWT_CONFIG = {
 export async function validateJWT(token: string): Promise<JWTValidationResult> {
   try {
     // Use Supabase to validate token
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data.user) {
@@ -189,7 +189,7 @@ export async function withJWTValidation(
  */
 export async function refreshJWT(): Promise<{ success: boolean; newToken?: string }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.auth.refreshSession();
 
     if (error || !data.session) {

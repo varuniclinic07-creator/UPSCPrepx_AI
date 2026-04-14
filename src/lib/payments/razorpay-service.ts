@@ -69,7 +69,7 @@ export class RazorpayService {
   async createOrder(options: CreateOrderOptions): Promise<RazorpayOrder> {
     try {
       const orderData = {
-        amount: options.amount,
+        amount: Number(options.amount),
         currency: options.currency || 'INR',
         receipt: `receipt_${options.userId}_${Date.now()}`,
         notes: {
@@ -84,7 +84,7 @@ export class RazorpayService {
 
       return {
         id: order.id,
-        amount: order.amount,
+        amount: Number(order.amount),
         currency: order.currency,
         status: order.status as any,
         created_at: order.created_at,
@@ -105,7 +105,7 @@ export class RazorpayService {
       // Generate expected signature
       const sign = razorpay_order_id + '|' + razorpay_payment_id;
       const expectedSign = crypto
-        .createHmac('sha256', this.razorpay.key_secret)
+        .createHmac('sha256', this.webhookSecret)
         .update(sign.toString())
         .digest('hex');
 
@@ -133,7 +133,7 @@ export class RazorpayService {
         verified: true,
         paymentId: razorpay_payment_id,
         orderId: razorpay_order_id,
-        amount: payment.amount,
+        amount: Number(payment.amount),
         status: payment.status as any,
         method: payment.method,
       };
@@ -175,7 +175,7 @@ export class RazorpayService {
    */
   async capturePayment(paymentId: string, amount: number): Promise<any> {
     try {
-      return await this.razorpay.payments.capture(paymentId, amount);
+      return await this.razorpay.payments.capture(paymentId, amount, 'INR');
     } catch (error) {
       console.error('Payment capture error:', error);
       throw error;
@@ -199,7 +199,7 @@ export class RazorpayService {
         refundData.notes = notes;
       }
 
-      return await this.razorpay.refunds.create(refundData);
+      return await this.razorpay.payments.refund(paymentId, refundData);
     } catch (error) {
       console.error('Refund error:', error);
       throw error;
@@ -237,9 +237,8 @@ export class RazorpayService {
     try {
       const payments = await this.razorpay.payments.all({
         count: limit,
-        'receipt[user_id]': userId,
-      });
-      return payments.items;
+      } as any);
+      return (payments as any).items || [];
     } catch (error) {
       console.error('Get payments error:', error);
       return [];
@@ -269,9 +268,7 @@ export class RazorpayService {
    */
   async cancelSubscription(subscriptionId: string, notifyCustomer?: boolean): Promise<any> {
     try {
-      return await this.razorpay.subscriptions.cancel(subscriptionId, {
-        notify_customer: notifyCustomer || false,
-      });
+      return await this.razorpay.subscriptions.cancel(subscriptionId, notifyCustomer ? 1 : 0);
     } catch (error) {
       console.error('Subscription cancellation error:', error);
       throw error;

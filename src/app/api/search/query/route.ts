@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     // Execute vector similarity search using database function
     const { data, error } = await supabase.rpc('search_content', {
-      query_embedding: embedding,
+      query_embedding: JSON.stringify(embedding),
       filter_sources: filters?.sources || null,
       filter_content_types: filters?.content_type || null,
       filter_syllabus_tags: filters?.syllabus_area || null,
@@ -355,7 +355,7 @@ async function generateRelatedQueries(query: string): Promise<string[]> {
       `Generate exactly 5 related search queries for: "${query}". Return ONLY a JSON array of strings, nothing else. Example: ["related query 1", "related query 2"]`,
       { maxTokens: 100, temperature: 0.7 }
     )).trim();
-    const jsonMatch = text.match(/\[.*\]/s);
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
       return Array.isArray(parsed) ? parsed.slice(0, 5) : [];

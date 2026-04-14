@@ -17,12 +17,20 @@ import { createClient as createSupabaseClient } from '@/lib/supabase/client';
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-export interface ApiError {
+export class ApiError extends Error {
   code: string;
-  message: string;
   status: number;
   details?: Record<string, unknown>;
   retryable: boolean;
+
+  constructor(code: string, message: string, status: number, details?: Record<string, unknown>, retryable: boolean = false) {
+    super(message);
+    this.code = code;
+    this.status = status;
+    this.details = details;
+    this.retryable = retryable;
+    this.name = 'ApiError';
+  }
 }
 
 export interface ApiConfig {
@@ -59,7 +67,7 @@ const DEFAULT_CONFIG: ApiConfig = {
 class ApiClient {
   private config: ApiConfig;
   private authToken: string | null = null;
-  private user: User | null = null;
+  private _currentUser: User | null = null;
 
   constructor(config?: Partial<ApiConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -70,12 +78,12 @@ class ApiClient {
   // ═══════════════════════════════════════════════════════════════════════
 
   setAuth(user: User | null, token: string | null) {
-    this.user = user;
+    this._currentUser = user;
     this.authToken = token;
   }
 
   clearAuth() {
-    this.user = null;
+    this._currentUser = null;
     this.authToken = null;
   }
 
@@ -164,20 +172,21 @@ class ApiClient {
   private async parseError(response: Response): Promise<ApiError> {
     try {
       const errorData = await response.json();
-      return {
-        code: errorData.code || 'UNKNOWN_ERROR',
-        message: errorData.error || errorData.message || 'An error occurred',
-        status: response.status,
-        details: errorData.details,
-        retryable: this.isRetryableError(response.status),
-      };
+      return new ApiError(
+        errorData.code || 'UNKNOWN_ERROR',
+        errorData.error || errorData.message || 'An error occurred',
+        response.status,
+        errorData.details,
+        this.isRetryableError(response.status),
+      );
     } catch {
-      return {
-        code: 'NETWORK_ERROR',
-        message: 'Network error occurred',
-        status: response.status,
-        retryable: this.isRetryableError(response.status),
-      };
+      return new ApiError(
+        'NETWORK_ERROR',
+        'Network error occurred',
+        response.status,
+        undefined,
+        this.isRetryableError(response.status),
+      );
     }
   }
 

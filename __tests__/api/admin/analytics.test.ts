@@ -9,13 +9,13 @@ import { GET } from '@/app/api/admin/analytics/route';
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
-    rpc: (...args: any[]) => mockRpc(...args),
-    from: (...args: any[]) => mockFrom(...args),
+    rpc: (name: any, params: any) => mockRpc(name, params),
+    from: (table: any) => mockFrom(table),
   })),
 }));
 
 const mockSelect = jest.fn().mockReturnThis();
-const mockFrom = jest.fn(() => ({ select: mockSelect }));
+const mockFrom: jest.Mock = jest.fn(() => ({ select: mockSelect }));
 const mockRpc = jest.fn();
 
 // ---------------------------------------------------------------------------
@@ -116,7 +116,10 @@ describe('GET /api/admin/analytics', () => {
 
   it('silently ignores 42883 RPC errors (function not found)', async () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation();
-    mockRpc.mockResolvedValue({ data: null, error: { code: '42883', message: 'function not found' } });
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { code: '42883', message: 'function not found' },
+    });
     mockSelect.mockResolvedValue({ data: [], error: null });
 
     const res = await GET(buildRequest(BASE_URL));
@@ -155,7 +158,14 @@ describe('GET /api/admin/analytics', () => {
 
   it('enriches provider data with default stats', async () => {
     const providers = [
-      { id: '1', name: 'Groq', provider_type: 'groq', is_active: true, is_default: false, rate_limit_rpm: 100 },
+      {
+        id: '1',
+        name: 'Groq',
+        provider_type: 'groq',
+        is_active: true,
+        is_default: false,
+        rate_limit_rpm: 100,
+      },
     ];
     mockSelect.mockResolvedValue({ data: providers, error: null });
 

@@ -202,10 +202,10 @@ export function getCorsHeaders(options: CorsOptions = DEFAULT_CORS_OPTIONS): Rec
 
     return {
         'Access-Control-Allow-Origin': allowedOrigins.join(', '),
-        'Access-Control-Allow-Methods': allowedMethods.join(', '),
-        'Access-Control-Allow-Headers': allowedHeaders.join(', '),
-        'Access-Control-Allow-Credentials': credentials.toString(),
-        'Access-Control-Max-Age': maxAge.toString(),
+        'Access-Control-Allow-Methods': (allowedMethods ?? []).join(', '),
+        'Access-Control-Allow-Headers': (allowedHeaders ?? []).join(', '),
+        'Access-Control-Allow-Credentials': (credentials ?? true).toString(),
+        'Access-Control-Max-Age': (maxAge ?? 86400).toString(),
     };
 }
 
@@ -266,7 +266,9 @@ export function validateCsrfToken(token: string, expectedToken: string): boolean
             return false;
         }
 
-        return crypto.timingSafeEqual(tokenBuffer, expectedBuffer);
+        // Use Node.js crypto for timing-safe comparison
+        const nodeCrypto = require('crypto') as typeof import('crypto');
+        return nodeCrypto.timingSafeEqual(tokenBuffer, expectedBuffer);
     } catch {
         return false;
     }

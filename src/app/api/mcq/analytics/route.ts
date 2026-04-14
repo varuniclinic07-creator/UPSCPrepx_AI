@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 // ============================================================================
 
 const analyticsQuerySchema = z.object({
-  days: z.string().transform(Number).default('30'),
+  days: z.string().default('30').transform(Number),
   subject: z.enum(['GS1', 'GS2', 'GS3', 'GS4', 'CSAT', 'Optional', 'General']).optional(),
 });
 

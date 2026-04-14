@@ -9,10 +9,11 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import Parser from 'rss-parser';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // RSS Parser instance
@@ -380,15 +381,16 @@ export async function saveArticles(
   for (const article of articles) {
     if (article.isDuplicate) continue;
 
-    const { data, error } = await getSupabase()
-      .from('ca_articles')
+    const sourceResult = await getSupabase().from('ca_sources').select('id').eq('name', article.sourceId === 'pib' ? 'Press Information Bureau' : article.sourceId).single();
+    const { data, error } = await (getSupabase()
+      .from('ca_articles') as any)
       .insert({
         digest_id: digestId,
-        source_id: (await getSupabase().from('ca_sources').select('id').eq('name', article.sourceId === 'pib' ? 'Press Information Bureau' : article.sourceId).single()).data?.id,
+        source_id: sourceResult.data?.id || null,
         title: article.title,
         url: article.url,
         full_content: article.content || '',
-        image_url: article.imageUrl,
+        image_url: article.imageUrl || null,
         category: article.category,
         published_at: article.publishedAt.toISOString(),
         is_published: false,

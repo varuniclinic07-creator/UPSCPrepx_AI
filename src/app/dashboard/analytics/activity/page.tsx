@@ -124,7 +124,7 @@ export default function ActivityAnalyticsPage() {
               <YAxis allowDecimals={false} />
               <Tooltip
                 labelFormatter={(d) => `Date: ${d}`}
-                formatter={(v: number) => [`${v} min`, 'Study Time']}
+                formatter={((v: number) => [`${v} min`, 'Study Time']) as any}
               />
               <Area
                 type="monotone"
@@ -151,7 +151,7 @@ export default function ActivityAnalyticsPage() {
                 />
                 <YAxis domain={[0, 100]} />
                 <Tooltip
-                  formatter={(v: number) => [`${v}%`, 'Accuracy']}
+                  formatter={((v: number) => [`${v}%`, 'Accuracy']) as any}
                 />
                 <Line
                   type="monotone"

@@ -469,7 +469,7 @@ function ServiceCard({
   extra,
 }: {
   name: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   status: 'healthy' | 'unhealthy' | 'degraded';
   latency: number;
   extra?: string;

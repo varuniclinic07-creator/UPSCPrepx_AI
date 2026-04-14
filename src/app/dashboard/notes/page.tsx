@@ -6,6 +6,7 @@ import { getNotesByUser } from '@/lib/services/notes-service';
 import { BentoGrid, BentoCard } from '@/components/magic-ui/bento-grid';
 import { ShimmerButton } from '@/components/magic-ui/shimmer-button';
 import { BorderBeamInput } from '@/components/magic-ui/border-beam';
+import { QuickGenerate } from '@/components/living-content/quick-generate';
 import type { Note } from '@/types';
 
 export const metadata = {
@@ -170,6 +171,9 @@ export default function NotesPage() {
           </button>
         </div>
       </section>
+
+      {/* Living Content — Quick Generate */}
+      <QuickGenerate mode="notes" />
 
       {/* Subject Filter Tags */}
       <div className="flex flex-wrap gap-2">

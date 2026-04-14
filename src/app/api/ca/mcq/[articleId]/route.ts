@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -17,8 +18,8 @@ export const dynamic = 'force-dynamic';
 // SUPABASE CLIENT
 // ============================================================================
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); return _sb; }
 
 // ============================================================================
@@ -38,11 +39,11 @@ const submitAnswerSchema = z.object({
  */
 async function getMCQs(articleId: string) {
   const { data, error } = await getSupabase()
-    .from('ca_mcqs')
+    .from('ca_mcqs' as any)
     .select('*')
     .eq('article_id', articleId)
     .eq('is_active', true)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true }) as { data: any[] | null; error: any };
 
   if (error) {
     console.error('Failed to fetch MCQs:', error);
@@ -57,11 +58,11 @@ async function getMCQs(articleId: string) {
  */
 async function getUserAttempts(mcqIds: string[], userId: string) {
   const { data } = await getSupabase()
-    .from('ca_user_quiz_attempts')
+    .from('ca_user_quiz_attempts' as any)
     .select('mcq_id, selected_answer, is_correct, attempted_at')
     .in('mcq_id', mcqIds)
     .eq('user_id', userId)
-    .order('attempted_at', { ascending: false });
+    .order('attempted_at', { ascending: false }) as { data: any[] | null };
 
   if (!data) return new Map();
 
@@ -120,14 +121,14 @@ async function saveQuizAttempt(
   isCorrect: boolean
 ) {
   const { error } = await getSupabase()
-    .from('ca_user_quiz_attempts')
+    .from('ca_user_quiz_attempts' as any)
     .insert({
       mcq_id: mcqId,
       user_id: userId,
       selected_answer: selectedAnswer,
       is_correct: isCorrect,
       attempted_at: new Date().toISOString(),
-    });
+    } as any);
 
   if (error) {
     console.error('Failed to save quiz attempt:', error);
@@ -141,14 +142,14 @@ async function saveQuizAttempt(
 async function updateUserStats(userId: string, isCorrect: boolean) {
   // Get or create user stats
   const { data: stats } = await getSupabase()
-    .from('user_progress')
+    .from('user_progress' as any)
     .select('ca_mcqs_correct, ca_mcqs_incorrect')
     .eq('user_id', userId)
-    .single();
+    .single() as { data: any };
 
   if (stats) {
-    await getSupabase()
-      .from('user_progress')
+    await (getSupabase()
+      .from('user_progress' as any) as any)
       .update({
         ca_mcqs_correct: stats.ca_mcqs_correct + (isCorrect ? 1 : 0),
         ca_mcqs_incorrect: stats.ca_mcqs_incorrect + (isCorrect ? 0 : 1),
@@ -157,12 +158,12 @@ async function updateUserStats(userId: string, isCorrect: boolean) {
       .eq('user_id', userId);
   } else {
     await getSupabase()
-      .from('user_progress')
+      .from('user_progress' as any)
       .insert({
         user_id: userId,
         ca_mcqs_correct: isCorrect ? 1 : 0,
         ca_mcqs_incorrect: isCorrect ? 0 : 1,
-      });
+      } as any);
   }
 }
 

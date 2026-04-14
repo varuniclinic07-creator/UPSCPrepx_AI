@@ -135,7 +135,7 @@ export class FeatureUsageService {
    * Get usage analytics for all features
    */
   async getFeatureUsage(periodDays: number = 30): Promise<FeatureUsage[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const periodStart = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
     const previousPeriodStart = new Date(periodStart.getTime() - periodDays * 24 * 60 * 60 * 1000);
 
@@ -155,10 +155,10 @@ export class FeatureUsageService {
     // Get total active users
     const { data: activeUsersData } = await supabase
       .from('ai_usage_logs')
-      .select('user_id', { distinct: true })
+      .select('user_id')
       .gte('created_at', periodStart.toISOString());
 
-    const totalActiveUsers = new Set(activeUsersData?.map(u => u.user_id) || []).size || 1;
+    const totalActiveUsers = new Set(activeUsersData?.map((u: { user_id: string }) => u.user_id) || []).size || 1;
 
     // Aggregate by feature
     const featureMap: Record<string, {
@@ -240,7 +240,7 @@ export class FeatureUsageService {
    * Get feature adoption status for a user
    */
   async getFeatureAdoption(userId: string): Promise<FeatureAdoption> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get all features used by user
     const { data: userFeatures } = await supabase
@@ -249,7 +249,7 @@ export class FeatureUsageService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    const usedFeatures = new Set(userFeatures?.map(f => f.feature_id) || []);
+    const usedFeatures = new Set(userFeatures?.map((f: { feature_id: string }) => f.feature_id) || []);
     const allFeatures = Object.keys(FEATURE_DEFINITIONS);
 
     // Define power features (advanced features that indicate power usage)
@@ -296,7 +296,7 @@ export class FeatureUsageService {
    * Get bulk feature adoption for all users
    */
   async getBulkFeatureAdoption(): Promise<Record<string, FeatureAdoption>> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get all users with feature usage
     const { data: featureData } = await supabase
@@ -370,7 +370,7 @@ export class FeatureUsageService {
    * Get usage trends for features
    */
   async getFeatureTrends(periods: number = 6, periodDays: number = 7): Promise<FeatureTrend[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const trends: FeatureTrend[] = [];
 
     const now = new Date();
@@ -443,7 +443,7 @@ export class FeatureUsageService {
    * Analyze user's feature journey
    */
   async analyzeUserJourney(userId: string): Promise<UserJourney> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get user's feature usage in chronological order
     const { data: featureUsage } = await supabase
@@ -468,7 +468,7 @@ export class FeatureUsageService {
     const uniqueFeatures = new Set<string>();
     const journeyPath: string[] = [];
     let firstFeature = featureUsage[0].feature_id;
-    const firstUsedAt = new Date(featureUsage[0].created_at).getTime();
+    const firstUsedAt = new Date(featureUsage[0].created_at as string).getTime();
 
     for (const usage of featureUsage) {
       if (!uniqueFeatures.has(usage.feature_id)) {
@@ -484,9 +484,9 @@ export class FeatureUsageService {
     let timeToActivation = 0;
     let activationReached = false;
     for (let i = 0; i < featureUsage.length; i++) {
-      const featuresSoFar = new Set(featureUsage.slice(0, i + 1).map(f => f.feature_id));
+      const featuresSoFar = new Set(featureUsage.slice(0, i + 1).map((f: { feature_id: string }) => f.feature_id));
       if (featuresSoFar.size >= 3 && !activationReached) {
-        timeToActivation = new Date(featureUsage[i].created_at).getTime() - firstUsedAt;
+        timeToActivation = new Date(featureUsage[i].created_at as string).getTime() - firstUsedAt;
         activationReached = true;
         break;
       }
@@ -517,7 +517,7 @@ export class FeatureUsageService {
    * Find correlations between features
    */
   async getFeatureCorrelations(): Promise<FeatureCorrelation[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const correlations: FeatureCorrelation[] = [];
 
     // Get all feature usage

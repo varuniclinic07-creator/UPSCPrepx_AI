@@ -193,7 +193,7 @@ export default function RevenueAnalyticsPage() {
               {metrics?.netRevenueRetention.toFixed(1)}%
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              {metrics?.netRevenueRetention >= 100 ? 'Growing revenue base' : 'Shrinking revenue base'}
+              {(metrics?.netRevenueRetention ?? 0) >= 100 ? 'Growing revenue base' : 'Shrinking revenue base'}
             </p>
           </div>
         </div>
@@ -219,7 +219,7 @@ export default function RevenueAnalyticsPage() {
                     border: '1px solid #E5E7EB',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
+                  formatter={((value: number) => [`$${value.toLocaleString()}`, 'Revenue']) as any}
                 />
                 <Legend />
                 <Area
@@ -252,7 +252,7 @@ export default function RevenueAnalyticsPage() {
                       border: '1px solid #E5E7EB',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
+                    formatter={((value: number) => [`$${value.toLocaleString()}`, 'Revenue']) as any}
                   />
                   <Bar dataKey="revenue" fill="#3B82F6" name="Revenue" />
                 </BarChart>
@@ -271,7 +271,7 @@ export default function RevenueAnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ plan, count }) => `${plan}: ${count.toLocaleString()}`}
+                    label={({ plan, count }: any) => `${plan}: ${count.toLocaleString()}`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"

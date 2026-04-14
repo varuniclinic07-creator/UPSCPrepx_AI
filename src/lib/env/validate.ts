@@ -56,7 +56,7 @@ export function validateEnv(): Env {
     // In production, log but don't crash — allow graceful degradation
     if (process.env.NODE_ENV === 'production') {
       console.error('⚠️ App starting with missing env vars — some features may be unavailable');
-      cachedEnv = result.data as Env;
+      cachedEnv = result.data as unknown as Env;
       return cachedEnv;
     }
     throw new Error('Invalid environment variables - check console for details');
@@ -68,14 +68,26 @@ export function validateEnv(): Env {
 
 // Helper: get 9Router key with fallback naming
 export function getNineRouterKey(): string {
-  return process.env.NINE_ROUTER_API_KEY || process.env['9ROUTER_API_KEY'] || process.env.ROUTER9_API_KEY || '';
+  return (
+    process.env.NINE_ROUTER_API_KEY ||
+    process.env['9ROUTER_API_KEY'] ||
+    process.env.ROUTER9_API_KEY ||
+    ''
+  );
 }
 
 export function getNineRouterUrl(): string {
-  return process.env.NINE_ROUTER_BASE_URL || process.env['9ROUTER_BASE_URL'] || process.env.ROUTER9_BASE_URL || 'https://r94p885.9router.com/v1';
+  return (
+    process.env.NINE_ROUTER_BASE_URL ||
+    process.env['9ROUTER_BASE_URL'] ||
+    process.env.ROUTER9_BASE_URL ||
+    'https://r94p885.9router.com/v1'
+  );
 }
 
 // Helper: get Supabase Edge Function URL (derived from Supabase URL)
 export function getEdgeFunctionUrl(): string {
-  return process.env.SUPABASE_EDGE_FUNCTION_URL || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
+  return (
+    process.env.SUPABASE_EDGE_FUNCTION_URL || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`
+  );
 }

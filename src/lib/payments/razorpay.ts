@@ -18,7 +18,13 @@ function getRazorpay(): InstanceType<typeof Razorpay> {
     return _razorpay;
 }
 /** @deprecated Use getRazorpay() for lazy initialization */
-export const razorpay = { orders: { create: (...args: any[]) => getRazorpay().orders.create(...args) } };
+export const razorpay = {
+    orders: { create: (params: any) => getRazorpay().orders.create(params) as any },
+    payments: {
+        fetch: (paymentId: string) => getRazorpay().payments.fetch(paymentId) as any,
+        refund: (paymentId: string, params: any) => getRazorpay().payments.refund(paymentId, params) as any,
+    },
+};
 
 export interface PaymentOrder {
     id: string;

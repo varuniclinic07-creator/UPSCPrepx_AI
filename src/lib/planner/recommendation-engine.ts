@@ -1,6 +1,6 @@
 /**
  * Study Recommendation Engine Service
- * 
+ *
  * Master Prompt v8.0 - Feature F8 (READ Mode)
  * - AI-powered task suggestions
  * - Based on weak areas from MCQ analytics
@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { callAI } from '@/lib/ai/ai-provider-client';
 
 // ============================================================================
@@ -97,10 +98,10 @@ Generate 3-5 actionable recommendations.`;
 // ============================================================================
 
 export class RecommendationEngineService {
-  private supabase: ReturnType<typeof createClient>;
+  private supabase: ReturnType<typeof createClient<Database>>;
 
   constructor() {
-    this.supabase = createClient(
+    this.supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -114,8 +115,7 @@ export class RecommendationEngineService {
     const mcqAnalytics = await this.getMCQAnalytics(input.userId);
 
     // Prepare AI prompt
-    const prompt = RECOMMENDATION_PROMPT
-      .replace('{weak_subjects}', input.weakSubjects.join(', '))
+    const prompt = RECOMMENDATION_PROMPT.replace('{weak_subjects}', input.weakSubjects.join(', '))
       .replace('{weak_topics}', input.weakTopics.join(', '))
       .replace('{accuracy}', input.mcqAccuracy.toString())
       .replace('{days}', input.daysUntilExam.toString())
@@ -124,7 +124,6 @@ export class RecommendationEngineService {
     // Generate recommendations using AI
     const aiResponse = await callAI({
       prompt,
-      provider: '9router',
       temperature: 0.7,
       maxTokens: 2000,
     });
@@ -144,27 +143,28 @@ export class RecommendationEngineService {
   async getDailyRecommendations(userId: string): Promise<TaskRecommendation[]> {
     // Get today's incomplete tasks
     const today = new Date().toISOString().split('T')[0];
-    
+
+    const scheduleResult = await this.supabase
+      .from('study_schedules')
+      .select('id')
+      .eq('date', today);
+    const scheduleIds = (scheduleResult.data as any[] | null)?.map((s: any) => s.id) || [];
+
     const { data: incompleteTasks } = await this.supabase
       .from('study_tasks')
       .select('*, schedules:study_schedules(plan_id)')
       .eq('status', 'pending')
-      .in(
-        'schedule_id',
-        (await this.supabase
-          .from('study_schedules')
-          .select('id')
-          .eq('date', today)).data?.map((s) => s.id) || []
-      )
+      .in('schedule_id', scheduleIds)
       .limit(5);
 
-    if (!incompleteTasks || incompleteTasks.length === 0) {
+    const tasks = incompleteTasks as any[] | null;
+    if (!tasks || tasks.length === 0) {
       // All tasks done - suggest revision
       return this.generateRevisionSuggestions(userId);
     }
 
     // Convert to recommendations
-    return incompleteTasks.map((task) => ({
+    return tasks.map((task: any) => ({
       type: task.task_type as 'study' | 'revision' | 'mock_test' | 'analysis',
       subject: task.subject,
       topic: task.topic,
@@ -195,7 +195,8 @@ export class RecommendationEngineService {
       .order('created_at', { ascending: false })
       .limit(100);
 
-    if (!attempts || attempts.length === 0) {
+    const attemptRows = attempts as any[] | null;
+    if (!attemptRows || attemptRows.length === 0) {
       return { subjectAccuracy: {}, weakTopics: [], totalAttempts: 0 };
     }
 
@@ -203,7 +204,7 @@ export class RecommendationEngineService {
     const subjectStats: Record<string, { correct: number; total: number }> = {};
     const topicStats: Record<string, { correct: number; total: number }> = {};
 
-    attempts.forEach((attempt) => {
+    attemptRows.forEach((attempt: any) => {
       // Subject stats
       if (!subjectStats[attempt.subject]) {
         subjectStats[attempt.subject] = { correct: 0, total: 0 };
@@ -232,14 +233,14 @@ export class RecommendationEngineService {
 
     // Find weak topics (< 50% accuracy)
     const weakTopics = Object.entries(topicStats)
-      .filter(([_, stats]) => stats.total >= 3 && (stats.correct / stats.total) < 0.5)
+      .filter(([_, stats]) => stats.total >= 3 && stats.correct / stats.total < 0.5)
       .map(([key, _]) => key.split(':')[1])
       .slice(0, 5);
 
     return {
       subjectAccuracy,
       weakTopics,
-      totalAttempts: attempts.length,
+      totalAttempts: attemptRows.length,
     };
   }
 
@@ -321,8 +322,9 @@ export class RecommendationEngineService {
         .ilike('topic', `%${rec.topic}%`)
         .limit(2);
 
-      if (notes) {
-        rec.contentLinks = notes.map((note) => `/my-notes/${note.id}`);
+      const noteRows = notes as any[] | null;
+      if (noteRows) {
+        rec.contentLinks = noteRows.map((note: any) => `/my-notes/${note.id}`);
       }
 
       // Search for related current affairs
@@ -332,10 +334,11 @@ export class RecommendationEngineService {
         .ilike('topic', `%${rec.topic}%`)
         .limit(2);
 
-      if (ca) {
+      const caRows = ca as any[] | null;
+      if (caRows) {
         rec.contentLinks = [
           ...(rec.contentLinks || []),
-          ...ca.map((article) => `/daily-digest/article/${article.id}`),
+          ...caRows.map((article: any) => `/daily-digest/article/${article.id}`),
         ];
       }
     }
@@ -355,12 +358,13 @@ export class RecommendationEngineService {
 
     const suggestions: TaskRecommendation[] = [];
 
-    if (completions && completions.length > 0) {
+    const completionRows = completions as any[] | null;
+    if (completionRows && completionRows.length > 0) {
       // Suggest revision of recently studied topics
-      const recentTopics = completions.slice(0, 3).map((c) => ({
+      const recentTopics = completionRows.slice(0, 3).map((c: any) => ({
         type: 'revision' as const,
-        subject: (c.tasks as any)?.subject || 'General',
-        topic: (c.tasks as any)?.topic || 'General Revision',
+        subject: c.tasks?.subject || 'General',
+        topic: c.tasks?.topic || 'General Revision',
         priority: 'medium' as const,
         estimatedMinutes: 45,
         reason: {
@@ -391,20 +395,18 @@ export class RecommendationEngineService {
   /**
    * Get subject-specific recommendations
    */
-  async getSubjectRecommendations(
-    userId: string,
-    subject: string
-  ): Promise<TaskRecommendation[]> {
+  async getSubjectRecommendations(userId: string, subject: string): Promise<TaskRecommendation[]> {
     // Get user's performance in this subject
     const { data: attempts } = await this.supabase
       .from('mcq_attempts')
       .select('topic, is_correct')
       .eq('user_id', userId)
-      .eq('subject', subject)
+      .eq('subject', subject as any)
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (!attempts || attempts.length === 0) {
+    const subjectAttempts = attempts as any[] | null;
+    if (!subjectAttempts || subjectAttempts.length === 0) {
       return [
         {
           type: 'study',
@@ -422,7 +424,7 @@ export class RecommendationEngineService {
 
     // Calculate topic-wise accuracy
     const topicStats: Record<string, { correct: number; total: number }> = {};
-    attempts.forEach((attempt) => {
+    subjectAttempts.forEach((attempt: any) => {
       const topic = attempt.topic || 'General';
       if (!topicStats[topic]) {
         topicStats[topic] = { correct: 0, total: 0 };
@@ -435,8 +437,8 @@ export class RecommendationEngineService {
 
     // Find weakest topics
     const weakTopics = Object.entries(topicStats)
-      .filter(([_, stats]) => stats.total >= 3 && (stats.correct / stats.total) < 0.6)
-      .sort((a, b) => (a[1].correct / a[1].total) - (b[1].correct / b[1].total))
+      .filter(([_, stats]) => stats.total >= 3 && stats.correct / stats.total < 0.6)
+      .sort((a, b) => a[1].correct / a[1].total - b[1].correct / b[1].total)
       .slice(0, 3)
       .map(([topic, _]) => topic);
 

@@ -1,6 +1,6 @@
 /**
  * Voice Processor Service
- * 
+ *
  * Master Prompt v8.0 - Feature F5 (READ Mode)
  * - Speech-to-text for voice-based doubts
  * - Web Speech API integration
@@ -87,7 +87,7 @@ export class VoiceProcessorService {
    */
   async startRecording(config: RecordingConfig = {}): Promise<void> {
     const maxDuration = config.maxDuration || DEFAULT_MAX_DURATION;
-    
+
     try {
       // Get microphone access
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -128,8 +128,8 @@ export class VoiceProcessorService {
     } catch (error) {
       console.error('Failed to start recording:', error);
       throw new Error(
-        error instanceof Error 
-          ? `Microphone access failed: ${error.message}` 
+        error instanceof Error
+          ? `Microphone access failed: ${error.message}`
           : 'Microphone access failed'
       );
     }
@@ -154,7 +154,7 @@ export class VoiceProcessorService {
         const duration = (Date.now() - this.recordingStartTime) / 1000;
 
         // Cleanup
-        this.stream.getTracks().forEach(track => track.stop());
+        this.stream!.getTracks().forEach((track) => track.stop());
         this.stream = null;
         this.mediaRecorder = null;
 
@@ -205,7 +205,8 @@ export class VoiceProcessorService {
         return;
       }
 
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       this.recognition = new SpeechRecognition();
 
       this.recognition.continuous = true;
@@ -248,14 +249,13 @@ export class VoiceProcessorService {
 
       this.recognition.onend = () => {
         const duration = (Date.now() - startTime) / 1000;
-        
+
         resolve({
           success: true,
           text: finalTranscript.trim(),
           language,
-          confidence: words.length > 0 
-            ? words.reduce((sum, w) => sum + w.confidence, 0) / words.length 
-            : 0,
+          confidence:
+            words.length > 0 ? words.reduce((sum, w) => sum + w.confidence, 0) / words.length : 0,
           duration,
           words,
         });
@@ -279,26 +279,29 @@ export class VoiceProcessorService {
    * Transcribe audio file (post-processing)
    * Note: For production, use a server-side service like Whisper, Google Speech-to-Text
    */
-  async transcribeAudioFile(audioBlob: Blob, language: 'en-IN' | 'hi-IN' = 'en-IN'): Promise<TranscriptionResult> {
+  async transcribeAudioFile(
+    audioBlob: Blob,
+    language: 'en-IN' | 'hi-IN' = 'en-IN'
+  ): Promise<TranscriptionResult> {
     try {
       // For client-side, we'll use Web Speech API with audio playback
       // In production, this should call a server endpoint with Whisper or similar
-      
+
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
-      
+
       // Create audio context for analysis
       const audioContext = new AudioContext();
       const audioBuffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer());
-      
+
       // Get duration
       const duration = audioBuffer.duration;
-      
+
       // For actual transcription, we need server-side processing
       // This is a placeholder that returns audio metadata
-      
+
       URL.revokeObjectURL(audioUrl);
-      
+
       return {
         success: false,
         text: '',
@@ -306,7 +309,8 @@ export class VoiceProcessorService {
         confidence: 0,
         duration,
         words: [],
-        error: 'Server-side transcription service required. Use Whisper API or Google Speech-to-Text.',
+        error:
+          'Server-side transcription service required. Use Whisper API or Google Speech-to-Text.',
       };
     } catch (error) {
       return {
@@ -387,10 +391,7 @@ export class VoiceProcessorService {
   /**
    * Convert audio blob to different format
    */
-  async convertAudioFormat(
-    audioBlob: Blob,
-    targetFormat: 'wav' | 'mp3' | 'webm'
-  ): Promise<Blob> {
+  async convertAudioFormat(audioBlob: Blob, targetFormat: 'wav' | 'mp3' | 'webm'): Promise<Blob> {
     // For production, use ffmpeg.wasm or server-side conversion
     // This is a placeholder
     console.warn('Audio format conversion requires ffmpeg.wasm or server-side processing');
@@ -410,23 +411,26 @@ export class VoiceProcessorService {
   /**
    * Detect silence in audio
    */
-  async detectSilence(audioBlob: Blob, threshold: number = 0.01): Promise<Array<{ start: number; end: number }>> {
+  async detectSilence(
+    audioBlob: Blob,
+    threshold: number = 0.01
+  ): Promise<Array<{ start: number; end: number }>> {
     const audioContext = new AudioContext();
     const arrayBuffer = await audioBlob.arrayBuffer();
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    
+
     const channelData = audioBuffer.getChannelData(0);
     const sampleRate = audioBuffer.sampleRate;
     const silenceThreshold = threshold;
     const minSilenceDuration = 0.5; // seconds
-    
+
     const silences: Array<{ start: number; end: number }> = [];
     let silenceStart: number | null = null;
-    
+
     for (let i = 0; i < channelData.length; i++) {
       const amplitude = Math.abs(channelData[i]);
       const time = i / sampleRate;
-      
+
       if (amplitude < silenceThreshold) {
         if (silenceStart === null) {
           silenceStart = time;
@@ -441,7 +445,7 @@ export class VoiceProcessorService {
         }
       }
     }
-    
+
     return silences;
   }
 

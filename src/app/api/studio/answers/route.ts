@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/security/auth';
 import { checkSubscriptionAccess } from '@/lib/trial/subscription-checker';
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply sorting
-    const orderColumn = validated.sortBy === 'title' ? 'title_en' : validated.sortBy;
+    const orderColumn = (validated.sortBy as string) === 'title' ? 'title_en' : validated.sortBy;
     query = query.order(orderColumn, { ascending: validated.sortOrder === 'asc' });
 
     // Pagination
@@ -164,7 +165,7 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid parameters', details: error.errors },
+        { success: false, error: 'Invalid parameters', details: error.issues },
         { status: 400 }
       );
     }
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
     const subscription = await checkSubscriptionAccess(authUser.id, 'content_studio');
     
     // Free tier limit: 20 answers/month
-    if (!subscription.isPremium) {
+    if (subscription.tier !== 'premium' && subscription.tier !== 'premium_plus') {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
@@ -286,7 +287,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid input', details: error.errors },
+        { success: false, error: 'Invalid input', details: error.issues },
         { status: 400 }
       );
     }

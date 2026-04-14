@@ -31,6 +31,7 @@ import {
   CheckCircle,
   RefreshCw,
   Zap,
+  Wallet,
 } from 'lucide-react';
 
 interface UsageData {

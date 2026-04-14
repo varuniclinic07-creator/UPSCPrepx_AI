@@ -1,6 +1,6 @@
 /**
  * AI Study Schedule Generator Service
- * 
+ *
  * Master Prompt v8.0 - Feature F8 (READ Mode)
  * - AI-powered schedule generation
  * - 9Router → Groq → Ollama fallback
@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { callAI } from '@/lib/ai/ai-provider-client';
 
 // ============================================================================
@@ -79,17 +80,8 @@ const GS_SYLLABUS = {
     'Environment and Ecology',
     'Security and Disaster Management',
   ],
-  GS4: [
-    'Ethics and Human Interface',
-    'Attitude and Emotional Intelligence',
-    'Case Studies',
-  ],
-  CSAT: [
-    'Comprehension',
-    'Mathematics',
-    'Reasoning',
-    'Decision Making',
-  ],
+  GS4: ['Ethics and Human Interface', 'Attitude and Emotional Intelligence', 'Case Studies'],
+  CSAT: ['Comprehension', 'Mathematics', 'Reasoning', 'Decision Making'],
 };
 
 const SCHEDULE_GENERATION_PROMPT = `You are an expert UPSC study planner. Create a detailed day-by-day study schedule.
@@ -147,10 +139,10 @@ Generate schedule for {total_days} days with approximately {tasks_per_day} tasks
 // ============================================================================
 
 export class ScheduleGeneratorService {
-  private supabase: ReturnType<typeof createClient>;
+  private supabase: ReturnType<typeof createClient<Database>>;
 
   constructor() {
-    this.supabase = createClient(
+    this.supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -162,13 +154,14 @@ export class ScheduleGeneratorService {
   async generateSchedule(input: StudyPlanInput): Promise<GeneratedSchedule> {
     const currentDate = new Date();
     const examDate = new Date(input.examDate);
-    const totalDays = Math.ceil((examDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+    const totalDays = Math.ceil(
+      (examDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
     const dailyMinutes = input.dailyStudyHours * 60;
     const tasksPerDay = Math.floor(dailyMinutes / 60); // Average 60 min per task
 
     // Prepare AI prompt
-    const prompt = SCHEDULE_GENERATION_PROMPT
-      .replace('{exam_date}', input.examDate)
+    const prompt = SCHEDULE_GENERATION_PROMPT.replace('{exam_date}', input.examDate)
       .replace('{daily_hours}', input.dailyStudyHours.toString())
       .replace('{subjects}', input.subjects.join(', '))
       .replace('{optional_subject}', input.optionalSubject || 'None')
@@ -180,7 +173,7 @@ export class ScheduleGeneratorService {
     // Generate schedule using AI
     const aiResponse = await callAI({
       prompt,
-      provider: '9router',
+      providerPreferences: ['a4f'],
       temperature: 0.7,
       maxTokens: 4000,
     });
@@ -299,7 +292,9 @@ export class ScheduleGeneratorService {
         targetValue: 25,
         unit: 'percentage',
         title: { en: '25% Syllabus Coverage', hi: '25% पाठ्यक्रम पूर्णता' },
-        estimatedDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        estimatedDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
       },
     ];
 
@@ -313,8 +308,7 @@ export class ScheduleGeneratorService {
     input: StudyPlanInput,
     totalDays: number
   ): Promise<{ planId: string | null }> {
-    const { data, error } = await this.supabase
-      .from('study_plans')
+    const { data, error } = await (this.supabase.from('study_plans') as any)
       .insert({
         user_id: input.userId,
         exam_date: input.examDate,

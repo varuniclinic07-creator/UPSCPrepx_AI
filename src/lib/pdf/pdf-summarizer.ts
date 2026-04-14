@@ -1,6 +1,6 @@
 /**
  * AI PDF Summarizer Service
- * 
+ *
  * Master Prompt v8.0 - Feature F12 (READ Mode)
  * - Generates summaries from highlighted text
  * - 9Router -> Groq -> Ollama fallback
@@ -16,7 +16,7 @@ export interface Highlight {
 export async function summarizeHighlights(highlights: Highlight[], language: 'en' | 'hi' = 'en') {
   if (highlights.length === 0) return '';
 
-  const text = highlights.map(h => `- Page ${h.page_index + 1}: ${h.text_content}`).join('\n');
+  const text = highlights.map((h) => `- Page ${h.page_index + 1}: ${h.text_content}`).join('\n');
 
   const prompt = `
 You are an expert study assistant. 
@@ -35,7 +35,7 @@ SUMMARY:`;
 
   return await callAI({
     prompt,
-    provider: '9router',
+    providerPreferences: ['a4f'],
     temperature: 0.3,
     maxTokens: 1500,
   });

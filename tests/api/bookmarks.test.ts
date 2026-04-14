@@ -26,7 +26,7 @@ const mockFrom = jest.fn(() => ({
 }));
 
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(() => Promise.resolve({ from: mockFrom })),
+  createClient: jest.fn(() => Promise.resolve({ from: mockFrom })) as any,
 }));
 
 function makeRequest(method: string, body?: any) {
@@ -42,7 +42,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('GET /api/bookmarks', () => {
   it('returns bookmarks for authenticated user', async () => {
-    mockOrder.mockResolvedValue({ data: [{ id: '1', title: 'Test' }], error: null });
+    mockOrder.mockResolvedValue({ data: [{ id: '1', title: 'Test' }], error: null } as any);
     const res = await GET();
     const data = await res.json();
     expect(data.bookmarks).toHaveLength(1);
@@ -50,7 +50,7 @@ describe('GET /api/bookmarks', () => {
   });
 
   it('returns 500 on db error', async () => {
-    mockOrder.mockResolvedValue({ data: null, error: { message: 'DB error' } });
+    mockOrder.mockResolvedValue({ data: null, error: { message: 'DB error' } } as any);
     const res = await GET();
     expect(res.status).toBe(500);
   });

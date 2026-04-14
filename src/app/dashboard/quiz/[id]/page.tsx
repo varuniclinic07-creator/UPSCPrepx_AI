@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { ArrowLeft, Clock, CheckCircle, XCircle, ArrowRight, Trophy, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,11 +26,8 @@ interface Quiz {
   timeLimit?: number;
 }
 
-interface QuizPageProps {
-  params: { id: string };
-}
-
-export default function QuizTakePage({ params }: QuizPageProps) {
+export default function QuizTakePage() {
+  const params = useParams<{ id: string }>();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -40,7 +38,7 @@ export default function QuizTakePage({ params }: QuizPageProps) {
 
   useEffect(() => {
     fetchQuiz();
-  }, [params.id]);
+  }, [params?.id]);
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0 || showResults) return;
@@ -61,7 +59,7 @@ export default function QuizTakePage({ params }: QuizPageProps) {
 
   const fetchQuiz = async () => {
     try {
-      const response = await fetch(`/api/quiz/${params.id}`);
+      const response = await fetch(`/api/quiz/${params?.id}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -105,7 +103,7 @@ export default function QuizTakePage({ params }: QuizPageProps) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/quiz/${params.id}/submit`, {
+      const response = await fetch(`/api/quiz/${params?.id}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

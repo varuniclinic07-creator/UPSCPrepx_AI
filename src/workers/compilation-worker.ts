@@ -8,12 +8,12 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 const execPromise = promisify(exec);
 
 function getSupabase() {
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 }
@@ -122,7 +122,7 @@ async function createChapterVideo(chapter: any, tempDir: string) {
     }
 }
 
-async function uploadVideo(videoPath: string, lectureJobId: string, supabase: ReturnType<typeof createClient>): Promise<string> {
+async function uploadVideo(videoPath: string, lectureJobId: string, supabase: ReturnType<typeof createClient<Database>>): Promise<string> {
     const videoBuffer = await fs.readFile(videoPath);
     const fileName = `lectures/${lectureJobId}/final.mp4`;
 

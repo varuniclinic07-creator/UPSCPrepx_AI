@@ -34,7 +34,7 @@ import {
   RotateCcw,
   Flag,
 } from 'lucide-react';
-import { TiptapEditor } from '@/components/studio/tiptap-editor';
+// TipTapEditor is a self-contained editor; this page uses useEditor + EditorContent directly
 import { EnhancedWordCounter } from '@/components/studio/word-counter';
 
 // ============================================================================
@@ -530,11 +530,7 @@ export default function WriteAnswerPage() {
 
         {/* Editor */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden min-h-[500px]">
-          <TiptapEditor
-            editor={editor}
-            showHindi={showHindi}
-            readOnly={isSubmitted}
-          />
+          <EditorContent editor={editor} className="prose-max p-4" />
         </div>
       </main>
 

@@ -138,7 +138,7 @@ export const ratingSchema = z.object({
 export class DoubtService {
   
 
-  constructor() {
+  constructor() {
   }
 
   private async getSupabase() {
@@ -165,8 +165,8 @@ export class DoubtService {
       }
 
       // Create thread
-      const { data: thread, error: threadError } = await (await this.getSupabase())
-        .from('doubt_threads')
+      const { data: thread, error: threadError } = await ((await this.getSupabase())
+        .from('doubt_threads') as any)
         .insert({
           user_id: userId,
           title_en: data.title.en,
@@ -293,9 +293,9 @@ export class DoubtService {
         .order('created_at', { ascending: true });
 
       return {
-        thread,
-        questions: questions || [],
-        answers: answers || [],
+        thread: thread as any as DoubtThread,
+        questions: (questions || []) as any as DoubtQuestion[],
+        answers: (answers || []) as any as DoubtAnswer[],
       };
     } catch (error) {
       console.error('Error getting thread:', error);
@@ -490,15 +490,19 @@ export class DoubtService {
 
       // If flagged, update thread status
       if (data.is_flagged) {
-        await (await this.getSupabase())
-          .from('doubt_threads')
-          .update({ status: 'flagged' })
+        // Get thread_id from the answer first
+        const { data: answerData } = await (await this.getSupabase())
+          .from('doubt_answers')
+          .select('thread_id')
           .eq('id', answerId)
-          .in('id', (await this.getSupabase())
-            .from('doubt_answers')
-            .select('thread_id')
-            .eq('id', answerId)
-          );
+          .single();
+
+        if (answerData?.thread_id) {
+          await (await this.getSupabase())
+            .from('doubt_threads')
+            .update({ status: 'flagged' })
+            .eq('id', answerData.thread_id);
+        }
       }
 
       return { success: true };
@@ -604,7 +608,7 @@ export class DoubtService {
       }
 
       return {
-        threads: threads || [],
+        threads: (threads || []) as any as DoubtThread[],
         total: count || 0,
       };
     } catch (error) {

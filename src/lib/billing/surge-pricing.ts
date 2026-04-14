@@ -3,8 +3,7 @@
  * Dynamic pricing based on demand, provider costs, and capacity
  */
 
-import { getAIProviderRouter } from '@/lib/ai/router/ai-provider-router';
-import { getAdvancedLoadBalancer } from '@/lib/ai/router/load-balancer';
+// Router removed — per-agent provider preferences now handle routing via callAI()
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -108,63 +107,18 @@ export class SurgePricingManager {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Get current demand metrics across all providers
+   * Get current demand metrics.
+   * Previously sourced from the legacy AI provider router; now returns
+   * neutral defaults because per-agent provider preferences handle routing.
    */
   async getDemandMetrics(): Promise<DemandMetrics> {
-    const router = getAIProviderRouter();
-    const loadBalancer = getAdvancedLoadBalancer();
-
-    // Get provider health
-    const providerHealth = router.getAllProviderHealth();
-    const loadState = loadBalancer.getState();
-
-    let totalCapacity = 0;
-    let currentDemand = 0;
-    let totalLatency = 0;
-    let healthyCount = 0;
-
-    const providerMetrics = Object.entries(providerHealth).map(([provider, health]) => {
-      const capacity = loadState.capacities[provider as keyof typeof loadState.capacities];
-      const cap = capacity?.maxConcurrent || 0;
-      const demand = capacity?.currentActive || 0;
-
-      totalCapacity += cap;
-      currentDemand += demand;
-      totalLatency += health.avgLatencyMs;
-
-      if (health.isHealthy) {
-        healthyCount++;
-      }
-
-      return {
-        provider,
-        healthy: health.isHealthy,
-        utilization: cap > 0 ? (demand / cap) * 100 : 0,
-      };
-    });
-
-    const utilizationPercent = totalCapacity > 0 ? (currentDemand / totalCapacity) * 100 : 0;
-    const avgLatency = Object.keys(providerHealth).length > 0
-      ? totalLatency / Object.keys(providerHealth).length
-      : 0;
-
-    // Calculate error rate from health data
-    const totalSuccessRate = Object.values(providerHealth).reduce(
-      (sum, h) => sum + h.successRate,
-      0
-    );
-    const avgSuccessRate = Object.keys(providerHealth).length > 0
-      ? totalSuccessRate / Object.keys(providerHealth).length
-      : 1;
-    const errorRate = 1 - avgSuccessRate;
-
     return {
-      totalCapacity,
-      currentDemand,
-      utilizationPercent,
-      providerHealth: providerMetrics,
-      avgLatencyMs: avgLatency,
-      errorRate,
+      totalCapacity: 100,
+      currentDemand: 0,
+      utilizationPercent: 0,
+      providerHealth: [],
+      avgLatencyMs: 0,
+      errorRate: 0,
     };
   }
 

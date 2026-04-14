@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         },
         timeStats: {
           timeTakenSec: attempt.time_taken_sec,
-          durationSec: attempt.duration_min * 60,
+          durationSec: ((attempt as any).mock?.duration_min || 0) * 60,
           avgTimePerQuestion: attempt.avg_time_per_question,
         },
         xpEarned,

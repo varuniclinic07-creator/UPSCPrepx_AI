@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Award, TrendingUp, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Award, TrendingUp, Calendar, AlertTriangle, CheckCircle, Target } from 'lucide-react';
 
 interface ReadinessScoreCardProps {
   showHindi: boolean;

@@ -8,12 +8,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-let _sb: ReturnType<typeof createClient> | null = null;
-function getSupabase() { if (!_sb) _sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+let _sb: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() { if (!_sb) _sb = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!); return _sb; }
 
 /**
@@ -105,8 +106,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert user profile
-    const { error: profileError } = await getSupabase()
-      .from('user_profiles')
+    const { error: profileError } = await (getSupabase()
+      .from('user_profiles') as any)
       .upsert({
         user_id,
         target_year,
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
         preparation_stage,
         onboarding_completed: false,
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('user_id', user_id);
 
     if (profileError) {
@@ -127,17 +128,10 @@ export async function POST(request: NextRequest) {
 
     // Log audit event
     await getSupabase().from('audit_logs').insert({
-      user_id,
+      actor_id: user_id,
       action: 'onboarding_profile_saved',
-      resource_type: 'user_profile',
-      details: {
-        target_year,
-        attempt_number,
-        is_working_professional,
-        study_hours_per_day,
-        optional_subject,
-      },
-    });
+      target_type: 'user_profile',
+    } as any);
 
     return NextResponse.json({
       success: true,
@@ -160,7 +154,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid request data',
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 }
       );
