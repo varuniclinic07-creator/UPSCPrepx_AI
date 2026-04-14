@@ -149,6 +149,30 @@ const jobHandlers: JobHandlers = {
     },
 
     // ═══════════════════════════════════════════════════════════
+    // LECTURE GENERATION JOBS
+    // ═══════════════════════════════════════════════════════════
+
+    [JobType.GENERATE_LECTURE]: async (job) => {
+        const { jobId, userId, topic, subject } = job.data as any;
+        logger.info('[Worker] Starting lecture generation', { jobId, userId, topic, subject });
+
+        const { orchestrateLecture } = await import('@/workers/lecture-orchestrator');
+        await orchestrateLecture(jobId);
+
+        logger.info('[Worker] Lecture generation complete', { jobId });
+    },
+
+    [JobType.COMPILE_LECTURE]: async (job) => {
+        const { lectureJobId } = job.data as any;
+        logger.info('[Worker] Starting lecture compilation', { lectureJobId });
+
+        const { compileVideo } = await import('@/workers/compilation-worker');
+        const videoUrl = await compileVideo(lectureJobId);
+
+        logger.info('[Worker] Lecture compilation complete', { lectureJobId, videoUrl });
+    },
+
+    // ═══════════════════════════════════════════════════════════
     // DATA PROCESSING JOBS
     // ═══════════════════════════════════════════════════════════
 

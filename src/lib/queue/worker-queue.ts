@@ -33,6 +33,10 @@ export enum JobType {
     GENERATE_VIDEO_SHORT = 'video:generate_short',
     PROCESS_VIDEO = 'video:process',
 
+    // Lecture generation jobs
+    GENERATE_LECTURE = 'lecture:generate',
+    COMPILE_LECTURE = 'lecture:compile',
+
     // Data processing jobs
     GENERATE_INVOICE = 'invoice:generate',
     EXPORT_USER_DATA = 'data:export',
@@ -79,6 +83,19 @@ export interface InvoiceJobPayload {
     userId: string;
 }
 
+export interface LectureJobPayload {
+    jobId: string;
+    userId: string;
+    topic: string;
+    subject: string;
+    language?: string;
+    targetDuration?: number;
+}
+
+export interface CompilationJobPayload {
+    lectureJobId: string;
+}
+
 export interface AnalyticsJobPayload {
     event: string;
     userId?: string;
@@ -90,6 +107,8 @@ export type JobPayload =
     | SubscriptionJobPayload
     | AIJobPayload
     | VideoJobPayload
+    | LectureJobPayload
+    | CompilationJobPayload
     | InvoiceJobPayload
     | AnalyticsJobPayload;
 
@@ -137,6 +156,10 @@ const DEFAULT_JOB_OPTIONS: Record<JobType, JobOptions> = {
     [JobType.GENERATE_VIDEO_SHORT]: { attempts: 2, backoff: { type: 'exponential', delay: 10000 }, priority: 1 },
     [JobType.PROCESS_VIDEO]: { attempts: 2, backoff: { type: 'exponential', delay: 10000 }, priority: 1 },
 
+    // Lecture jobs - low priority, very long running
+    [JobType.GENERATE_LECTURE]: { attempts: 2, backoff: { type: 'exponential', delay: 15000 }, priority: 2 },
+    [JobType.COMPILE_LECTURE]: { attempts: 2, backoff: { type: 'exponential', delay: 10000 }, priority: 2 },
+
     // Data jobs - medium priority
     [JobType.GENERATE_INVOICE]: { attempts: 3, backoff: { type: 'exponential', delay: 2000 }, priority: 6 },
     [JobType.EXPORT_USER_DATA]: { attempts: 2, priority: 4 },
@@ -167,6 +190,8 @@ export interface JobHandlers {
     [JobType.GENERATE_QUIZ]?: JobHandler<AIJobPayload>;
     [JobType.GENERATE_VIDEO_SHORT]?: JobHandler<VideoJobPayload>;
     [JobType.PROCESS_VIDEO]?: JobHandler<VideoJobPayload>;
+    [JobType.GENERATE_LECTURE]?: JobHandler<LectureJobPayload>;
+    [JobType.COMPILE_LECTURE]?: JobHandler<CompilationJobPayload>;
     [JobType.GENERATE_INVOICE]?: JobHandler<InvoiceJobPayload>;
     [JobType.EXPORT_USER_DATA]?: JobHandler;
     [JobType.CLEANUP_TEMP_DATA]?: JobHandler;

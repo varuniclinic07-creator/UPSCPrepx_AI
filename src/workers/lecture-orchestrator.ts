@@ -137,7 +137,12 @@ export async function orchestrateLecture(lectureJobId: string) {
         // Phase 5: Queue compilation
         await updateJobStatus(lectureJobId, 'compiling', 80, 'Compiling video...');
 
-        await compilationQueue.add('compile-lecture' as any, { lectureJobId } as any);
+        const queue = compilationQueue.get();
+        if (queue) {
+            await queue.add('compile-lecture', { lectureJobId });
+        } else {
+            console.warn('[Orchestrator] Compilation queue unavailable — skipping video assembly');
+        }
 
         await updateJobProgress(lectureJobId, 90);
 
