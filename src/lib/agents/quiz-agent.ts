@@ -75,16 +75,16 @@ class QuizAgent extends BaseAgent {
             agent_type: 'quiz',
           });
         } catch (dbError) {
-          this.log(`Failed to write to content_queue: ${dbError}`);
+          this.log('warn', `Failed to write to content_queue: ${dbError}`);
         }
       }
 
-      await this.completeRun(runId);
+      await this.completeRun('completed', { content_generated: questions.length });
 
       return { questions, topic, subject, confidence };
     } catch (error) {
-      this.log(`Quiz generation failed: ${error}`);
-      await this.completeRun(runId, 'failed');
+      this.log('error', `Quiz generation failed: ${error}`);
+      await this.completeRun('failed', { errors: [`${error}`] });
       throw error;
     }
   }
@@ -105,12 +105,12 @@ class QuizAgent extends BaseAgent {
           const parsed = JSON.parse(arrayMatch[0]);
           if (Array.isArray(parsed)) return this.validateQuestions(parsed);
         } catch {
-          this.log('Failed to parse extracted JSON array from response');
+          this.log('warn', 'Failed to parse extracted JSON array from response');
         }
       }
     }
 
-    this.log('Could not parse any questions from AI response');
+    this.log('warn', 'Could not parse any questions from AI response');
     return [];
   }
 

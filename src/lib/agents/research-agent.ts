@@ -59,19 +59,19 @@ export class ResearchAgent extends BaseAgent {
       if (webResult.status === 'fulfilled') {
         sources.push(...webResult.value);
       } else {
-        this.log(`Web search layer failed: ${webResult.reason?.message ?? webResult.reason}`);
+        this.log('warn', `Web search layer failed: ${webResult.reason?.message ?? webResult.reason}`);
       }
 
       if (docResult.status === 'fulfilled') {
         sources.push(...docResult.value);
       } else {
-        this.log(`Doc RAG layer failed: ${docResult.reason?.message ?? docResult.reason}`);
+        this.log('warn', `Doc RAG layer failed: ${docResult.reason?.message ?? docResult.reason}`);
       }
 
       if (fileResult.status === 'fulfilled') {
         sources.push(...fileResult.value);
       } else {
-        this.log(`File search layer failed: ${fileResult.reason?.message ?? fileResult.reason}`);
+        this.log('warn', `File search layer failed: ${fileResult.reason?.message ?? fileResult.reason}`);
       }
 
       // Sort by relevance descending
@@ -87,10 +87,10 @@ export class ResearchAgent extends BaseAgent {
         sourceCount: sources.length,
       };
 
-      await this.completeRun(runId, { sourceCount: result.sourceCount });
+      await this.completeRun('completed', { nodes_processed: result.sourceCount });
       return result;
     } catch (err: any) {
-      await this.completeRun(runId, { error: err?.message });
+      await this.completeRun('failed', { errors: [err?.message] });
       throw err;
     }
   }
@@ -102,7 +102,7 @@ export class ResearchAgent extends BaseAgent {
   private async searchWeb(topic: string): Promise<ResearchSource[]> {
     const url = process.env.AGENTIC_WEB_SEARCH_URL;
     if (!url) {
-      this.log('AGENTIC_WEB_SEARCH_URL not configured — skipping web search layer');
+      this.log('info', 'AGENTIC_WEB_SEARCH_URL not configured — skipping web search layer');
       return [];
     }
 
@@ -128,7 +128,7 @@ export class ResearchAgent extends BaseAgent {
         relevanceScore: r.relevanceScore ?? r.score ?? 0.5,
       }));
     } catch (err: any) {
-      this.log(`Web search error: ${err.message}`);
+      this.log('error', `Web search error: ${err.message}`);
       throw err;
     }
   }
@@ -140,7 +140,7 @@ export class ResearchAgent extends BaseAgent {
   private async searchDocs(topic: string): Promise<ResearchSource[]> {
     const url = process.env.AGENTIC_DOC_CHAT_URL;
     if (!url) {
-      this.log('AGENTIC_DOC_CHAT_URL not configured — skipping doc RAG layer');
+      this.log('info', 'AGENTIC_DOC_CHAT_URL not configured — skipping doc RAG layer');
       return [];
     }
 
@@ -167,7 +167,7 @@ export class ResearchAgent extends BaseAgent {
         relevanceScore: r.relevanceScore ?? r.score ?? 0.6,
       }));
     } catch (err: any) {
-      this.log(`Doc RAG error: ${err.message}`);
+      this.log('error', `Doc RAG error: ${err.message}`);
       throw err;
     }
   }
@@ -179,7 +179,7 @@ export class ResearchAgent extends BaseAgent {
   private async searchFiles(topic: string): Promise<ResearchSource[]> {
     const url = process.env.AGENTIC_FILE_SEARCH_URL;
     if (!url) {
-      this.log('AGENTIC_FILE_SEARCH_URL not configured — skipping file search layer');
+      this.log('info', 'AGENTIC_FILE_SEARCH_URL not configured — skipping file search layer');
       return [];
     }
 
@@ -206,7 +206,7 @@ export class ResearchAgent extends BaseAgent {
         relevanceScore: r.relevanceScore ?? r.score ?? 0.4,
       }));
     } catch (err: any) {
-      this.log(`File search error: ${err.message}`);
+      this.log('error', `File search error: ${err.message}`);
       throw err;
     }
   }

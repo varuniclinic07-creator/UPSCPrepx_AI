@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/auth/session';
 import { generateDigest, getDigestHistory } from '@/lib/digest/digest-generator';
 import { errors } from '@/lib/security/error-sanitizer';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,13 @@ export async function POST(request: NextRequest) {
         if (!Array.isArray(reqSubjects) || reqSubjects.some((s: any) => !validSubjects.includes(s))) {
             return errors.validation([{ field: 'subjects', message: 'Invalid subjects' }]);
         }
+
+        // Best-effort KG normalization for digest subjects
+        try {
+            for (const subj of reqSubjects) {
+                await normalizeUPSCInput(subj);
+            }
+        } catch { /* best-effort */ }
 
         const digest = await generateDigest({
             userId: userId,

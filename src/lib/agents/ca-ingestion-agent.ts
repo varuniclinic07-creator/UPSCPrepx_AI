@@ -55,7 +55,7 @@ class CAIngestionAgent extends BaseAgent {
         try {
           const rawResults = await this.fetchFromSource(source, date);
           if (!rawResults || rawResults.length === 0) {
-            this.log(`No results from ${source.name} for ${date}`);
+            this.log('info', `No results from ${source.name} for ${date}`);
             continue;
           }
 
@@ -92,7 +92,7 @@ class CAIngestionAgent extends BaseAgent {
                   published_date: date,
                 });
               } catch (dbError) {
-                this.log(`Failed to insert into current_affairs: ${dbError}`);
+                this.log('warn', `Failed to insert into current_affairs: ${dbError}`);
                 errors.push(`DB insert failed for "${article.title}": ${dbError}`);
               }
 
@@ -107,7 +107,7 @@ class CAIngestionAgent extends BaseAgent {
                       created_by: 'ca_ingestion',
                     });
                   } catch (edgeError) {
-                    this.log(`Failed to create knowledge_edge for topic ${topic}: ${edgeError}`);
+                    this.log('warn', `Failed to create knowledge_edge for topic ${topic}: ${edgeError}`);
                   }
                 }
               }
@@ -128,29 +128,29 @@ class CAIngestionAgent extends BaseAgent {
                   agent_type: 'ca_ingestion',
                 });
               } catch (queueError) {
-                this.log(`Failed to write to content_queue: ${queueError}`);
+                this.log('warn', `Failed to write to content_queue: ${queueError}`);
                 errors.push(`Queue insert failed for "${article.title}": ${queueError}`);
               }
 
               articles.push(article);
             } catch (articleError) {
               const msg = `Failed to process article from ${source.name}: ${articleError}`;
-              this.log(msg);
+              this.log('warn', msg);
               errors.push(msg);
             }
           }
         } catch (sourceError) {
           const msg = `Failed to fetch from ${source.name}: ${sourceError}`;
-          this.log(msg);
+          this.log('warn', msg);
           errors.push(msg);
         }
       }
 
-      await this.completeRun(runId);
+      await this.completeRun('completed', { content_generated: articles.length });
     } catch (error) {
-      this.log(`CA ingestion failed: ${error}`);
+      this.log('error', `CA ingestion failed: ${error}`);
       errors.push(`Critical failure: ${error}`);
-      await this.completeRun(runId, 'failed');
+      await this.completeRun('failed', { errors: [`${error}`] });
     }
 
     return {
@@ -165,7 +165,7 @@ class CAIngestionAgent extends BaseAgent {
     date: string
   ): Promise<Record<string, unknown>[]> {
     if (!source.url) {
-      this.log(`No URL configured for source ${source.name}`);
+      this.log('info', `No URL configured for source ${source.name}`);
       return [];
     }
 
@@ -179,14 +179,14 @@ class CAIngestionAgent extends BaseAgent {
       });
 
       if (!response.ok) {
-        this.log(`HTTP ${response.status} from ${source.name}`);
+        this.log('warn', `HTTP ${response.status} from ${source.name}`);
         return [];
       }
 
       const data = await response.json();
       return Array.isArray(data) ? data : data.results || [];
     } catch (fetchError) {
-      this.log(`Fetch error for ${source.name}: ${fetchError}`);
+      this.log('warn', `Fetch error for ${source.name}: ${fetchError}`);
       return [];
     }
   }
@@ -220,7 +220,7 @@ class CAIngestionAgent extends BaseAgent {
 
       return this.parseExtractedArticle(response);
     } catch (error) {
-      this.log(`AI extraction failed for article from ${source.name}: ${error}`);
+      this.log('warn', `AI extraction failed for article from ${source.name}: ${error}`);
       return null;
     }
   }

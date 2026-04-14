@@ -26,6 +26,17 @@ class EvaluatorAgent extends BaseAgent {
     super('evaluator');
   }
 
+  /** Generic execute() for orchestrator dispatch */
+  async execute(params: Record<string, any>): Promise<any> {
+    if (params.answerText) {
+      return this.evaluateAnswer(params as any);
+    }
+    if (params.question) {
+      return this.answerDoubt(params as any);
+    }
+    throw new Error('EvaluatorAgent.execute: provide answerText (evaluation) or question (doubt)');
+  }
+
   async evaluateAnswer(params: {
     questionId: string;
     answerText: string;
@@ -78,11 +89,11 @@ class EvaluatorAgent extends BaseAgent {
 
       const result = this.parseEvaluationResult(rawResponse);
 
-      await this.completeRun(runId);
+      await this.completeRun('completed', { content_generated: 1 });
       return result;
     } catch (error) {
-      this.log(`Answer evaluation failed: ${error}`);
-      await this.completeRun(runId, 'failed');
+      this.log('error', `Answer evaluation failed: ${error}`);
+      await this.completeRun('failed', { errors: [`${error}`] });
       throw error;
     }
   }
@@ -129,11 +140,11 @@ class EvaluatorAgent extends BaseAgent {
 
       const result = this.parseDoubtAnswer(rawResponse);
 
-      await this.completeRun(runId);
+      await this.completeRun('completed', { content_generated: 1 });
       return result;
     } catch (error) {
-      this.log(`Doubt answering failed: ${error}`);
-      await this.completeRun(runId, 'failed');
+      this.log('error', `Doubt answering failed: ${error}`);
+      await this.completeRun('failed', { errors: [`${error}`] });
       throw error;
     }
   }
@@ -163,12 +174,12 @@ class EvaluatorAgent extends BaseAgent {
           const parsed = JSON.parse(jsonMatch[0]);
           return this.validateEvaluationResult(parsed);
         } catch {
-          this.log('Failed to parse extracted evaluation JSON');
+          this.log('warn', 'Failed to parse extracted evaluation JSON');
         }
       }
     }
 
-    this.log('Could not parse evaluation response, returning default');
+    this.log('warn', 'Could not parse evaluation response, returning default');
     return defaultResult;
   }
 
@@ -210,12 +221,12 @@ class EvaluatorAgent extends BaseAgent {
           const parsed = JSON.parse(jsonMatch[0]);
           return this.validateDoubtAnswer(parsed);
         } catch {
-          this.log('Failed to parse extracted doubt-answer JSON');
+          this.log('warn', 'Failed to parse extracted doubt-answer JSON');
         }
       }
     }
 
-    this.log('Could not parse doubt answer response, returning raw text');
+    this.log('warn', 'Could not parse doubt answer response, returning raw text');
     return defaultAnswer;
   }
 

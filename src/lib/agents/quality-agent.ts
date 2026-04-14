@@ -24,6 +24,14 @@ class QualityAgent extends BaseAgent {
     super('quality_check');
   }
 
+  /** Generic execute() for orchestrator dispatch */
+  async execute(params: Record<string, any>): Promise<any> {
+    if (params.contentId && params.content) {
+      return this.scoreContent(params as any);
+    }
+    return this.sweepStale();
+  }
+
   async scoreContent(params: {
     contentId: string;
     content: string;
@@ -38,7 +46,7 @@ class QualityAgent extends BaseAgent {
 
       const userPrompt = `Content type: ${params.contentType}${params.topic ? `\nTopic: ${params.topic}` : ''}\n\nContent:\n${params.content}`;
 
-      const raw = await callAI(userPrompt, { system: systemPrompt });
+      const raw = await callAI({ systemPrompt, userPrompt });
 
       let parsed: {
         accuracy: number;
@@ -53,7 +61,7 @@ class QualityAgent extends BaseAgent {
         if (!jsonMatch) throw new Error('No JSON object found in AI response');
         parsed = JSON.parse(jsonMatch[0]);
       } catch (parseErr) {
-        this.log(`Failed to parse AI response: ${parseErr}`);
+        this.log('warn', `Failed to parse AI response: ${parseErr}`);
         throw new Error('Quality agent received malformed AI response');
       }
 
@@ -77,13 +85,13 @@ class QualityAgent extends BaseAgent {
           .eq('id', params.contentId);
 
         if (error) {
-          this.log(`Failed to update content_queue: ${error.message}`);
+          this.log('warn', `Failed to update content_queue: ${error.message}`);
         }
       } catch (dbErr) {
-        this.log(`Database error updating content_queue: ${dbErr}`);
+        this.log('warn', `Database error updating content_queue: ${dbErr}`);
       }
 
-      await this.completeRun(runId);
+      await this.completeRun('completed', { content_generated: 1 });
 
       return {
         score,
@@ -97,7 +105,7 @@ class QualityAgent extends BaseAgent {
         },
       };
     } catch (err) {
-      await this.completeRun(runId);
+      await this.completeRun('failed', { errors: [`${err}`] });
       throw err;
     }
   }
@@ -115,7 +123,7 @@ class QualityAgent extends BaseAgent {
         .lt('created_at', sevenDaysAgo);
 
       if (error) {
-        this.log(`Failed to query stale content: ${error.message}`);
+        this.log('warn', `Failed to query stale content: ${error.message}`);
         return result;
       }
 
@@ -144,13 +152,13 @@ class QualityAgent extends BaseAgent {
             result.flagged++;
           }
         } catch (itemErr) {
-          this.log(`Failed to re-score item ${item.id}: ${itemErr}`);
+          this.log('warn', `Failed to re-score item ${item.id}: ${itemErr}`);
           result.reviewed++;
           result.flagged++;
         }
       }
     } catch (err) {
-      this.log(`sweepStale failed: ${err}`);
+      this.log('error', `sweepStale failed: ${err}`);
     }
 
     return result;

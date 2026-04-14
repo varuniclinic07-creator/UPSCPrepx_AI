@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { mockTest } from '@/lib/mcq/mock-test';
 import { z } from 'zod';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { mockId } = validation.data;
+
+    // Best-effort KG normalization
+    try { await normalizeUPSCInput(`mock test ${mockId}`); } catch { /* best-effort */ }
 
     // Get mock test details
     const mock = await mockTest.getMockTestById(mockId);

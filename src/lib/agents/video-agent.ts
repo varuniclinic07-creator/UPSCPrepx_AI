@@ -36,7 +36,7 @@ class VideoAgent extends BaseAgent {
 
       const userPrompt = `Topic: ${params.topic}${params.subject ? `\nSubject: ${params.subject}` : ''}${params.style ? `\nStyle: ${params.style}` : ''}\n\nGenerate a 5-scene video script (hook, concept1, concept2, example, CTA).`;
 
-      const raw = await callAI(userPrompt, { system: systemPrompt });
+      const raw = await callAI({ systemPrompt, userPrompt });
 
       let parsed: { script: string; scenes: VideoScene[] };
 
@@ -45,7 +45,7 @@ class VideoAgent extends BaseAgent {
         if (!jsonMatch) throw new Error('No JSON object found in AI response');
         parsed = JSON.parse(jsonMatch[0]);
       } catch (parseErr) {
-        this.log(`Failed to parse AI response: ${parseErr}`);
+        this.log('warn', `Failed to parse AI response: ${parseErr}`);
         throw new Error('Video agent received malformed AI response');
       }
 
@@ -81,10 +81,10 @@ class VideoAgent extends BaseAgent {
             renderJobId = renderData.jobId || renderData.id;
             status = 'rendering';
           } else {
-            this.log(`Remotion render failed with status ${resp.status}`);
+            this.log('warn', `Remotion render failed with status ${resp.status}`);
           }
         } catch (renderErr) {
-          this.log(`Remotion render request failed: ${renderErr}`);
+          this.log('warn', `Remotion render request failed: ${renderErr}`);
         }
       }
 
@@ -98,13 +98,13 @@ class VideoAgent extends BaseAgent {
         });
 
         if (error) {
-          this.log(`Failed to write to content_queue: ${error.message}`);
+          this.log('warn', `Failed to write to content_queue: ${error.message}`);
         }
       } catch (dbErr) {
-        this.log(`Database error writing to content_queue: ${dbErr}`);
+        this.log('warn', `Database error writing to content_queue: ${dbErr}`);
       }
 
-      await this.completeRun(runId);
+      await this.completeRun('completed', { content_generated: 1 });
 
       return {
         script: parsed.script,
@@ -114,7 +114,7 @@ class VideoAgent extends BaseAgent {
         status,
       };
     } catch (err) {
-      await this.completeRun(runId);
+      await this.completeRun('failed', { errors: [`${err}`] });
       throw err;
     }
   }

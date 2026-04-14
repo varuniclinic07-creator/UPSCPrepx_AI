@@ -38,6 +38,14 @@ export const PROVIDER_PRICING: Record<string, ProviderPricing> = {
   // Local models (Ollama)
   'ollama-local': { promptCostPer1K: 0, completionCostPer1K: 0, currency: 'USD' },
 
+  // NVIDIA NIM models
+  'nvidia-nemotron': { promptCostPer1K: 0.0003, completionCostPer1K: 0.0006, currency: 'USD' },
+  'nvidia-llama-70b': { promptCostPer1K: 0.00056, completionCostPer1K: 0.00077, currency: 'USD' },
+
+  // Google Gemini models
+  'gemini-1.5-pro': { promptCostPer1K: 0.00125, completionCostPer1K: 0.005, currency: 'USD' },
+  'gemini-1.5-flash': { promptCostPer1K: 0.000075, completionCostPer1K: 0.0003, currency: 'USD' },
+
   // 9Router (aggregated pricing)
   '9router': { promptCostPer1K: 0.001, completionCostPer1K: 0.003, currency: 'USD' },
 };

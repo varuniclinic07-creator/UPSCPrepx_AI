@@ -13,6 +13,9 @@ import {
   checkStreakMilestones,
   generateDueReminders,
   generateWeeklyDigest,
+  generateCATopicAlerts,
+  generateSubjectInactivityAlerts,
+  generateAccuracyRegressionAlerts,
 } from '@/lib/mastery/mastery-notifications';
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +65,15 @@ export async function POST(request: NextRequest) {
         if (isSunday) {
           await generateWeeklyDigest(user.id);
         }
+
+        // 5. CA topic alerts (daily)
+        await generateCATopicAlerts(user.id);
+
+        // 6. Subject inactivity alerts (daily)
+        await generateSubjectInactivityAlerts(user.id);
+
+        // 7. Accuracy regression alerts (daily)
+        await generateAccuracyRegressionAlerts(user.id);
 
         processed++;
       } catch (err) {

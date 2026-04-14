@@ -223,9 +223,277 @@ export async function generateWeeklyDigest(userId: string): Promise<void> {
   } catch { /* push is best-effort */ }
 }
 
+// ─── CA Topic Alerts ────────────────────────────────────────────
+
+/**
+ * "New CA linked to your weak topic: {topic} — revise now"
+ * Queries today's current_affairs that have node_id set,
+ * checks if user_mastery for that node_id is weak/developing,
+ * and creates a notification for each match.
+ */
+export async function generateCATopicAlerts(userId: string): Promise<number> {
+  const supabase = getSupabase();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Get today's CA articles that are linked to a knowledge node
+  const { data: caArticles } = await supabase
+    .from('current_affairs')
+    .select('id, title, node_id')
+    .not('node_id', 'is', null)
+    .gte('created_at', today);
+
+  if (!caArticles || caArticles.length === 0) return 0;
+
+  const nodeIds = caArticles.map((ca) => ca.node_id).filter(Boolean);
+
+  // Check which of these nodes are weak or developing for this user
+  const { data: weakNodes } = await supabase
+    .from('user_mastery')
+    .select('node_id, mastery_level')
+    .eq('user_id', userId)
+    .in('node_id', nodeIds)
+    .in('mastery_level', ['weak', 'developing']);
+
+  if (!weakNodes || weakNodes.length === 0) return 0;
+
+  const weakNodeIds = new Set(weakNodes.map((n) => n.node_id));
+  let created = 0;
+
+  for (const ca of caArticles) {
+    if (!weakNodeIds.has(ca.node_id)) continue;
+
+    // Deduplicate: check if we already sent this alert today
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('type', 'info')
+      .like('title', `%${ca.title}%`)
+      .gte('created_at', today)
+      .limit(1);
+
+    if (existing && existing.length > 0) continue;
+
+    const title = `New CA linked to your weak topic: ${ca.title}`;
+    const body = `New CA linked to your weak topic: ${ca.title} — revise now`;
+
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'info',
+      title,
+      message: body,
+      link: '/dashboard/revision',
+      is_read: false,
+    });
+
+    try {
+      const { sendPushToUser } = await import('@/lib/notifications/push-service');
+      await sendPushToUser(userId, { title, body, url: '/dashboard/revision', tag: 'ca-topic-alert' });
+    } catch { /* push is best-effort */ }
+
+    created++;
+  }
+
+  return created;
+}
+
+// ─── Subject Inactivity Alerts ──────────────────────────────────
+
+/**
+ * "You haven't studied {subject} in {days} days — {count} new CAs linked"
+ * Groups user_mastery by subject (via knowledge_nodes.subject),
+ * finds subjects where MAX(last_attempted_at) > 7 days ago,
+ * and counts new CA articles linked to that subject.
+ */
+export async function generateSubjectInactivityAlerts(userId: string): Promise<number> {
+  const supabase = getSupabase();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Get user mastery with subject info from knowledge_nodes
+  const { data: masteryRows } = await supabase
+    .from('user_mastery')
+    .select('node_id, last_attempted_at, knowledge_nodes(subject)')
+    .eq('user_id', userId);
+
+  if (!masteryRows || masteryRows.length === 0) return 0;
+
+  // Group by subject and find max last_attempted_at
+  const subjectMap: Record<string, { lastAttempted: string; nodeIds: string[] }> = {};
+
+  for (const row of masteryRows) {
+    const subject = (row.knowledge_nodes as any)?.subject;
+    if (!subject) continue;
+
+    if (!subjectMap[subject]) {
+      subjectMap[subject] = { lastAttempted: row.last_attempted_at || '', nodeIds: [] };
+    }
+
+    subjectMap[subject].nodeIds.push(row.node_id);
+
+    if (row.last_attempted_at && row.last_attempted_at > subjectMap[subject].lastAttempted) {
+      subjectMap[subject].lastAttempted = row.last_attempted_at;
+    }
+  }
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+  let created = 0;
+
+  for (const [subject, data] of Object.entries(subjectMap)) {
+    if (!data.lastAttempted) continue;
+
+    const lastDate = new Date(data.lastAttempted);
+    if (lastDate >= sevenDaysAgo) continue;
+
+    const daysSince = Math.floor((Date.now() - lastDate.getTime()) / 86400000);
+
+    // Count new CA articles linked to nodes in this subject
+    const { count: caCount } = await supabase
+      .from('current_affairs')
+      .select('*', { count: 'exact', head: true })
+      .in('node_id', data.nodeIds)
+      .gte('created_at', data.lastAttempted);
+
+    // Deduplicate: check if we already sent this alert today
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('type', 'info')
+      .like('title', `%${subject}%`)
+      .like('title', '%haven%')
+      .gte('created_at', today)
+      .limit(1);
+
+    if (existing && existing.length > 0) continue;
+
+    const linkedCAs = caCount || 0;
+    const title = `You haven't studied ${subject} in ${daysSince} days`;
+    const body = `You haven't studied ${subject} in ${daysSince} days — ${linkedCAs} new CAs linked`;
+
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'info',
+      title,
+      message: body,
+      link: '/dashboard/revision',
+      is_read: false,
+    });
+
+    try {
+      const { sendPushToUser } = await import('@/lib/notifications/push-service');
+      await sendPushToUser(userId, { title, body, url: '/dashboard/revision', tag: 'subject-inactivity' });
+    } catch { /* push is best-effort */ }
+
+    created++;
+  }
+
+  return created;
+}
+
+// ─── Accuracy Regression Alerts ─────────────────────────────────
+
+/**
+ * "Your {subject} accuracy dropped from {old}% to {new}% — 15-min revision suggested"
+ * Compares this week's average accuracy per subject vs last week's.
+ * If dropped by more than 10%, creates a notification.
+ */
+export async function generateAccuracyRegressionAlerts(userId: string): Promise<number> {
+  const supabase = getSupabase();
+  const today = new Date().toISOString().split('T')[0];
+  const now = Date.now();
+  const oneWeekAgo = new Date(now - 7 * 86400000).toISOString();
+  const twoWeeksAgo = new Date(now - 14 * 86400000).toISOString();
+
+  // Get this week's mastery data with subject
+  const { data: thisWeek } = await supabase
+    .from('user_mastery')
+    .select('node_id, accuracy_score, knowledge_nodes(subject)')
+    .eq('user_id', userId)
+    .gte('last_attempted_at', oneWeekAgo);
+
+  // Get last week's mastery data with subject
+  const { data: lastWeek } = await supabase
+    .from('user_mastery')
+    .select('node_id, accuracy_score, knowledge_nodes(subject)')
+    .eq('user_id', userId)
+    .gte('last_attempted_at', twoWeeksAgo)
+    .lt('last_attempted_at', oneWeekAgo);
+
+  if (!thisWeek || thisWeek.length === 0 || !lastWeek || lastWeek.length === 0) return 0;
+
+  // Average accuracy per subject for each week
+  function avgBySubject(rows: any[]): Record<string, number> {
+    const sums: Record<string, { total: number; count: number }> = {};
+    for (const row of rows) {
+      const subject = (row.knowledge_nodes as any)?.subject;
+      if (!subject || row.accuracy_score == null) continue;
+      if (!sums[subject]) sums[subject] = { total: 0, count: 0 };
+      sums[subject].total += row.accuracy_score;
+      sums[subject].count++;
+    }
+    const result: Record<string, number> = {};
+    for (const [sub, { total, count }] of Object.entries(sums)) {
+      result[sub] = total / count;
+    }
+    return result;
+  }
+
+  const thisWeekAvg = avgBySubject(thisWeek);
+  const lastWeekAvg = avgBySubject(lastWeek);
+
+  let created = 0;
+
+  for (const [subject, oldAccuracy] of Object.entries(lastWeekAvg)) {
+    const newAccuracy = thisWeekAvg[subject];
+    if (newAccuracy == null) continue;
+
+    const oldPct = Math.round(oldAccuracy * 100);
+    const newPct = Math.round(newAccuracy * 100);
+    const drop = oldPct - newPct;
+
+    if (drop <= 10) continue;
+
+    // Deduplicate: check if we already sent this alert today
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('type', 'warning')
+      .like('title', `%${subject}%accuracy%`)
+      .gte('created_at', today)
+      .limit(1);
+
+    if (existing && existing.length > 0) continue;
+
+    const title = `${subject} accuracy dropped`;
+    const body = `Your ${subject} accuracy dropped from ${oldPct}% to ${newPct}% — 15-min revision suggested`;
+
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'warning',
+      title,
+      message: body,
+      link: '/dashboard/revision',
+      is_read: false,
+    });
+
+    try {
+      const { sendPushToUser } = await import('@/lib/notifications/push-service');
+      await sendPushToUser(userId, { title, body, url: '/dashboard/revision', tag: 'accuracy-regression' });
+    } catch { /* push is best-effort */ }
+
+    created++;
+  }
+
+  return created;
+}
+
 export const masteryNotifications = {
   checkStreakMilestones,
   notifyLevelUp,
   generateDueReminders,
   generateWeeklyDigest,
+  generateCATopicAlerts,
+  generateSubjectInactivityAlerts,
+  generateAccuracyRegressionAlerts,
 };

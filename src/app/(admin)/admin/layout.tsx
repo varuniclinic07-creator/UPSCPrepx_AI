@@ -37,6 +37,7 @@ interface AdminLayoutProps {
 
 const navigation = [
   { name: 'Overview', href: '/admin', icon: LayoutDashboard },
+  { name: 'Console', href: '/admin/console', icon: Activity },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'ML Analytics', href: '/admin/ml-analytics', icon: Brain },
   { name: 'Business', href: '/admin/business', icon: TrendingUp },
@@ -52,6 +53,7 @@ const navigation = [
   { name: 'Queue Status', href: '/admin/queue', icon: Activity },
   { name: 'Content', href: '/admin/content', icon: FileText },
   { name: 'Hermes', href: '/admin/hermes', icon: Cpu },
+  { name: 'Source Intel', href: '/admin/source-intelligence', icon: Database },
   { name: 'Knowledge Graph', href: '/admin/knowledge-base', icon: Database },
   { name: 'AI Videos', href: '/admin/ai-videos', icon: Video },
   { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },

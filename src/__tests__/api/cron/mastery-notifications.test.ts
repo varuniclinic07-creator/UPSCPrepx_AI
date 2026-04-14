@@ -24,10 +24,16 @@ jest.mock('@/lib/mastery/mastery-service', () => ({
 const mockCheckStreakMilestones = jest.fn();
 const mockGenerateDueReminders = jest.fn();
 const mockGenerateWeeklyDigest = jest.fn();
+const mockGenerateCATopicAlerts = jest.fn();
+const mockGenerateSubjectInactivityAlerts = jest.fn();
+const mockGenerateAccuracyRegressionAlerts = jest.fn();
 jest.mock('@/lib/mastery/mastery-notifications', () => ({
   checkStreakMilestones: (...args: any[]) => mockCheckStreakMilestones(...args),
   generateDueReminders: (...args: any[]) => mockGenerateDueReminders(...args),
   generateWeeklyDigest: (...args: any[]) => mockGenerateWeeklyDigest(...args),
+  generateCATopicAlerts: (...args: any[]) => mockGenerateCATopicAlerts(...args),
+  generateSubjectInactivityAlerts: (...args: any[]) => mockGenerateSubjectInactivityAlerts(...args),
+  generateAccuracyRegressionAlerts: (...args: any[]) => mockGenerateAccuracyRegressionAlerts(...args),
 }));
 
 import { POST } from '@/app/api/cron/mastery-notifications/route';
@@ -91,6 +97,9 @@ describe('POST /api/cron/mastery-notifications', () => {
     mockCheckStreakMilestones.mockResolvedValue(undefined);
     mockGenerateDueReminders.mockResolvedValue(undefined);
     mockGenerateWeeklyDigest.mockResolvedValue(undefined);
+    mockGenerateCATopicAlerts.mockResolvedValue(undefined);
+    mockGenerateSubjectInactivityAlerts.mockResolvedValue(undefined);
+    mockGenerateAccuracyRegressionAlerts.mockResolvedValue(undefined);
 
     const res = await POST(makeRequest('Bearer test-cron-secret'));
     expect(res.status).toBe(200);
@@ -103,6 +112,9 @@ describe('POST /api/cron/mastery-notifications', () => {
     expect(mockCheckStreakMilestones).toHaveBeenCalledWith('user-1', 7);
     expect(mockCheckStreakMilestones).toHaveBeenCalledWith('user-2', 7);
     expect(mockGenerateDueReminders).toHaveBeenCalledTimes(2);
+    expect(mockGenerateCATopicAlerts).toHaveBeenCalledTimes(2);
+    expect(mockGenerateSubjectInactivityAlerts).toHaveBeenCalledTimes(2);
+    expect(mockGenerateAccuracyRegressionAlerts).toHaveBeenCalledTimes(2);
   });
 
   it('triggers weekly digest on Sundays', async () => {
@@ -124,6 +136,9 @@ describe('POST /api/cron/mastery-notifications', () => {
     mockCheckStreakMilestones.mockResolvedValue(undefined);
     mockGenerateDueReminders.mockResolvedValue(undefined);
     mockGenerateWeeklyDigest.mockResolvedValue(undefined);
+    mockGenerateCATopicAlerts.mockResolvedValue(undefined);
+    mockGenerateSubjectInactivityAlerts.mockResolvedValue(undefined);
+    mockGenerateAccuracyRegressionAlerts.mockResolvedValue(undefined);
 
     const res = await POST(makeRequest('Bearer test-cron-secret'));
     const body = await res.json();

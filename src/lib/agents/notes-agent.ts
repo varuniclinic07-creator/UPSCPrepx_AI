@@ -88,7 +88,7 @@ export class NotesAgent extends BaseAgent {
           userPrompt,
         });
       } catch (aiErr: any) {
-        this.log(`AI provider call failed: ${aiErr.message}`);
+        this.log('error', `AI provider call failed: ${aiErr.message}`);
         throw new Error(`Notes generation failed: ${aiErr.message}`);
       }
 
@@ -130,20 +130,20 @@ export class NotesAgent extends BaseAgent {
             });
 
           if (insertError) {
-            this.log(`content_queue insert failed: ${insertError.message}`);
+            this.log('warn', `content_queue insert failed: ${insertError.message}`);
           }
         } catch (dbErr: any) {
-          this.log(`content_queue write error: ${dbErr.message}`);
+          this.log('warn', `content_queue write error: ${dbErr.message}`);
         }
       }
 
       // ------------------------------------------------------------------
       // 5. Complete
       // ------------------------------------------------------------------
-      await this.completeRun(runId, { wordCount, sourceCount: usedSources.length });
+      await this.completeRun('completed', { content_generated: 1, nodes_processed: 1 });
       return result;
     } catch (err: any) {
-      await this.completeRun(runId, { error: err?.message });
+      await this.completeRun('failed', { errors: [err?.message] });
       throw err;
     }
   }

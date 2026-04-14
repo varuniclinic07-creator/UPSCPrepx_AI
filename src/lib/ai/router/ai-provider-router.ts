@@ -9,7 +9,7 @@ import { PROVIDER_PRICING, PLAN_LIMITS } from '@/lib/ai-cost/cost-tracker';
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type ProviderName = 'ollama' | 'groq' | 'anthropic' | 'openai';
+export type ProviderName = 'ollama' | 'groq' | 'nvidia' | 'gemini';
 
 export type UserPlan = 'free' | 'basic' | 'premium' | 'enterprise';
 
@@ -119,37 +119,37 @@ export const PROVIDER_CONFIGS: Record<ProviderName, ProviderConfig> = {
     supportsStreaming: true,
     isActive: true,
   },
-  anthropic: {
-    name: 'anthropic',
-    baseUrl: 'https://api.anthropic.com/v1',
-    apiKeyEnv: 'ANTHROPIC_API_KEY',
+  nvidia: {
+    name: 'nvidia',
+    baseUrl: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
+    apiKeyEnv: 'NVIDIA_API_KEY',
     models: [
-      'claude-3-5-sonnet-20241022',
-      'claude-3-opus-20240229',
-      'claude-3-haiku-20240307',
+      'nvidia/llama-3.1-nemotron-70b-instruct',
+      'meta/llama-3.1-70b-instruct',
+      'nvidia/nemotron-4-340b-instruct',
+    ],
+    priority: 3,
+    rateLimitRPM: 40,
+    rateLimitConcurrent: 10,
+    maxTokensPerRequest: 32768,
+    supportsStreaming: true,
+    isActive: !!process.env.NVIDIA_API_KEY,
+  },
+  gemini: {
+    name: 'gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    apiKeyEnv: 'GEMINI_API_KEY_1',
+    models: [
+      'gemini-1.5-pro',
+      'gemini-1.5-flash',
+      'gemini-1.0-pro',
     ],
     priority: 4,
-    rateLimitRPM: 50,
+    rateLimitRPM: 60,
     rateLimitConcurrent: 15,
     maxTokensPerRequest: 128000,
     supportsStreaming: true,
-    isActive: false, // Disabled by default, enable via env
-  },
-  openai: {
-    name: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    apiKeyEnv: 'OPENAI_API_KEY',
-    models: [
-      'gpt-4o',
-      'gpt-4-turbo',
-      'gpt-3.5-turbo',
-    ],
-    priority: 5,
-    rateLimitRPM: 60,
-    rateLimitConcurrent: 20,
-    maxTokensPerRequest: 128000,
-    supportsStreaming: true,
-    isActive: false, // Disabled by default, enable via env
+    isActive: !!process.env.GEMINI_API_KEY_1,
   },
 };
 
@@ -174,26 +174,26 @@ const PLAN_PROVIDER_PREFERENCES: Record<UserPlan, Record<ProviderName, number>> 
   free: {
     ollama: 1.0,
     groq: 0.9,
-    anthropic: 0.3, // Low preference due to cost
-    openai: 0.3,
+    nvidia: 0.5,
+    gemini: 0.4,
   },
   basic: {
     ollama: 1.0,
     groq: 1.0,
-    anthropic: 0.5,
-    openai: 0.5,
+    nvidia: 0.7,
+    gemini: 0.6,
   },
   premium: {
     ollama: 1.0,
     groq: 1.0,
-    anthropic: 0.8,
-    openai: 0.8,
+    nvidia: 0.9,
+    gemini: 0.8,
   },
   enterprise: {
     ollama: 1.0,
     groq: 1.0,
-    anthropic: 1.0,
-    openai: 1.0,
+    nvidia: 1.0,
+    gemini: 1.0,
   },
 };
 
@@ -563,8 +563,8 @@ export class AIProviderRouter {
     const mapping: Record<ProviderName, string> = {
       ollama: 'ollama-local',
       groq: 'groq-llama-70b',
-      anthropic: 'claude-3-sonnet',
-      openai: 'gpt-4o',
+      nvidia: 'nvidia-nemotron',
+      gemini: 'gemini-1.5-pro',
     };
     return mapping[provider];
   }

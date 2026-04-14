@@ -16,6 +16,7 @@ import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/security/auth';
 import { checkSubscriptionAccess } from '@/lib/trial/subscription-checker';
+import { normalizeUPSCInput } from '@/lib/agents/normalizer-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -221,6 +222,11 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // Best-effort KG normalization for the answer's subject + title
+    try {
+      await normalizeUPSCInput(`${validated.subject} ${validated.title.en}`);
+    } catch { /* best-effort */ }
 
     // Calculate word count
     const wordCount = validated.content.split(/\s+/).filter(w => w.length > 0).length;

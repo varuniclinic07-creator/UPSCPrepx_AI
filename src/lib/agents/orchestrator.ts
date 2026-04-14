@@ -9,6 +9,7 @@ export type TaskType =
   | 'generate_video'
   | 'generate_animation'
   | 'research_topic'
+  | 'normalize_input'
   | 'syllabus_coverage'
   | 'freshness_check';
 
@@ -34,9 +35,15 @@ export interface HermesResult {
  * HermesOrchestrator — central dispatcher that routes tasks to the correct
  * specialist agent. Uses lazy (dynamic) imports to avoid circular dependencies
  * and keep initial bundle size small.
+ *
+ * Dead-letter: tracks failure counts per node; after 3 failures a node is
+ * flagged in the admin console via `knowledge_nodes.metadata.dead_letter`.
  */
 export class HermesOrchestrator {
   private supabase: SupabaseClient;
+  /** In-memory failure counter: nodeId → count */
+  private failureCounts = new Map<string, number>();
+  private static DEAD_LETTER_THRESHOLD = 3;
 
   constructor() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -46,16 +53,52 @@ export class HermesOrchestrator {
 
   /**
    * Dispatch a single task to the appropriate agent.
+   * On failure, increments per-node failure counter; after 3 failures
+   * the node is flagged as dead-letter in the admin console.
    */
   async dispatch(task: HermesTask): Promise<HermesResult> {
     try {
-      return await this.withRetry(() => this.route(task));
+      const result = await this.withRetry(() => this.route(task));
+      // Reset failure counter on success
+      if (task.nodeId) this.failureCounts.delete(task.nodeId);
+      return result;
     } catch (err: any) {
+      // Dead-letter tracking
+      if (task.nodeId) {
+        const count = (this.failureCounts.get(task.nodeId) ?? 0) + 1;
+        this.failureCounts.set(task.nodeId, count);
+
+        if (count >= HermesOrchestrator.DEAD_LETTER_THRESHOLD) {
+          await this.flagDeadLetter(task.nodeId, task.type, err?.message);
+        }
+      }
+
       return {
         success: false,
         agentType: task.type,
         error: err?.message ?? 'Unknown orchestrator error',
       };
+    }
+  }
+
+  /**
+   * Flag a node as dead-letter in knowledge_nodes metadata for admin visibility.
+   */
+  private async flagDeadLetter(nodeId: string, taskType: string, errorMsg?: string): Promise<void> {
+    try {
+      await this.supabase
+        .from('knowledge_nodes')
+        .update({
+          metadata: {
+            dead_letter: true,
+            dead_letter_task: taskType,
+            dead_letter_error: errorMsg ?? 'Unknown',
+            dead_letter_at: new Date().toISOString(),
+          },
+        })
+        .eq('id', nodeId);
+    } catch {
+      // Best-effort; don't let dead-letter flagging crash the orchestrator
     }
   }
 
@@ -100,6 +143,12 @@ export class HermesOrchestrator {
         const agent = new QuizAgent();
         const data = await agent.execute(params as any);
         return { success: true, agentType: 'quiz', data };
+      }
+
+      case 'normalize_input': {
+        const { normalizeUPSCInput } = await import('./normalizer-agent');
+        const data = await normalizeUPSCInput(params.topic);
+        return { success: true, agentType: 'normalizer', data };
       }
 
       case 'research_topic': {
