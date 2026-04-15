@@ -3,13 +3,20 @@
 // Production logging with Pino (or console fallback)
 // ═══════════════════════════════════════════════════════════════
 
-// Try to import pino, fall back to console if not available
+// Pino will be lazily loaded on first use (avoids Edge Runtime issues)
 let pino: unknown = null;
-try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    pino = require('pino');
-} catch {
-    // Pino not installed, use console fallback
+let pinoAttempted = false;
+
+function getPino(): unknown {
+    if (pinoAttempted) return pino;
+    pinoAttempted = true;
+    try {
+        // Dynamic require — safe in Node.js Runtime, no-op in Edge
+        pino = typeof globalThis.process !== 'undefined' ? require('pino') : null;
+    } catch {
+        // Pino not installed or in Edge Runtime — use console fallback
+    }
+    return pino;
 }
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
@@ -57,11 +64,12 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
  * Create pino logger if available
  */
 function createPinoLogger() {
-    if (!pino) return null;
+    const pinoLib = getPino();
+    if (!pinoLib) return null;
 
     try {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        return (pino as any)({
+        return (pinoLib as any)({
             level: config.minLevel,
             timestamp: () => `,"time":"${new Date().toISOString()}"`,
             formatters: {

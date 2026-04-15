@@ -42,6 +42,7 @@ function generateRequestId(): string {
 // ═══════════════════════════════════════════════════════════════
 
 export async function middleware(request: NextRequest) {
+  try {
     const { pathname } = request.nextUrl;
 
     const requestId = generateRequestId();
@@ -135,6 +136,11 @@ export async function middleware(request: NextRequest) {
     }
 
     return response;
+  } catch (error) {
+    // Never let middleware crash kill the entire request — degrade gracefully
+    console.error('[Middleware] Unhandled error:', error);
+    return NextResponse.next();
+  }
 }
 
 export const config = {

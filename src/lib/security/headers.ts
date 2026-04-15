@@ -257,21 +257,19 @@ export function generateCsrfToken(): string {
  */
 export function validateCsrfToken(token: string, expectedToken: string): boolean {
     if (!token || !expectedToken) return false;
+    if (token.length !== expectedToken.length) return false;
 
-    try {
-        const tokenBuffer = Buffer.from(token, 'hex');
-        const expectedBuffer = Buffer.from(expectedToken, 'hex');
+    // Constant-time comparison using XOR (Edge-compatible, no Node.js APIs)
+    const encoder = new TextEncoder();
+    const a = encoder.encode(token);
+    const b = encoder.encode(expectedToken);
+    if (a.length !== b.length) return false;
 
-        if (tokenBuffer.length !== expectedBuffer.length) {
-            return false;
-        }
-
-        // Use Node.js crypto for timing-safe comparison
-        const nodeCrypto = require('crypto') as typeof import('crypto');
-        return nodeCrypto.timingSafeEqual(tokenBuffer, expectedBuffer);
-    } catch {
-        return false;
+    let mismatch = 0;
+    for (let i = 0; i < a.length; i++) {
+        mismatch |= a[i] ^ b[i];
     }
+    return mismatch === 0;
 }
 
 /**
