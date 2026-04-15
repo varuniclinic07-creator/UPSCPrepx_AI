@@ -806,19 +806,26 @@ See `DEPLOYMENT.md` and `DEPLOY_QUICKSTART.md` for full instructions.
 
 ### Ready for Production
 - [x] Build passes (exit code 0)
+- [x] TypeScript: 0 errors (tsc --noEmit)
 - [x] 105 test suites
 - [x] 6-provider AI chain with 30+ model fallback
 - [x] 15 Edge Functions ready for deployment
 - [x] 51 DB migrations
-- [x] Alignment: ~95%
+- [x] Alignment audit issues: all C1-C5 critical + H2-H8 high verified fixed
+- [x] Kilo API keys configured (4-key rotation + 5-model fallback)
+- [x] OpenCode API key configured (17-model fallback)
+- [x] CSP headers updated for Kilo AI + NVIDIA API domains
+- [x] X-Powered-By header disabled
+- [x] Living Pages (QuickGenerate) wired into 4 dashboard pages
+- [x] All 3 "missing" pages exist: Topic Intelligence, Animations, Ethics Case Study
+- [x] Admin Console exists at /admin/console
 
 ### Manual Steps Required
 1. **Run `npm install --legacy-peer-deps`** — to install any new dependencies
 2. **Apply Supabase migration 051** — `npx supabase db push` (raw_input_hash generated column)
 3. **Deploy Edge Functions** — `npx supabase login` then deployment script
-4. **Set Kilo API keys** — Add `KILO_API_KEY_1` through `_4` in `.env` and Supabase secrets
-5. **Set OpenCode API key** — Add `OPENCODE_API_KEY` in `.env`
-6. **Configure Kilo + OpenCode** — Set env vars per Section 12
+4. **Trigger Coolify redeploy** — Push is done, trigger build from Coolify dashboard
+5. **Copy `.env.production.deploy` to Coolify** — Kilo/OpenCode keys are now in the file
 
 ### Future Enhancements (not blocking)
 1. Unified `/admin/console` Source Intelligence panel could be richer
@@ -826,9 +833,12 @@ See `DEPLOYMENT.md` and `DEPLOY_QUICKSTART.md` for full instructions.
 3. Vision models need Ollama configured with gemma4/qwen3-vl models
 4. Multi-region Terraform (disabled by default) — activate for second region
 5. E2E Playwright tests for full browser-based flows
+6. Lighthouse performance audit + bundle size optimization
+7. Content seeding: trigger CA ingestion + syllabus coverage crons
 
 ---
 
-*Generated: 2026-04-14 20:30 IST*
-*Build: next build exit code 0*
-*Session: Gap closure + Kilo/OpenCode providers + comprehensive docs*
+*Updated: 2026-04-15 06:00 IST*
+*Build: tsc 0 errors + next build exit code 0*
+*Session: Type safety + Kilo/OpenCode config + CSP hardening + alignment verification*
+

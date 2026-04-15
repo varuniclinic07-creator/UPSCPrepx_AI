@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
-  
+  poweredByHeader: false,
+
   transpilePackages: [
     "@tiptap/react",
     "@tiptap/starter-kit",
@@ -86,7 +86,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://*.9router.com https://api.groq.com https://api.razorpay.com https://*.upstash.io",
+              "connect-src 'self' https://*.supabase.co https://*.9router.com https://api.groq.com https://api.razorpay.com https://*.upstash.io https://api.kilo.ai https://integrate.api.nvidia.com",
               "frame-src 'self' https://api.razorpay.com",
               "object-src 'none'",
               "base-uri 'self'",
