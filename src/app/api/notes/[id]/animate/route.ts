@@ -1,5 +1,5 @@
 /**
- * Note Animation API — /api/notes/[slug]/animate
+ * Note Animation API — /api/notes/[id]/animate
  *
  * POST: Trigger Manim animation for a diagram in a note
  */
