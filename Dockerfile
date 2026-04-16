@@ -53,6 +53,9 @@ EXPOSE 3000
 
 ENV PORT=3000
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "const http=require('http');const r=http.get('http://localhost:3000/api/health',res=>{process.exit(res.statusCode<500?0:1)});r.on('error',()=>process.exit(1));r.setTimeout(5000,()=>{r.destroy();process.exit(1)})"
+
 # Do NOT use ENV HOSTNAME — Docker overrides it with container ID at runtime.
 # Instead, pass hostname directly to the server via node -e wrapper.
 CMD ["node", "-e", "process.env.HOSTNAME='0.0.0.0'; require('./server.js')"]

@@ -11,13 +11,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, FileText, MessageSquare, Link2 } from 'lucide-react';
-import { CustomVideoPlayer } from '@/components/video/custom-video-player';
-import { TranscriptBar } from '@/components/video/transcript-bar';
-import { VideoNotesPanel } from '@/components/video/video-notes-panel';
-import { VideoQueryPanel } from '@/components/video/video-query-panel';
 import { createBrowserClient } from '@supabase/ssr';
+
+const CustomVideoPlayer = dynamic(() => import('@/components/video/custom-video-player').then(m => m.CustomVideoPlayer), { ssr: false });
+const TranscriptBar = dynamic(() => import('@/components/video/transcript-bar').then(m => m.TranscriptBar), { ssr: false });
+const VideoNotesPanel = dynamic(() => import('@/components/video/video-notes-panel').then(m => m.VideoNotesPanel), { ssr: false });
+const VideoQueryPanel = dynamic(() => import('@/components/video/video-query-panel').then(m => m.VideoQueryPanel), { ssr: false });
 
 interface VideoData {
     id: string;

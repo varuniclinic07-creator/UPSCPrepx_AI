@@ -55,78 +55,88 @@ export class AIProviderClient {
   private currentKiloModelIndex: number = 0;
   private opencodeModels: string[];
 
+  /** Reject placeholder/dummy keys that look real but aren't */
+  private static isRealKey(key: string | undefined): key is string {
+    if (!key) return false;
+    const lower = key.toLowerCase();
+    return !(
+      lower === 'placeholder' ||
+      lower.startsWith('replace_with') ||
+      lower.startsWith('your_') ||
+      lower.startsWith('placeholder') ||
+      lower === '' ||
+      lower === 'test' ||
+      lower === 'dummy'
+    );
+  }
+
   constructor() {
-    // CRITICAL: AI Provider Priority — Ollama primary, Groq fallback
+    // AI Provider Priority: Groq (7 real keys) → Kilo (4 JWT keys) → Ollama Cloud → OpenCode
     this.providers = [
-      {
-        name: 'ollama',
-        baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
-        apiKey: process.env.OLLAMA_API_KEY || '',
-        model: process.env.OLLAMA_MODEL || 'qwen3.5:397b-cloud',
-        priority: 1, // Primary
-        rateLimitRPM: 20,
-        rateLimitConcurrent: 5,
-        isActive: true,
-      },
       {
         name: 'groq',
         baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
         apiKey: '', // Will use rotation from groqKeys
         model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
-        priority: 2, // Fallback
+        priority: 1, // Primary — 7 free keys, fastest
         rateLimitRPM: 30,
         rateLimitConcurrent: 10,
         isActive: true,
-      },
-      {
-        name: 'nvidia',
-        baseUrl: 'https://integrate.api.nvidia.com/v1',
-        apiKey: process.env.NVIDIA_API_KEY || '',
-        model: process.env.NVIDIA_MODEL || 'nvidia/llama-3.1-nemotron-70b-instruct',
-        priority: 3,
-        rateLimitRPM: 10,
-        rateLimitConcurrent: 3,
-        isActive: Boolean(process.env.NVIDIA_API_KEY),
-      },
-      {
-        name: 'gemini',
-        baseUrl: 'gemini-adapter', // Uses GeminiAdapter, not direct fetch
-        apiKey: '', // Resolved via key rotation at call time
-        model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
-        priority: 4,
-        rateLimitRPM: 15,
-        rateLimitConcurrent: 5,
-        isActive: Boolean(
-          process.env.GEMINI_API_KEY_1 ||
-          process.env.GEMINI_API_KEY_2 ||
-          process.env.GEMINI_API_KEY_3 ||
-          process.env.GEMINI_API_KEY_4
-        ),
       },
       {
         name: 'kilo',
         baseUrl: process.env.KILO_API_BASE_URL || 'https://api.kilo.ai/api/gateway',
         apiKey: '', // Resolved via key rotation at call time
         model: process.env.KILO_MODEL || 'bytedance-seed/dola-seed-2.0-pro:free',
-        priority: 5, // After Gemini
+        priority: 2, // 4 JWT keys, 5 model fallback
         rateLimitRPM: 30,
         rateLimitConcurrent: 10,
         isActive: Boolean(
-          process.env.KILO_API_KEY_1 ||
-          process.env.KILO_API_KEY_2 ||
-          process.env.KILO_API_KEY_3 ||
-          process.env.KILO_API_KEY_4
+          AIProviderClient.isRealKey(process.env.KILO_API_KEY_1) ||
+          AIProviderClient.isRealKey(process.env.KILO_API_KEY_2) ||
+          AIProviderClient.isRealKey(process.env.KILO_API_KEY_3) ||
+          AIProviderClient.isRealKey(process.env.KILO_API_KEY_4)
         ),
+      },
+      {
+        name: 'ollama',
+        baseUrl: process.env.OLLAMA_BASE_URL || 'https://ollama.com/v1',
+        apiKey: process.env.OLLAMA_API_KEY || '',
+        model: process.env.OLLAMA_MODEL || 'qwen3.5:397b-cloud',
+        priority: 3, // Paid cloud — fallback
+        rateLimitRPM: 20,
+        rateLimitConcurrent: 5,
+        isActive: AIProviderClient.isRealKey(process.env.OLLAMA_API_KEY),
       },
       {
         name: 'opencode',
         baseUrl: process.env.OPENCODE_API_BASE_URL || 'http://localhost:3100',
         apiKey: process.env.OPENCODE_API_KEY || '',
         model: process.env.OPENCODE_MODEL || 'opencode zen/Big Pickle',
-        priority: 6, // After Kilo
+        priority: 4, // Self-hosted — only works when local server running
         rateLimitRPM: 60,
         rateLimitConcurrent: 10,
-        isActive: Boolean(process.env.OPENCODE_API_KEY),
+        isActive: AIProviderClient.isRealKey(process.env.OPENCODE_API_KEY),
+      },
+      {
+        name: 'nvidia',
+        baseUrl: 'https://integrate.api.nvidia.com/v1',
+        apiKey: process.env.NVIDIA_API_KEY || '',
+        model: process.env.NVIDIA_MODEL || 'nvidia/llama-3.1-nemotron-70b-instruct',
+        priority: 5,
+        rateLimitRPM: 10,
+        rateLimitConcurrent: 3,
+        isActive: AIProviderClient.isRealKey(process.env.NVIDIA_API_KEY),
+      },
+      {
+        name: 'gemini',
+        baseUrl: 'gemini-adapter', // Uses GeminiAdapter, not direct fetch
+        apiKey: '', // Resolved via key rotation at call time
+        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+        priority: 6,
+        rateLimitRPM: 15,
+        rateLimitConcurrent: 5,
+        isActive: false, // Disabled until real keys are provided
       },
     ];
 
@@ -139,10 +149,15 @@ export class AIProviderClient {
       process.env.GROQ_API_KEY_5,
       process.env.GROQ_API_KEY_6,
       process.env.GROQ_API_KEY_7,
-    ].filter((k): k is string => !!k);
+    ].filter(AIProviderClient.isRealKey);
     if (this.groqKeys.length === 0) {
       const singleKey = process.env.GROQ_API_KEY || '';
-      if (singleKey) this.groqKeys = [singleKey];
+      if (AIProviderClient.isRealKey(singleKey)) this.groqKeys = [singleKey];
+    }
+    // Disable Groq if no real keys
+    if (this.groqKeys.length === 0) {
+      const groq = this.providers.find(p => p.name === 'groq');
+      if (groq) groq.isActive = false;
     }
 
     // Gemini multi-key rotation: GEMINI_API_KEY_1 through _4
@@ -151,7 +166,12 @@ export class AIProviderClient {
       process.env.GEMINI_API_KEY_2,
       process.env.GEMINI_API_KEY_3,
       process.env.GEMINI_API_KEY_4,
-    ].filter((k): k is string => !!k);
+    ].filter(AIProviderClient.isRealKey);
+    // Enable Gemini only if real keys exist
+    if (this.geminiKeys.length > 0) {
+      const gemini = this.providers.find(p => p.name === 'gemini');
+      if (gemini) gemini.isActive = true;
+    }
 
     // Kilo multi-key rotation: KILO_API_KEY_1 through _4
     this.kiloKeys = [
@@ -159,7 +179,7 @@ export class AIProviderClient {
       process.env.KILO_API_KEY_2,
       process.env.KILO_API_KEY_3,
       process.env.KILO_API_KEY_4,
-    ].filter((k): k is string => !!k);
+    ].filter(AIProviderClient.isRealKey);
 
     // Kilo model fallback order (5 models, cycled on failure)
     this.kiloModels = [
@@ -827,14 +847,18 @@ export async function callAI(
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || '';
 
-      // Reset failure count on success
+      // Reset failure count on success + rotate keys for round-robin providers
       const failures = (client as any).providerFailures as Map<string, number>;
       failures.set(provider.name, 0);
       health.set(provider.name, true);
+      if (provider.name === 'groq') (client as any).rotateGroqKey();
 
       return content;
     } catch (error) {
       console.error(`callAI: Provider ${provider.name} failed:`, error);
+
+      // Rotate Groq key on failure too — try a different key next time
+      if (provider.name === 'groq') (client as any).rotateGroqKey();
 
       const failures = (client as any).providerFailures as Map<string, number>;
       const count = (failures.get(provider.name) || 0) + 1;

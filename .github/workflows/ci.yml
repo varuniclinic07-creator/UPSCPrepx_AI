@@ -99,6 +99,48 @@ jobs:
           retention-days: 7
 
   # ═══════════════════════════════════════════════════════════
+  # E2E TESTS (Playwright)
+  # ═══════════════════════════════════════════════════════════
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://emotqkukvfwjycvwfvyj.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════
   # UNIT TESTS
   # ═══════════════════════════════════════════════════════════
   test:
@@ -243,7 +285,7 @@ jobs:
   report-status:
     name: Report CI Status
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, build, test, docker-build-test, security-scan]
+    needs: [lint-and-typecheck, build, test, e2e, docker-build-test, security-scan]
     if: always()
 
     steps:
@@ -263,7 +305,10 @@ jobs:
           echo "| Lint & Type Check | $lint_status |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | $build_status |" >> $GITHUB_STEP_SUMMARY
           echo "| Tests | $test_status |" >> $GITHUB_STEP_SUMMARY
+          e2e_status="${{ needs.e2e.result }}"
+
           echo "| Docker Build | $docker_status |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | $e2e_status |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Scan | $security_status |" >> $GITHUB_STEP_SUMMARY
 
           # Fail if any critical job failed

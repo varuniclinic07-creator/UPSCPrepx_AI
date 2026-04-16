@@ -1,5 +1,12 @@
-import { SyllabusGraph3D } from '@/components/features/syllabus/SyllabusGraph3D';
+'use client';
+
+import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/card';
+
+const SyllabusGraph3D = dynamic(
+  () => import('@/components/features/syllabus/SyllabusGraph3D').then(m => m.SyllabusGraph3D),
+  { ssr: false, loading: () => <div className="h-[600px] flex items-center justify-center text-muted-foreground">Loading 3D graph...</div> }
+);
 
 export default function SyllabusPage() {
     return (
