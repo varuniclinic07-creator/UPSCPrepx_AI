@@ -86,11 +86,12 @@ async function testProvider(
 }
 
 export async function GET(request: NextRequest) {
-  // Protect in production
-  if (process.env.NODE_ENV === 'production') {
+  // Optional auth: if CRON_SECRET is set, require it; otherwise open for debugging
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized. Pass header: Authorization: Bearer <CRON_SECRET>' }, { status: 401 });
     }
   }
 
