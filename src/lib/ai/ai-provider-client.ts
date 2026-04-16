@@ -47,12 +47,12 @@ export class AIProviderClient {
   private providerFailures: Map<string, number> = new Map();
   private groqKeys: string[];
   private currentGroqKeyIndex: number = 0;
-  private geminiKeys: string[];
-  private currentGeminiKeyIndex: number = 0;
   private kiloKeys: string[];
   private currentKiloKeyIndex: number = 0;
   private kiloModels: string[];
   private currentKiloModelIndex: number = 0;
+  private nvidiaModels: string[];
+  private currentNvidiaModelIndex: number = 0;
   private opencodeModels: string[];
 
   /** Reject placeholder/dummy keys that look real but aren't */
@@ -71,24 +71,54 @@ export class AIProviderClient {
   }
 
   constructor() {
-    // AI Provider Priority: Groq (7 real keys) → Kilo (4 JWT keys) → Ollama Cloud → OpenCode
+    // AI Provider Priority: Ollama(1) → Groq(2) → 9Router(3) → NVIDIA(4) → Kilo(5) → OpenCode(6)
     this.providers = [
+      {
+        name: 'ollama',
+        baseUrl: process.env.OLLAMA_BASE_URL || 'https://ollama.com/v1',
+        apiKey: process.env.OLLAMA_API_KEY || '',
+        model: process.env.OLLAMA_MODEL || 'qwen3.5:397b-cloud',
+        priority: 1, // Primary — paid cloud, highest quality
+        rateLimitRPM: 20,
+        rateLimitConcurrent: 5,
+        isActive: AIProviderClient.isRealKey(process.env.OLLAMA_API_KEY),
+      },
       {
         name: 'groq',
         baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
         apiKey: '', // Will use rotation from groqKeys
         model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
-        priority: 1, // Primary — 7 free keys, fastest
+        priority: 2, // 6 free keys, fastest inference
         rateLimitRPM: 30,
         rateLimitConcurrent: 10,
         isActive: true,
+      },
+      {
+        name: '9router',
+        baseUrl: process.env.NINE_ROUTER_BASE_URL || 'https://9router.aimasteryedu.in/v1',
+        apiKey: process.env.NINE_ROUTER_API_KEY || '',
+        model: process.env.NINE_ROUTER_MODEL || 'kr/claude-sonnet-4.5',
+        priority: 3, // Claude Sonnet via 9Router
+        rateLimitRPM: 60,
+        rateLimitConcurrent: 20,
+        isActive: AIProviderClient.isRealKey(process.env.NINE_ROUTER_API_KEY),
+      },
+      {
+        name: 'nvidia',
+        baseUrl: 'https://integrate.api.nvidia.com/v1',
+        apiKey: process.env.NVIDIA_API_KEY || '',
+        model: process.env.NVIDIA_MODEL || 'moonshotai/kimi-k2.5',
+        priority: 4, // 4-model fallback
+        rateLimitRPM: 10,
+        rateLimitConcurrent: 3,
+        isActive: AIProviderClient.isRealKey(process.env.NVIDIA_API_KEY),
       },
       {
         name: 'kilo',
         baseUrl: process.env.KILO_API_BASE_URL || 'https://api.kilo.ai/api/gateway',
         apiKey: '', // Resolved via key rotation at call time
         model: process.env.KILO_MODEL || 'bytedance-seed/dola-seed-2.0-pro:free',
-        priority: 2, // 4 JWT keys, 5 model fallback
+        priority: 5, // 4 JWT keys, 5 model fallback
         rateLimitRPM: 30,
         rateLimitConcurrent: 10,
         isActive: Boolean(
@@ -99,44 +129,14 @@ export class AIProviderClient {
         ),
       },
       {
-        name: 'ollama',
-        baseUrl: process.env.OLLAMA_BASE_URL || 'https://ollama.com/v1',
-        apiKey: process.env.OLLAMA_API_KEY || '',
-        model: process.env.OLLAMA_MODEL || 'qwen3.5:397b-cloud',
-        priority: 3, // Paid cloud — fallback
-        rateLimitRPM: 20,
-        rateLimitConcurrent: 5,
-        isActive: AIProviderClient.isRealKey(process.env.OLLAMA_API_KEY),
-      },
-      {
         name: 'opencode',
         baseUrl: process.env.OPENCODE_API_BASE_URL || 'http://localhost:3100',
         apiKey: process.env.OPENCODE_API_KEY || '',
         model: process.env.OPENCODE_MODEL || 'opencode zen/Big Pickle',
-        priority: 4, // Self-hosted — only works when local server running
+        priority: 6, // Self-hosted — only works when local server running
         rateLimitRPM: 60,
         rateLimitConcurrent: 10,
         isActive: AIProviderClient.isRealKey(process.env.OPENCODE_API_KEY),
-      },
-      {
-        name: 'nvidia',
-        baseUrl: 'https://integrate.api.nvidia.com/v1',
-        apiKey: process.env.NVIDIA_API_KEY || '',
-        model: process.env.NVIDIA_MODEL || 'nvidia/llama-3.1-nemotron-70b-instruct',
-        priority: 5,
-        rateLimitRPM: 10,
-        rateLimitConcurrent: 3,
-        isActive: AIProviderClient.isRealKey(process.env.NVIDIA_API_KEY),
-      },
-      {
-        name: 'gemini',
-        baseUrl: 'gemini-adapter', // Uses GeminiAdapter, not direct fetch
-        apiKey: '', // Resolved via key rotation at call time
-        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
-        priority: 6,
-        rateLimitRPM: 15,
-        rateLimitConcurrent: 5,
-        isActive: false, // Disabled until real keys are provided
       },
     ];
 
@@ -160,19 +160,6 @@ export class AIProviderClient {
       if (groq) groq.isActive = false;
     }
 
-    // Gemini multi-key rotation: GEMINI_API_KEY_1 through _4
-    this.geminiKeys = [
-      process.env.GEMINI_API_KEY_1,
-      process.env.GEMINI_API_KEY_2,
-      process.env.GEMINI_API_KEY_3,
-      process.env.GEMINI_API_KEY_4,
-    ].filter(AIProviderClient.isRealKey);
-    // Enable Gemini only if real keys exist
-    if (this.geminiKeys.length > 0) {
-      const gemini = this.providers.find(p => p.name === 'gemini');
-      if (gemini) gemini.isActive = true;
-    }
-
     // Kilo multi-key rotation: KILO_API_KEY_1 through _4
     this.kiloKeys = [
       process.env.KILO_API_KEY_1,
@@ -190,7 +177,15 @@ export class AIProviderClient {
       'openrouter/free',
     ];
 
-    // OpenCode model fallback order (16 models, cycled on failure)
+    // NVIDIA model fallback order (4 models, cycled on failure)
+    this.nvidiaModels = [
+      'moonshotai/kimi-k2.5',
+      'qwen/qwen3.5-397b-a17b',
+      'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+      'mistralai/mistral-large-3-675b-instruct-2512',
+    ];
+
+    // OpenCode model fallback order (13 models, cycled on failure)
     this.opencodeModels = [
       'opencode zen/Big Pickle',
       'go/MiniMax M2.7',
@@ -229,7 +224,7 @@ export class AIProviderClient {
       }
 
       try {
-        const apiKey = provider.name === 'groq' ? this.getGroqKey() : provider.apiKey;
+        const apiKey = provider.name === 'groq' ? this.getGroqKey() : provider.name === 'kilo' ? this.getKiloKey() : provider.apiKey;
         
         const response = await this.callProvider(provider, apiKey, request);
         
@@ -484,20 +479,17 @@ export class AIProviderClient {
   }
 
   /**
-   * Get current Gemini key (rotation)
+   * Get current NVIDIA model (fallback rotation)
    */
-  getGeminiKey(): string {
-    if (this.geminiKeys.length === 0) return '';
-    return this.geminiKeys[this.currentGeminiKeyIndex];
+  getNvidiaModel(): string {
+    return this.nvidiaModels[this.currentNvidiaModelIndex];
   }
 
   /**
-   * Rotate to next Gemini key
+   * Cycle to next NVIDIA model on failure
    */
-  private rotateGeminiKey(): void {
-    if (this.geminiKeys.length > 0) {
-      this.currentGeminiKeyIndex = (this.currentGeminiKeyIndex + 1) % this.geminiKeys.length;
-    }
+  cycleNvidiaModel(): void {
+    this.currentNvidiaModelIndex = (this.currentNvidiaModelIndex + 1) % this.nvidiaModels.length;
   }
 
   /**
@@ -548,7 +540,6 @@ export class AIProviderClient {
   /** Returns the resolved API key for a named provider */
   getProviderKey(name: string): string {
     if (name === 'groq') return this.getGroqKey();
-    if (name === 'gemini') return this.getGeminiKey();
     if (name === 'kilo') return this.getKiloKey();
     return this.providers.find(p => p.name === name)?.apiKey ?? '';
   }
@@ -587,7 +578,7 @@ export function getAIProviderClient(): AIProviderClient {
 // callAIStream() — True streaming support for real-time AI responses
 // ============================================================================
 
-export type AIProvider = 'ollama' | 'groq' | 'kilo' | 'opencode' | 'nvidia' | 'gemini' | 'a4f';
+export type AIProvider = 'ollama' | 'groq' | '9router' | 'nvidia' | 'kilo' | 'opencode' | 'a4f';
 
 // ============================================================================
 // Vision Model Configuration — multi-modal image + text support
@@ -717,43 +708,67 @@ export async function callAI(
     sortedProviders = [...providers].sort((a, b) => a.priority - b.priority);
   }
 
+  const activeProviders = sortedProviders.filter(p => p.isActive).map(p => p.name);
+  console.info(`[callAI] Attempting providers: [${activeProviders.join(', ')}] | prompt: ${(messages[messages.length-1]?.content || '').slice(0, 80)}...`);
+
   for (const provider of sortedProviders) {
     if (!provider.isActive) continue;
 
     const health = (client as any).providerHealth as Map<string, boolean>;
-    if (health.get(provider.name) === false) continue;
+    if (health.get(provider.name) === false) {
+      console.warn(`[callAI] Skipping ${provider.name}: marked unhealthy`);
+      continue;
+    }
 
     try {
       // Resolve API key based on provider type
       const apiKey = provider.name === 'groq'
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
-        : provider.name === 'gemini'
-        ? client.getGeminiKey()
         : provider.name === 'kilo'
         ? client.getKiloKey()
         : provider.apiKey;
 
-      if (provider.name !== 'ollama' && !apiKey) {
-        console.warn(`Skipping provider ${provider.name}: no API key configured`);
+      if (!apiKey) {
+        console.warn(`[callAI] Skipping ${provider.name}: no API key configured`);
         continue;
       }
 
-      // Gemini uses adapter instead of direct fetch
-      if (provider.name === 'gemini') {
-        const { GeminiAdapter } = await import('./gemini-adapter');
-        const adapter = new GeminiAdapter({ apiKey, model: provider.model });
-        const response = await adapter.chat(
-          messages as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-          { temperature, maxTokens }
-        );
-        const content = response.choices[0].message.content;
+      console.info(`[callAI] Trying ${provider.name} (model: ${provider.model}, key: ${apiKey?.slice(0, 8)}...)`);
 
-        const failures = (client as any).providerFailures as Map<string, number>;
-        failures.set(provider.name, 0);
-        health.set(provider.name, true);
-        (client as any).rotateGeminiKey();
-
-        return content;
+      // NVIDIA: try multiple models in fallback order
+      if (provider.name === 'nvidia') {
+        const nvidiaModels = (client as any).nvidiaModels as string[];
+        let lastError: Error | null = null;
+        for (let i = 0; i < nvidiaModels.length; i++) {
+          const model = client.getNvidiaModel();
+          try {
+            const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!response.ok) {
+              client.cycleNvidiaModel();
+              lastError = new Error(`NVIDIA model ${model} returned ${response.status}`);
+              continue;
+            }
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '';
+            const failures = (client as any).providerFailures as Map<string, number>;
+            failures.set(provider.name, 0);
+            health.set(provider.name, true);
+            console.info(`[callAI] SUCCESS via nvidia/${model} (${content.length} chars)`);
+            return content;
+          } catch (e) {
+            client.cycleNvidiaModel();
+            lastError = e as Error;
+          }
+        }
+        throw lastError || new Error('All NVIDIA models failed');
       }
 
       // Kilo: try multiple models in fallback order, rotate keys on each attempt
@@ -853,9 +868,10 @@ export async function callAI(
       health.set(provider.name, true);
       if (provider.name === 'groq') (client as any).rotateGroqKey();
 
+      console.info(`[callAI] SUCCESS via ${provider.name} (${content.length} chars)`);
       return content;
-    } catch (error) {
-      console.error(`callAI: Provider ${provider.name} failed:`, error);
+    } catch (error: any) {
+      console.error(`[callAI] FAILED ${provider.name}: ${error?.message || error}`);
 
       // Rotate Groq key on failure too — try a different key next time
       if (provider.name === 'groq') (client as any).rotateGroqKey();
@@ -954,33 +970,13 @@ export async function callAIStream(
     try {
       const apiKey = provider.name === 'groq'
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
-        : provider.name === 'gemini'
-        ? client.getGeminiKey()
+        : provider.name === 'kilo'
+        ? client.getKiloKey()
         : provider.apiKey;
 
-      if (provider.name !== 'ollama' && !apiKey) {
+      if (!apiKey) {
         console.warn(`Skipping provider ${provider.name}: no API key configured`);
         continue;
-      }
-
-      // Gemini doesn't support true streaming — call adapter and yield full response
-      if (provider.name === 'gemini') {
-        const { GeminiAdapter } = await import('./gemini-adapter');
-        const adapter = new GeminiAdapter({ apiKey, model: provider.model });
-        const geminiResponse = await adapter.chat(
-          messages as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-          { temperature, maxTokens }
-        );
-        const content = geminiResponse.choices[0].message.content;
-        onChunk(content);
-
-        const failures = (client as any).providerFailures as Map<string, number>;
-        failures.set(provider.name, 0);
-        health.set(provider.name, true);
-        (client as any).rotateGeminiKey();
-
-        onComplete?.();
-        return;
       }
 
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -1136,11 +1132,11 @@ export async function callAIVision(options: CallAIVisionOptions): Promise<string
     try {
       const apiKey = provider.name === 'groq'
         ? ((client as any).groqKeys as string[])[(client as any).currentGroqKeyIndex as number]
-        : provider.name === 'gemini'
-        ? client.getGeminiKey()
+        : provider.name === 'kilo'
+        ? client.getKiloKey()
         : provider.apiKey;
 
-      if (provider.name !== 'ollama' && !apiKey) continue;
+      if (!apiKey) continue;
 
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: 'POST',
