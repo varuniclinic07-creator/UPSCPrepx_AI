@@ -125,76 +125,130 @@ Focus on conceptual clarity, not just facts.`;
 
 /**
  * Get all notes for a user
+ *
+ * Unions two underlying tables so both writer paths surface on the list:
+ *   - `notes` — written by `notes-service.generateNotes()` (rich NoteContent JSON)
+ *   - `user_generated_notes` — written by `/api/notes/generate` (markdown + html)
+ *
+ * Both shapes are normalized to the `Note` interface so the UI doesn't have
+ * to care which table a note came from.
  */
 export async function getUserNotes(userId: string): Promise<Note[]> {
   const supabase = await createClient();
+  const db = supabase as any;
 
-  const { data, error } = await (supabase
-    .from('notes') as any)
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+  const [legacyRes, agenticRes] = await Promise.allSettled([
+    db.from('notes').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    db
+      .from('user_generated_notes')
+      .select('id, user_id, topic, subject, content_markdown, content_html, word_count, ai_provider_used, agentic_sources, created_at, updated_at, status')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false }),
+  ]);
 
-  if (error) {
-    throw new Error(`Failed to fetch notes: ${error.message}`);
-  }
+  const legacy = legacyRes.status === 'fulfilled' && !legacyRes.value.error
+    ? (legacyRes.value.data as any[])
+    : [];
+  const agentic = agenticRes.status === 'fulfilled' && !agenticRes.value.error
+    ? (agenticRes.value.data as any[])
+    : [];
 
-  return data.map((note: { id: string; user_id: string; topic: string; subject: string; content: unknown; is_bookmarked: boolean; view_count: number; created_at: string; updated_at: string }) => ({
+  const fromLegacy: Note[] = legacy.map(mapLegacyNoteRow);
+  const fromAgentic: Note[] = agentic.map(mapAgenticNoteRow);
+
+  return [...fromLegacy, ...fromAgentic].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+}
+
+function mapLegacyNoteRow(note: any): Note {
+  return {
     id: note.id,
     userId: note.user_id,
     topic: note.topic,
-    title: note.topic, // Alias
-    subject: note.subject,
+    title: note.topic,
+    subject: note.subject ?? note.subject_slug ?? 'General',
     content: note.content as unknown as NoteContent,
-    isBookmarked: note.is_bookmarked,
-    viewCount: note.view_count,
+    isBookmarked: !!note.is_bookmarked,
+    viewCount: note.view_count ?? note.views ?? 0,
     createdAt: new Date(note.created_at),
-    updatedAt: new Date(note.updated_at),
-  }));
+    updatedAt: new Date(note.updated_at ?? note.created_at),
+  };
+}
+
+function mapAgenticNoteRow(row: any): Note {
+  // Synthesize a NoteContent from the markdown so the detail page can render it.
+  const content: NoteContent = {
+    summary: typeof row.content_markdown === 'string'
+      ? row.content_markdown.split('\n').slice(0, 3).join(' ').slice(0, 400)
+      : undefined,
+    sections: typeof row.content_markdown === 'string'
+      ? [{ title: row.topic ?? 'Notes', content: row.content_markdown }]
+      : [],
+    keyPoints: Array.isArray(row.agentic_sources?.keyPoints)
+      ? row.agentic_sources.keyPoints
+      : [],
+    sources: Array.isArray(row.agentic_sources?.sources)
+      ? row.agentic_sources.sources.map((s: any) => (typeof s === 'string' ? s : s?.name ?? '')).filter(Boolean)
+      : [],
+  };
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    topic: row.topic,
+    title: row.topic,
+    subject: row.subject ?? 'General',
+    content,
+    isBookmarked: false,
+    viewCount: 0,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at ?? row.created_at),
+  };
 }
 
 /**
  * Get a single note by ID
- * SECURITY: Requires userId for ownership verification to prevent IDOR
+ * SECURITY: Requires userId for ownership verification to prevent IDOR.
+ *
+ * Looks up the id in `notes` first; falls back to `user_generated_notes`
+ * so agentic-generated notes also have a detail page.
  */
 export async function getNoteById(noteId: string, userId?: string): Promise<Note | null> {
   const supabase = await createClient();
+  const db = supabase as any;
 
-  // Build query - if userId provided, enforce ownership
-  let query = (supabase
-    .from('notes') as any)
-    .select('*')
-    .eq('id', noteId);
+  // Try legacy table
+  let legacyQuery = db.from('notes').select('*').eq('id', noteId);
+  if (userId) legacyQuery = legacyQuery.eq('user_id', userId);
+  const { data: legacy, error: legacyErr } = await legacyQuery.maybeSingle();
 
-  // If userId is provided, enforce ownership check (IDOR protection)
-  if (userId) {
-    query = query.eq('user_id', userId);
+  if (!legacyErr && legacy) {
+    await db
+      .from('notes')
+      .update({ view_count: (legacy.view_count ?? legacy.views ?? 0) + 1 })
+      .eq('id', noteId);
+
+    return {
+      ...mapLegacyNoteRow(legacy),
+      viewCount: (legacy.view_count ?? legacy.views ?? 0) + 1,
+    };
   }
 
-  const { data, error } = await query.single();
+  // Fallback to agentic table
+  let agenticQuery = db
+    .from('user_generated_notes')
+    .select('id, user_id, topic, subject, content_markdown, content_html, word_count, ai_provider_used, agentic_sources, created_at, updated_at, status')
+    .eq('id', noteId);
+  if (userId) agenticQuery = agenticQuery.eq('user_id', userId);
+  const { data: agentic, error: agenticErr } = await agenticQuery.maybeSingle();
 
-  if (error || !data) {
-    return null;
+  if (!agenticErr && agentic) {
+    return mapAgenticNoteRow(agentic);
   }
 
-  // Increment view count
-  await (supabase
-    .from('notes') as any)
-    .update({ view_count: data.view_count + 1 })
-    .eq('id', noteId);
-
-  return {
-    id: data.id,
-    userId: data.user_id,
-    topic: data.topic,
-    title: data.topic, // Alias
-    subject: data.subject,
-    content: data.content as unknown as NoteContent,
-    isBookmarked: data.is_bookmarked,
-    viewCount: data.view_count + 1,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
-  };
+  return null;
 }
 
 /**
