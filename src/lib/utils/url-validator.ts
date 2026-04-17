@@ -33,6 +33,24 @@ function isValidProductionUrl(url: string | undefined): boolean {
 }
 
 /**
+ * Normalize a URL so it's reachable by the browser.
+ * `0.0.0.0` is a valid bind address for servers but NOT a routable client
+ * address — browsers return ERR_ADDRESS_INVALID. Rewrite to `localhost`.
+ */
+function normalizeBrowserUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.hostname === '0.0.0.0' || u.hostname === '::' || u.hostname === '[::]') {
+      u.hostname = 'localhost';
+      return u.toString().replace(/\/$/, '');
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Get the canonical app URL
  * Priority: NEXT_PUBLIC_APP_URL > NEXTAUTH_URL > window.location.origin
  * With validation to reject placeholder URLs
@@ -46,29 +64,29 @@ export function getAppUrl(): string {
   // Server-side: use environment variables (with validation)
   if (typeof window === 'undefined') {
     if (isValidProductionUrl(envUrl)) {
-      return envUrl!;
+      return normalizeBrowserUrl(envUrl!);
     }
     if (isValidProductionUrl(nextAuthUrl)) {
-      return nextAuthUrl!;
+      return normalizeBrowserUrl(nextAuthUrl!);
     }
     if (isValidProductionUrl(coolifyUrl)) {
-      return coolifyUrl!;
+      return normalizeBrowserUrl(coolifyUrl!);
     }
     return 'http://localhost:3000';
   }
 
   // Client-side: prefer valid env var
   if (isValidProductionUrl(envUrl)) {
-    return envUrl!;
+    return normalizeBrowserUrl(envUrl!);
   }
 
   // In production, always use window.location.origin as the most reliable source
   // This handles the case where NEXT_PUBLIC_APP_URL was missing at build time
   if (process.env.NODE_ENV === 'production') {
-    return window.location.origin;
+    return normalizeBrowserUrl(window.location.origin);
   }
 
-  return window.location.origin;
+  return normalizeBrowserUrl(window.location.origin);
 }
 
 /**
