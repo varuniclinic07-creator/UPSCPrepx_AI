@@ -1,12 +1,13 @@
 # UPSC PrepX AI — Complete Application Reference
 
-**Last Updated:** 2026-04-17 15:00 IST
-**Version:** 1.1.0
+**Last Updated:** 2026-04-17 (post design overhaul)
+**Version:** 1.2.0
 **Build Status:** PASSING (exit code 0)
 **Test Files:** 105 test suites
 **Total Source Files:** 660+ (.ts/.tsx)
 **Spec:** `docs/superpowers/specs/2026-04-13-enterprise-ai-system-design.md` (v8)
 **Alignment Score:** ~97%
+**Design System:** Chanakya AI pure-black theme (v1.2.0)
 
 ---
 
@@ -27,6 +28,7 @@
 13. [Deployment](#13-deployment)
 14. [Implementation Timeline](#14-implementation-timeline)
 15. [Remaining Work](#15-remaining-work)
+16. [Design System (v1.2.0 Overhaul)](#16-design-system-v120-overhaul)
 
 ---
 
@@ -808,13 +810,15 @@ See `DEPLOYMENT.md` and `DEPLOY_QUICKSTART.md` for full instructions.
 | 2026-04-14 | *uncommitted* | Gap closure: Kilo/OpenCode providers, Living Pages, vision models, daily plan fix, Source Intelligence (93% -> 95%) |
 | 2026-04-15 | `d71e01c` | Fix entitlement.ts + admin bypass |
 | 2026-04-16 | `d2b74d8` | 6-provider AI chain with multi-key rotation + NVIDIA/9Router |
-| 2026-04-17 | *uncommitted* | Hermes Jobs/Logs backend + Manim 13-scene server + Remotion 15-composition server + docker-compose integration (95% -> 97%) |
+| 2026-04-17 | `9ece939` | Hermes Jobs/Logs backend + Manim 13-scene server + Remotion 15-composition server + docker-compose integration (95% -> 97%) |
+| 2026-04-17 | `6bce052` | Design overhaul to pure-black Chanakya AI theme + Remember-Me auth persistence + GET /api/ai/generate fix (20 files, +1291/-932) |
 
 ### Session Reports
 - `IMPLEMENTATION_REPORT.md` — Sessions 1-6 (QA fixes, streaming, edge functions, ML analytics, zero-trust, multi-region)
 - `docs/ALIGNMENT_AUDIT_REPORT.md` — Full spec vs codebase audit
 - `docs/ALIGNMENT_FIX_IMPLEMENTATION_REPORT.md` — Fix implementation with phase-by-phase scores
 - `docs/PLAN_9_IMPLEMENTATION_REPORT.md` — Lecture generation pipeline
+- `docs/DESIGN_OVERHAUL_REPORT.md` — v1.2.0 Chanakya AI design system migration + auth fixes
 
 ---
 
@@ -884,7 +888,116 @@ All handlers wrap `runHermesJob()` for automatic DB tracking in `hermes_jobs` + 
 
 ---
 
-*Updated: 2026-04-17 15:00 IST*
+## 16. Design System (v1.2.0 Overhaul)
+
+**Date:** 2026-04-17
+**Commit:** `6bce052`
+**Reference:** PrepX-AI / Chanakya AI design system (`C:\Users\DR-VARUNI\Desktop\latest UI upsc`)
+**Scope:** 20 files changed, +1291 / -932 lines
+**Report:** `docs/DESIGN_OVERHAUL_REPORT.md`
+
+### 16.1 Summary
+
+Complete visual migration of the UPSC AI platform from a slate-blue HSL-token dark theme to a premium pure-black design system matching the Chanakya AI reference app. Bundled with two critical backend fixes: session persistence bug and HTTP 405 on `/api/ai/generate`.
+
+### 16.2 Bundled Fixes
+
+**Auth Persistence (Phase 1)**
+- `src/lib/supabase/client.ts` — `persistSession: false` by default; new `setRememberMe()` controls persistence via localStorage flag; singleton resets on toggle.
+- `src/app/(auth)/login/page.tsx` — Added "Remember Me" checkbox; calls `setRememberMe()` before creating Supabase client on login.
+- `src/hooks/use-user.tsx` — `signOut()` now clears remember-me flag.
+
+**API Route Fix (Phase 2)**
+- `src/app/api/ai/generate/route.ts` — Added GET handler returning endpoint info (fixes HTTP 405 on browser navigation).
+
+### 16.3 Design Tokens
+
+| Element | Old (v1.1.0) | New (v1.2.0) |
+|---------|--------------|--------------|
+| Background | `hsl(222,47%,6%)` | `#000000` (pure black) |
+| Text Primary | `hsl(210,40%,98%)` | `white` |
+| Text Secondary | `hsl(215,20%,65%)` | `white/40` |
+| Card BG | `hsl(222,47%,9%)` | `white/[0.03]` |
+| Card Border | `hsl(217,33%,17%)` | `white/[0.05]` |
+| Hover Border | `primary/30` | `white/[0.1]` |
+| Primary | `hsl(217,91%,65%)` | `#3b82f6` (blue-500) |
+| Secondary | `hsl(189,94%,45%)` | `#f97316` (orange-500) |
+| CTA Button | `bg-primary rounded-xl` | `bg-white text-black rounded-full` |
+| Sidebar | solid surface | `black/40 + backdrop-blur-48px` |
+| Navbar | solid surface | transparent → glass-on-scroll |
+| Scrollbar | slate thumb | `white/10` on transparent track |
+
+### 16.4 Files Changed by Layer
+
+**Core / Tokens (Phase 3A)**
+- `src/app/globals.css` — pure-black theme, white-opacity hierarchy, all component classes remapped
+- `src/app/layout.tsx` — theme color set to `#000000`
+
+**Layout Shell (Phase 3B)**
+- `src/components/layout/command-sidebar.tsx` — white logo, keyboard shortcut tooltips, blue active-indicator glow
+- `src/components/layout/command-navbar.tsx` — gamification stats (streak / XP), rounded-full search with focus ring, transparent-to-blur transition
+- `src/components/layout/command-center-shell.tsx` — decorative blur orbs, mobile bottom nav with active states
+
+**Pages (Phase 3C–3F)**
+- `src/app/page.tsx` — "UPSC. Reimagined." hero with text-gradient, bento demo cards (rank prediction, AI chat, daily target)
+- `src/app/dashboard/page.tsx` — Performance Analytics with timeframe toggle, 3 AI insight cards, streak + badges gamification, Chanakya AI Mentor card, white rounded-full CTAs
+- `src/app/(auth)/layout.tsx` — simplified to plain black wrapper
+- `src/app/(auth)/login/page.tsx` — dark modal card, `white/5` inputs, blue focus rings, white CTA, Remember Me checkbox
+- `src/app/dashboard/notes/page.tsx`
+- `src/app/dashboard/quiz/page.tsx`
+- `src/app/dashboard/current-affairs/page.tsx`
+- `src/app/dashboard/videos/page.tsx`
+- `src/app/dashboard/answer-practice/page.tsx`
+- `src/app/dashboard/planner/page.tsx`
+
+**Shared Components (Phase 3G)**
+- `src/components/magic-ui/stat-card.tsx` — remapped from `text-foreground/muted-foreground` to `text-white` / `text-white/40`
+
+**Backend**
+- `src/lib/supabase/client.ts`
+- `src/hooks/use-user.tsx`
+- `src/app/api/ai/generate/route.ts`
+
+### 16.5 Visual Vocabulary
+
+**Card pattern** — use everywhere instead of the old `bento-card` class:
+```
+rounded-2xl bg-white/[0.03] border border-white/[0.05]
+hover: border-white/[0.1] bg-white/[0.05]
+```
+
+**Primary CTA button** — white with scale feedback, replaces `ShimmerButton` for main actions:
+```
+inline-flex items-center gap-2 px-6 py-3 rounded-full
+bg-white text-black font-semibold
+hover:bg-white/90 hover:scale-105 active:scale-95 transition-all
+```
+
+**Accent pill** — per-feature identity pill above page titles:
+```
+inline-flex items-center gap-2 px-3 py-1 rounded-full
+bg-{color}-500/10 border border-{color}-500/20
+text-{color}-400 text-xs font-bold uppercase tracking-wider
+```
+
+Feature accent colors: blue (quiz), violet (videos), emerald (answer practice), green (planner), orange (current affairs).
+
+### 16.6 Verification Checklist
+
+- [ ] Visit app URL → login page appears (not auto-logged in)
+- [ ] Login without "Remember Me" → close tab → reopen → logged out
+- [ ] Login with "Remember Me" → close tab → reopen → stays logged in
+- [ ] `GET /api/ai/generate` returns JSON endpoint info (not 405)
+- [ ] Landing page shows "UPSC. Reimagined." hero with pure-black bg
+- [ ] Dashboard shows performance analytics, AI insights, gamification
+- [ ] Sidebar tooltips show keyboard shortcuts
+- [ ] All six feature pages (Notes, Quiz, CA, Videos, Answer Practice, Planner) match the dark theme
+- [ ] Navbar transitions from transparent to glass on scroll
+
+---
+
+*Updated: 2026-04-17 (post design overhaul)*
 *Build: tsc 0 errors + next build exit code 0*
-*Session: Hermes Jobs/Logs DB + 13 Manim scenes + 15 Remotion compositions + docker-compose integration + admin dashboard rewired*
+*Latest commit: 6bce052 — design overhaul to pure-black Chanakya AI theme + auth fixes*
+*Prior session: 9ece939 — Hermes Jobs/Logs DB + 13 Manim scenes + 15 Remotion compositions + docker-compose integration*
 

@@ -116,7 +116,25 @@
       "Bash(xargs)",
       "Bash(python3:*)",
       "Bash(bash /tmp/check_missing.sh)",
-      "Bash(npm info:*)"
+      "Bash(npm info:*)",
+      "Bash(mkdir -p \"src/app/api/notes/[id]/animate\")",
+      "Bash(mv \"src/app/api/notes/[id_animate]_tmp/animate/route.ts\" \"src/app/api/notes/[id]/animate/route.ts\")",
+      "Bash(rm -rf \"src/app/api/notes/[id_animate]_tmp\")",
+      "Bash(ssh vps:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=yes vps \"echo connected\")",
+      "Bash(chmod 600 ~/.ssh/vps_key)",
+      "Bash(ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=no root@89.117.60.144 \"echo connected\")",
+      "Bash(/c/Windows/System32/OpenSSH/ssh.exe:*)",
+      "Bash(curl:*)",
+      "Bash(chmod +x:*)",
+      "Bash(ssh -o ConnectTimeout=10 vps \"echo CONNECTED && docker ps --format 'table {{.Names}}\\\\t{{.Status}}\\\\t{{.Ports}}'\")",
+      "Bash(sed \"s/^[[:space:]]*//\")",
+      "Bash(echo \"---EXIT:$?\")",
+      "Bash(wc -l /c/Users/DR-VARUNI/Desktop/upsc_ai/docker-compose.production.yml /c/Users/DR-VARUNI/Desktop/upsc_ai/src/app/api/notes/[id]/animate/route.ts /c/Users/DR-VARUNI/Desktop/upsc_ai/src/lib/agents/animation-agent.ts /c/Users/DR-VARUNI/Desktop/upsc_ai/src/components/notes/diagram-viewer.tsx)",
+      "Read(//c/Users/DR-VARUNI/Desktop/latest UI upsc//**)",
+      "Read(//c/Users/DR-VARUNI/Desktop/latest UI upsc/**)",
+      "Read(//c/Users/DR-VARUNI/Desktop//**)",
+      "mcp__claude_ai_supabase__get_logs"
     ]
   }
 }
