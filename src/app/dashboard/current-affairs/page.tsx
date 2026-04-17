@@ -21,12 +21,12 @@ async function CurrentAffairsList() {
 
   if (affairs.length === 0) {
     return (
-      <div className="bento-card text-center p-12">
-        <div className="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center mx-auto mb-4">
-          <Newspaper className="w-8 h-8 text-secondary" />
+      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.05] text-center p-12">
+        <div className="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center mx-auto mb-4">
+          <Newspaper className="w-8 h-8 text-orange-400" />
         </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">No current affairs yet</h3>
-        <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+        <h3 className="text-lg font-semibold text-white mb-2">No current affairs yet</h3>
+        <p className="text-white/40 mb-6 max-w-sm mx-auto">
           Check back later for daily UPSC-relevant news and analysis
         </p>
       </div>
@@ -68,8 +68,8 @@ async function CurrentAffairsList() {
       {Object.entries(groupedByDate).map(([date, dateAffairs]) => (
         <div key={date}>
           <div className="flex items-center gap-2 mb-6">
-            <Calendar className="w-4 h-4 text-primary" />
-            <h2 className="text-xl font-semibold text-foreground">
+            <Calendar className="w-4 h-4 text-blue-400" />
+            <h2 className="text-xl font-semibold text-white">
               {new Date(date).toLocaleDateString('en-IN', {
                 weekday: 'long',
                 day: 'numeric',
@@ -86,7 +86,7 @@ async function CurrentAffairsList() {
 
               return (
                 <Link key={affair.id} href={`/current-affairs/${affair.id}`}>
-                  <div className="group relative flex flex-col p-6 rounded-3xl bg-card/40 border border-border/50 hover:border-primary/30 hover:bg-card/80 transition-all duration-500 overflow-hidden cursor-pointer h-full">
+                  <div className="group relative flex flex-col p-6 rounded-2xl bg-white/[0.03] border border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.03] transition-all duration-500 overflow-hidden cursor-pointer h-full">
                     {/* Top gradient line */}
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary via-accent to-primary" />
 
@@ -95,7 +95,7 @@ async function CurrentAffairsList() {
 
                     <div className="flex flex-col gap-4 z-10">
                       <div className="flex justify-between items-start">
-                        <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center border border-border/50 text-muted-foreground group-hover:text-primary transition-colors">
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/[0.05] text-white/40 group-hover:text-blue-400 transition-colors">
                           <Icon className="w-5 h-5" />
                         </div>
                         <span className={`badge badge-${color}`}>
@@ -104,21 +104,21 @@ async function CurrentAffairsList() {
                       </div>
 
                       <div>
-                        <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors line-clamp-2">
                           {affair.topic}
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-3">
+                        <p className="text-sm text-white/40 line-clamp-3">
                           {affair.content?.summary || 'Comprehensive analysis for UPSC preparation'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-4 border-t border-border/30 flex justify-between items-center z-10">
-                      <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                    <div className="mt-6 pt-4 border-t border-white/[0.05] flex justify-between items-center z-10">
+                      <span className="text-xs text-white/40 font-medium flex items-center gap-1">
                         <Eye className="w-3 h-3" />
                         {affair.viewCount || 0} views
                       </span>
-                      <span className="text-xs text-primary font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+                      <span className="text-xs text-blue-400 font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
                         Read more
                         <ArrowRight className="w-3 h-3" />
                       </span>
@@ -142,18 +142,18 @@ function TodayHighlights() {
   ];
 
   return (
-    <div className="bento-card p-6 mb-8">
-      <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+    <div className="rounded-2xl bg-white/[0.03] border border-white/[0.05] p-6 mb-8">
+      <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
         <span className="text-xl">🔥</span> Today&apos;s Highlights
       </h3>
       <div className="grid md:grid-cols-3 gap-4">
         {highlights.map((item, index) => (
-          <div key={index} className="p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer border border-border/30 hover:border-primary/20 group">
+          <div key={index} className="p-4 rounded-xl bg-white/[0.03] hover:bg-white/5 transition-colors cursor-pointer border border-white/[0.05] hover:border-white/[0.1] group">
             <div className="flex items-center gap-2 mb-2">
               <item.icon className={`w-4 h-4 text-${item.color}`} />
               <span className={`text-xs text-${item.color} font-bold uppercase tracking-wider`}>{item.category}</span>
             </div>
-            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{item.title}</p>
+            <p className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">{item.title}</p>
           </div>
         ))}
       </div>
@@ -178,8 +178,8 @@ function CategoryFilter() {
         <button
           key={cat.label}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${cat.active
-              ? 'bg-primary/20 text-primary border border-primary/20'
-              : 'bg-muted/50 text-muted-foreground hover:text-foreground border border-border/50 hover:border-primary/30'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20'
+              : 'bg-white/5 text-white/40 hover:text-white border border-white/[0.05] hover:border-white/[0.1]'
             }`}
         >
           {cat.label}
@@ -195,14 +195,14 @@ export default function CurrentAffairsPage() {
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div className="flex flex-col gap-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 self-start w-fit">
-            <Newspaper className="w-3 h-3 text-secondary" />
-            <span className="text-secondary text-xs font-bold uppercase tracking-wider">Daily Updates</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 self-start w-fit">
+            <Newspaper className="w-3 h-3 text-orange-400" />
+            <span className="text-orange-400 text-xs font-bold uppercase tracking-wider">Daily Updates</span>
           </div>
-          <h1 className="text-4xl lg:text-5xl font-light text-foreground leading-[1.1] tracking-tight">
+          <h1 className="text-4xl lg:text-5xl font-light text-white leading-[1.1] tracking-tight">
             Current <span className="font-bold text-gradient">Affairs</span>
           </h1>
-          <p className="text-lg text-muted-foreground font-light max-w-xl">
+          <p className="text-lg text-white/40 font-light max-w-xl">
             Daily UPSC-relevant news with comprehensive analysis
           </p>
         </div>
@@ -232,7 +232,7 @@ function AffairsLoading() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="bento-card h-52 shimmer" />
+        <div key={i} className="rounded-2xl bg-white/[0.03] border border-white/[0.05] h-52 shimmer" />
       ))}
     </div>
   );

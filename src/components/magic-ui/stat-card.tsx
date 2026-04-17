@@ -55,7 +55,7 @@ export function StatCard({
             <div className="flex justify-between items-start z-10">
                 {Icon && (
                     <div
-                        className="p-2.5 rounded-xl bg-muted/50 text-muted-foreground group-hover:text-primary transition-colors"
+                        className="p-2.5 rounded-xl bg-white/5 text-white/40 group-hover:text-blue-400 transition-colors"
                         aria-hidden="true"
                     >
                         <Icon className="w-5 h-5" />
@@ -86,14 +86,14 @@ export function StatCard({
             <div className="z-10 mt-auto">
                 <h3
                     id={`${cardId}-title`}
-                    className="text-muted-foreground text-sm font-medium mb-1"
+                    className="text-white/40 text-sm font-medium mb-1"
                 >
                     {title}
                 </h3>
                 <div className="flex items-end gap-2">
                     <span
                         id={`${cardId}-value`}
-                        className="text-3xl font-bold text-foreground"
+                        className="text-3xl font-bold text-white"
                         aria-live="polite"
                     >
                         {value}
@@ -129,9 +129,9 @@ export function ProgressStatCard({
             glowColor={glowColor}
             className={className}
         >
-            <div className="w-full bg-muted/50 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div className="w-full bg-white/5 h-1.5 rounded-full mt-3 overflow-hidden">
                 <div
-                    className="bg-primary h-full rounded-full transition-all duration-500"
+                    className="bg-blue-500 h-full rounded-full transition-all duration-500"
                     style={{ width: `${percentage}%` }}
                 />
             </div>

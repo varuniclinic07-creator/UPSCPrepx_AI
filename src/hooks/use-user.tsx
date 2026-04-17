@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, setRememberMe } from '@/lib/supabase/client';
 import type { User } from '@/types';
 
 interface UserContextValue {
@@ -66,6 +66,7 @@ function useUserStandalone(): UserContextValue {
 
     const signOut = useCallback(async () => {
         try {
+            setRememberMe(false);
             const supabase = createClient();
             await supabase.auth.signOut();
             setUser(null);

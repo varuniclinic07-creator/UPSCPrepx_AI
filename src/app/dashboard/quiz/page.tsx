@@ -33,16 +33,16 @@ async function QuizList() {
 
   if (quizzes.length === 0) {
     return (
-      <div className="bento-card text-center p-12">
-        <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
-          <Brain className="w-8 h-8 text-accent" />
+      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.05] text-center p-12">
+        <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
+          <Brain className="w-8 h-8 text-violet-400" />
         </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">No quizzes yet</h3>
-        <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+        <h3 className="text-lg font-semibold text-white mb-2">No quizzes yet</h3>
+        <p className="text-white/40 mb-6 max-w-sm mx-auto">
           Generate your first AI-powered quiz to test your UPSC knowledge
         </p>
         <Link href="/dashboard/quiz/new">
-          <ShimmerButton className="px-6 py-3">
+          <ShimmerButton className="px-6 py-3 rounded-full bg-white text-black font-semibold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all">
             <Zap className="w-4 h-4 mr-2" />
             Generate Quiz
           </ShimmerButton>
@@ -76,13 +76,13 @@ async function QuizList() {
 
         return (
           <Link key={quiz.id} href={`/quiz/${quiz.id}`}>
-            <div className="group relative flex flex-col justify-between p-6 rounded-3xl bg-card/40 border border-border/50 hover:border-primary/30 hover:bg-card/80 transition-all duration-500 overflow-hidden cursor-pointer h-full min-h-[200px]">
+            <div className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white/[0.03] border border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.05] transition-all duration-500 overflow-hidden cursor-pointer h-full min-h-[200px]">
               {/* Glow */}
               <div className={`absolute -right-12 -top-12 w-24 h-24 bg-${color}/20 rounded-full blur-[50px] group-hover:bg-${color}/30 transition-all duration-500`} />
 
               <div className="flex flex-col gap-4 z-10">
                 <div className="flex justify-between items-start">
-                  <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center border border-border/50 text-muted-foreground group-hover:text-primary transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/[0.05] text-white/40 group-hover:text-blue-400 transition-colors">
                     <Icon className="w-5 h-5" />
                   </div>
                   <span className={`badge badge-${color}`}>
@@ -90,10 +90,10 @@ async function QuizList() {
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-2">
+                  <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors line-clamp-2">
                     {quiz.topic}
                   </h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+                  <div className="flex items-center gap-4 text-sm text-white/40 mt-2">
                     <span className="flex items-center gap-1">
                       <Brain className="w-4 h-4" />
                       {questionsCount} Q
@@ -106,9 +106,9 @@ async function QuizList() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-border/30 flex justify-between items-center z-10">
-                <span className="text-xs text-muted-foreground font-medium">Start quiz</span>
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+              <div className="mt-6 pt-4 border-t border-white/[0.05] flex justify-between items-center z-10">
+                <span className="text-xs text-white/40 font-medium">Start quiz</span>
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
                   <Play className="w-4 h-4" />
                 </div>
               </div>
@@ -176,8 +176,8 @@ function CategorySelector() {
         <button
           key={cat.label}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all text-sm font-medium ${cat.active
-              ? 'bg-primary/20 text-primary border border-primary/20 shadow-[0_0_15px_-3px_hsl(var(--primary)/0.3)]'
-              : 'bg-muted/50 text-muted-foreground hover:text-foreground border border-border/50 hover:border-primary/30'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)]'
+              : 'bg-white/5 text-white/40 hover:text-white border border-white/[0.05] hover:border-white/[0.1]'
             }`}
         >
           <cat.icon className="w-4 h-4" />
@@ -202,8 +202,8 @@ function DifficultySelector() {
         <button
           key={diff.label}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${diff.active
-              ? 'bg-primary/20 text-primary border border-primary/20'
-              : `bg-muted/30 text-muted-foreground hover:text-foreground border border-border/30 hover:border-primary/20 ${diff.color || ''}`
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20'
+              : `bg-white/[0.03] text-white/40 hover:text-white border border-white/[0.05] hover:border-white/[0.1] ${diff.color || ''}`
             }`}
         >
           {diff.label}
@@ -219,26 +219,26 @@ export default function QuizPage() {
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div className="flex flex-col gap-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 self-start w-fit">
-            <Zap className="w-3 h-3 text-accent" />
-            <span className="text-accent text-xs font-bold uppercase tracking-wider">AI Quiz Engine</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 self-start w-fit">
+            <Zap className="w-3 h-3 text-violet-400" />
+            <span className="text-violet-400 text-xs font-bold uppercase tracking-wider">AI Quiz Engine</span>
           </div>
-          <h1 className="text-4xl lg:text-5xl font-light text-foreground leading-[1.1] tracking-tight">
+          <h1 className="text-4xl lg:text-5xl font-light text-white leading-[1.1] tracking-tight">
             Practice <span className="font-bold text-gradient">Quiz</span>
           </h1>
-          <p className="text-lg text-muted-foreground font-light max-w-xl">
+          <p className="text-lg text-white/40 font-light max-w-xl">
             Test your knowledge with AI-generated UPSC-style questions
           </p>
         </div>
         <Link href="/dashboard/quiz/new">
-          <ShimmerButton className="px-6 py-3 text-sm">
+          <ShimmerButton className="px-6 py-3 rounded-full bg-white text-black font-semibold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all text-sm">
             <Play className="w-4 h-4 mr-2" />
             Start New Quiz
           </ShimmerButton>
         </Link>
       </header>
 
-      {/* Living Content — Quick Generate */}
+      {/* Living Content -- Quick Generate */}
       <QuickGenerate mode="quiz" />
 
       {/* Stats */}
@@ -253,10 +253,10 @@ export default function QuizPage() {
       {/* Quiz List */}
       <section className="flex flex-col gap-6">
         <div className="flex items-end justify-between px-1">
-          <h2 className="text-2xl font-medium text-foreground tracking-tight">Your Quizzes</h2>
+          <h2 className="text-2xl font-medium text-white tracking-tight">Your Quizzes</h2>
           <Link
             href="/dashboard/quiz/history"
-            className="text-sm text-primary hover:text-foreground transition-colors flex items-center gap-1"
+            className="text-sm text-blue-400 hover:text-white transition-colors flex items-center gap-1"
           >
             View history <ArrowRight className="w-4 h-4" />
           </Link>
@@ -274,7 +274,7 @@ function QuizLoading() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="bento-card h-52 shimmer" />
+        <div key={i} className="rounded-2xl bg-white/[0.03] border border-white/[0.05] h-52 shimmer" />
       ))}
     </div>
   );

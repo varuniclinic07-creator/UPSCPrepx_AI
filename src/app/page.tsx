@@ -12,7 +12,8 @@ import {
   BarChart3,
   Shield,
   Calendar,
-  GraduationCap,
+  BrainCircuit,
+  Activity,
 } from 'lucide-react';
 
 const features = [
@@ -20,42 +21,42 @@ const features = [
     icon: BookOpen,
     title: 'AI Study Notes',
     description: 'Generate comprehensive notes from any UPSC topic with AI-powered content creation.',
-    color: 'from-blue-500/20 to-blue-600/5',
+    color: 'bg-blue-500/10',
     iconColor: 'text-blue-400',
   },
   {
     icon: Brain,
     title: 'Practice Quizzes',
     description: 'Adaptive quizzes that learn your weak areas and focus on what matters.',
-    color: 'from-violet-500/20 to-violet-600/5',
+    color: 'bg-violet-500/10',
     iconColor: 'text-violet-400',
   },
   {
     icon: Newspaper,
     title: 'Current Affairs',
     description: 'Daily curated current affairs with UPSC-relevant analysis and connections.',
-    color: 'from-amber-500/20 to-amber-600/5',
+    color: 'bg-amber-500/10',
     iconColor: 'text-amber-400',
   },
   {
     icon: Video,
     title: 'Video Lectures',
     description: 'AI-generated video explanations for complex topics across all GS papers.',
-    color: 'from-rose-500/20 to-rose-600/5',
+    color: 'bg-rose-500/10',
     iconColor: 'text-rose-400',
   },
   {
     icon: PenTool,
-    title: 'Answer Writing',
+    title: 'Mains Evaluation',
     description: 'AI-evaluated mains answer practice with detailed feedback and scoring.',
-    color: 'from-emerald-500/20 to-emerald-600/5',
+    color: 'bg-emerald-500/10',
     iconColor: 'text-emerald-400',
   },
   {
     icon: Calendar,
-    title: 'Study Planner',
+    title: 'Smart Planner',
     description: 'Personalized study schedules that adapt to your pace and exam timeline.',
-    color: 'from-cyan-500/20 to-cyan-600/5',
+    color: 'bg-cyan-500/10',
     iconColor: 'text-cyan-400',
   },
 ];
@@ -67,20 +68,44 @@ const stats = [
   { value: '4.8', label: 'User Rating' },
 ];
 
+const storytellingSections = [
+  {
+    icon: BrainCircuit,
+    iconColor: 'text-blue-400',
+    iconBg: 'bg-blue-500/10',
+    title: 'Reads like a book.\nThinks like a mentor.',
+    description: 'Chanakya AI understands the UPSC syllabus deeply. It generates study notes, explains concepts, and adapts to your learning style — 24/7.',
+  },
+  {
+    icon: Target,
+    iconColor: 'text-orange-400',
+    iconBg: 'bg-orange-500/10',
+    title: 'Flawless Evaluation.\nMains & Prelims.',
+    description: 'Upload your answer papers for instant AI evaluation. Get structural feedback, content scoring, and actionable improvement tips.',
+  },
+  {
+    icon: Activity,
+    iconColor: 'text-green-400',
+    iconBg: 'bg-green-500/10',
+    title: 'Command your prep.\nZero blind spots.',
+    description: 'Track every metric. Subject mastery, mock test trends, study hours, and rank prediction — all in one dashboard.',
+  },
+];
+
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[hsl(222,47%,6%)] text-white relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* Ambient background */}
       <div className="ambient-bg" aria-hidden="true" />
       <div className="ambient-noise" aria-hidden="true" />
 
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 command-navbar">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-24">
+          <div className="flex items-center justify-between py-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-400 flex items-center justify-center shadow-lg shadow-primary/20">
-                <GraduationCap className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                <span className="text-black text-lg font-display font-bold">P</span>
               </div>
               <span className="text-lg font-display font-bold tracking-tight">UPSC PrepX</span>
             </div>
@@ -96,7 +121,7 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/register"
-                className="px-5 py-2 rounded-xl bg-primary text-white text-sm font-medium shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:brightness-110 transition-all"
+                className="px-5 py-2 rounded-full bg-white text-black text-sm font-semibold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all"
               >
                 Start Free Trial
               </Link>
@@ -105,111 +130,159 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative z-10 pt-36 pb-24 px-4">
+      {/* ═══════════ HERO SECTION ═══════════ */}
+      <section className="relative z-10 min-h-[90vh] flex flex-col items-center justify-center px-6">
+        {/* Decorative blur orbs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-blue-500/5 blur-[150px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-orange-500/5 blur-[120px] pointer-events-none" />
+
         <div className="max-w-5xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-8">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">AI-Powered UPSC Preparation</span>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-8">
+            <Sparkles className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-medium text-blue-400">Chanakya AI is Online</span>
           </div>
 
-          {/* Main heading */}
-          <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] mb-6">
-            Your Command Center
+          {/* Main heading — Apple-style large text gradient */}
+          <h1 className="font-display text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-[1.05] mb-6">
+            <span className="text-gradient">UPSC.</span>
             <br />
-            <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              for UPSC Mastery
-            </span>
+            <span className="text-gradient">Reimagined.</span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-white/50 max-w-2xl mx-auto mb-10 leading-relaxed">
-            AI-driven study notes, adaptive quizzes, mains answer evaluation, and intelligent scheduling
-            &mdash; everything you need to crack the Civil Services Exam.
+          <p className="text-xl md:text-2xl text-white/50 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Personalized strategy, predictive analytics, and an AI mentor that never sleeps — built for serious aspirants.
           </p>
 
           {/* CTA buttons */}
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link
               href="/register"
-              className="group px-8 py-3.5 rounded-xl bg-primary text-white font-semibold shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:brightness-110 transition-all flex items-center gap-2"
+              className="group px-8 py-3.5 rounded-full bg-white text-black font-semibold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.15)] flex items-center gap-2"
             >
-              Get Started Free
+              Open Platform
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/login"
-              className="px-8 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-all"
+              className="px-8 py-3.5 rounded-full bg-white/5 border border-white/10 text-white/60 font-medium hover:bg-white/10 hover:text-white transition-all"
             >
               Sign In
             </Link>
           </div>
         </div>
 
-        {/* Floating cards decoration */}
-        <div className="relative max-w-6xl mx-auto mt-20 hidden lg:block">
-          <div className="absolute -top-10 left-10 w-64 p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm animate-float">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Target className="w-4 h-4 text-blue-400" />
+        {/* ── Bento Demo Cards ── */}
+        <div className="relative max-w-6xl mx-auto mt-20 hidden lg:grid grid-cols-3 gap-5 px-8">
+          {/* Card 1: Rank Prediction */}
+          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.05] backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                <Target className="w-4 h-4 text-orange-400" />
               </div>
-              <span className="text-sm font-medium text-white/80">Today&apos;s Goal</span>
+              <span className="text-sm font-medium text-white/80">Rank Prediction</span>
+            </div>
+            <div className="mb-3">
+              <span className="text-3xl font-display font-bold text-orange-400">85%</span>
+              <span className="text-xs text-white/30 ml-2">probability</span>
             </div>
             <div className="h-2 rounded-full bg-white/5">
-              <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-primary to-blue-400" />
+              <div className="h-full w-[85%] rounded-full bg-gradient-to-r from-orange-500 to-orange-400" />
             </div>
-            <p className="text-xs text-white/40 mt-2">75% completed</p>
+            <p className="text-xs text-white/30 mt-2">Selection probability based on current progress</p>
           </div>
 
-          <div className="absolute -top-6 right-16 w-56 p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm animate-float" style={{ animationDelay: '2s' }}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <BarChart3 className="w-4 h-4 text-emerald-400" />
+          {/* Card 2: AI Chat Demo */}
+          <div className="p-6 rounded-2xl bg-white/[0.03] border border-blue-500/20 backdrop-blur-sm shadow-[0_0_40px_rgba(59,130,246,0.1)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-blue-400" />
               </div>
-              <span className="text-sm font-medium text-white/80">Score Trend</span>
+              <span className="text-sm font-medium text-white/80">Chanakya AI</span>
+              <span className="ml-auto text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">Live</span>
             </div>
-            <div className="flex items-end gap-1 h-10">
-              {[40, 55, 45, 70, 65, 80, 85].map((h, i) => (
-                <div key={i} className="flex-1 rounded-sm bg-gradient-to-t from-emerald-500/30 to-emerald-400/60" style={{ height: `${h}%` }} />
+            <div className="space-y-3">
+              <div className="p-3 rounded-xl bg-white/5 text-sm text-white/60">
+                Explain Article 370 and its abrogation impact on J&K...
+              </div>
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-white/70">
+                Article 370 granted special autonomy to J&K under Part XXI of the Constitution...
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Daily Target */}
+          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.05] backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-blue-400" />
+              </div>
+              <span className="text-sm font-medium text-white/80">Daily Target</span>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: 'Read Economy Chapter 5', done: true },
+                { label: 'Solve 50 MCQs — Polity', done: true },
+                { label: 'Write 1 Mains Answer', done: false },
+                { label: 'Current Affairs Review', done: false },
+              ].map((task) => (
+                <div key={task.label} className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border ${task.done ? 'bg-blue-500 border-blue-500' : 'border-white/20'} flex items-center justify-center`}>
+                    {task.done && <span className="text-white text-xs">&#10003;</span>}
+                  </div>
+                  <span className={`text-sm ${task.done ? 'text-white/50 line-through' : 'text-white/70'}`}>{task.label}</span>
+                </div>
               ))}
-            </div>
-          </div>
-
-          <div className="absolute top-8 left-1/2 -translate-x-1/2 w-72 p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm animate-float" style={{ animationDelay: '4s' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-violet-400" />
-              </div>
-              <div>
-                <span className="text-sm font-medium text-white/80">AI Mentor Active</span>
-                <p className="text-xs text-white/40">Analyzing your weak areas...</p>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section id="stats" className="relative z-10 py-16 px-4">
+      {/* ═══════════ STORYTELLING SECTIONS ═══════════ */}
+      <section className="relative z-10 py-20 px-6 md:px-12 lg:px-24 space-y-32">
+        {storytellingSections.map((section, i) => (
+          <div key={i} className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+            <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
+              <div className={`w-12 h-12 rounded-xl ${section.iconBg} flex items-center justify-center mb-6`}>
+                <section.icon className={`w-6 h-6 ${section.iconColor}`} />
+              </div>
+              <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight mb-6 whitespace-pre-line text-gradient">
+                {section.title}
+              </h2>
+              <p className="text-lg text-white/50 leading-relaxed max-w-md">
+                {section.description}
+              </p>
+            </div>
+            <div className={`p-8 rounded-2xl bg-white/[0.03] border border-white/[0.05] min-h-[280px] flex items-center justify-center ${i % 2 === 1 ? 'lg:order-1' : ''}`}>
+              <div className="text-center text-white/20">
+                <section.icon className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                <p className="text-sm">Interactive preview</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* ═══════════ STATS SECTION ═══════════ */}
+      <section id="stats" className="relative z-10 py-20 px-6">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {stats.map((stat) => (
-            <div key={stat.label} className="text-center p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-              <div className="text-3xl font-display font-bold text-white mb-1">{stat.value}</div>
+            <div key={stat.label} className="text-center p-6 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
+              <div className="text-4xl font-display font-bold text-white mb-1">{stat.value}</div>
               <div className="text-sm text-white/40">{stat.label}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="relative z-10 py-20 px-4">
+      {/* ═══════════ FEATURES GRID ═══════════ */}
+      <section id="features" className="relative z-10 py-20 px-6 md:px-12 lg:px-24">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Everything You Need to
-              <span className="text-primary"> Succeed</span>
+            <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight mb-4 text-gradient">
+              Everything You Need
             </h2>
-            <p className="text-white/40 max-w-xl mx-auto">
+            <p className="text-white/40 max-w-xl mx-auto text-lg">
               Comprehensive tools built specifically for UPSC aspirants, powered by cutting-edge AI.
             </p>
           </div>
@@ -218,12 +291,12 @@ export default function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-300"
+                className="group p-6 rounded-2xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-300"
               >
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4`}>
+                <div className={`w-12 h-12 rounded-xl ${feature.color} flex items-center justify-center mb-4`}>
                   <feature.icon className={`w-6 h-6 ${feature.iconColor}`} />
                 </div>
-                <h3 className="text-lg font-display font-semibold mb-2">{feature.title}</h3>
+                <h3 className="text-lg font-display font-semibold mb-2 text-white">{feature.title}</h3>
                 <p className="text-sm text-white/40 leading-relaxed">{feature.description}</p>
               </div>
             ))}
@@ -231,33 +304,39 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative z-10 py-24 px-4">
+      {/* ═══════════ FINAL CTA ═══════════ */}
+      <section className="relative z-10 py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="p-10 rounded-3xl bg-gradient-to-br from-primary/10 to-blue-600/5 border border-primary/20">
-            <Shield className="w-12 h-12 text-primary mx-auto mb-6" />
-            <h2 className="font-display text-3xl font-bold mb-4">
-              Start Your Free Trial Today
-            </h2>
-            <p className="text-white/40 mb-8 max-w-lg mx-auto">
-              No credit card required. Get instant access to all AI-powered features and start your UPSC preparation journey.
-            </p>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-white font-semibold shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:brightness-110 transition-all"
-            >
-              Create Free Account
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+          <div className="p-12 rounded-3xl bg-white/[0.03] border border-white/[0.05] relative overflow-hidden">
+            {/* Decorative glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-orange-500/5 pointer-events-none" />
+            <div className="relative z-10">
+              <Shield className="w-12 h-12 text-blue-400 mx-auto mb-6" />
+              <h2 className="font-display text-4xl font-bold mb-4 text-gradient">
+                Start Your Free Trial
+              </h2>
+              <p className="text-white/40 mb-8 max-w-lg mx-auto">
+                No credit card required. Get instant access to all AI-powered features and start your UPSC preparation journey.
+              </p>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-white text-black font-semibold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.15)]"
+              >
+                Create Free Account
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 py-8 px-4">
+      {/* ═══════════ FOOTER ═══════════ */}
+      <footer className="relative z-10 border-t border-white/5 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <span className="text-black text-sm font-display font-bold">P</span>
+            </div>
             <span className="font-display font-semibold">UPSC PrepX</span>
           </div>
           <p className="text-sm text-white/30">

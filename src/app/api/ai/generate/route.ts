@@ -12,6 +12,20 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // ═══════════════════════════════════════════════════════════════════════════
+// GET /api/ai/generate — endpoint info
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function GET() {
+    return NextResponse.json({
+        endpoint: '/api/ai/generate',
+        method: 'POST',
+        description: 'AI text generation endpoint',
+        required: { prompt: 'string' },
+        optional: { systemPrompt: 'string', temperature: 'number', max_tokens: 'number' },
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // POST /api/ai/generate
 // ═══════════════════════════════════════════════════════════════════════════
 

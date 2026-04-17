@@ -3,19 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Brain, BookOpen, Newspaper } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
-import { GradientShimmerButton } from '@/components/magic-ui/shimmer-button';
-import { BorderBeamInput } from '@/components/magic-ui/border-beam';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { createBrowserSupabaseClient, setRememberMe } from '@/lib/supabase/client';
 import { getOAuthRedirectUrl, logUrlConfig } from '@/lib/utils/url-validator';
-
-const features = [
-  { icon: Brain, text: 'AI-Powered Study Notes' },
-  { icon: BookOpen, text: 'Smart Practice Quizzes' },
-  { icon: Newspaper, text: 'Daily Current Affairs' },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,6 +15,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [rememberMe, setRememberMeState] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +28,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // Set persistence BEFORE creating client
+      setRememberMe(rememberMe);
       const supabase = createBrowserSupabaseClient();
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -67,17 +61,12 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
-    
-    // Log URL config in development
     logUrlConfig();
 
     try {
+      setRememberMe(rememberMe);
       const supabase = createBrowserSupabaseClient();
-      
-      // Use production-safe URL utility
       const redirectUrl = getOAuthRedirectUrl('/dashboard');
-      
-      console.log('[Google Login] Redirect URL:', redirectUrl);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -103,56 +92,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex flex-col gap-8">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-5xl font-light text-foreground leading-[1.1] tracking-tight">
-            Welcome<br />
-            <span className="font-bold text-gradient">Back</span>
-          </h1>
-          <p className="text-lg text-muted-foreground font-light max-w-md">
-            Continue your UPSC preparation journey with AI-powered tools designed for success.
-          </p>
-        </div>
+    <div className="min-h-screen bg-black flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background orbs */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-blue-500/5 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-violet-500/5 blur-[120px] pointer-events-none" />
 
-        {/* Features */}
-        <div className="space-y-4">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-4 p-4 rounded-2xl bg-card/30 backdrop-blur-sm border border-border/30 group hover:border-primary/30 transition-all"
-            >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                <feature.icon className="w-6 h-6" />
-              </div>
-              <span className="text-foreground font-medium">{feature.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Right Side - Login Form */}
-      <div className="w-full max-w-md mx-auto lg:mx-0">
-        <div className="bento-card p-8 lg:p-10">
+      <div className="w-full max-w-md relative z-10">
+        {/* Card */}
+        <div className="p-8 lg:p-10 rounded-2xl bg-white/[0.03] border border-white/[0.05] backdrop-blur-sm">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-4">
-              <Sparkles className="w-3 h-3 text-primary" />
-              <span className="text-primary text-xs font-bold uppercase tracking-wider">Secure Login</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
+              <Sparkles className="w-3 h-3 text-blue-400" />
+              <span className="text-blue-400 text-xs font-bold uppercase tracking-wider">Secure Login</span>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Sign In</h2>
-            <p className="text-muted-foreground text-sm mt-1">Enter your credentials to continue</p>
+            <h2 className="text-2xl font-display font-bold text-white">Welcome Back</h2>
+            <p className="text-white/40 text-sm mt-1">Sign in to continue your preparation</p>
           </div>
 
           {/* Google Login */}
           <button
             onClick={handleGoogleLogin}
             disabled={isGoogleLoading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl bg-card border border-border/50 hover:border-primary/30 hover:bg-muted/50 transition-all text-foreground font-medium disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-white font-medium disabled:opacity-50"
           >
             {isGoogleLoading ? (
-              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
             ) : (
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -167,89 +132,97 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border/50" />
+              <span className="w-full border-t border-white/5" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-3 text-muted-foreground">Or continue with email</span>
+              <span className="bg-black px-3 text-white/30">Or continue with email</span>
             </div>
           </div>
 
           {/* Email Login Form */}
           <form onSubmit={handleEmailLogin} className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
+              <label htmlFor="email" className="text-sm font-medium text-white/80">
                 Email Address
               </label>
-              <BorderBeamInput active={email.length > 0}>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-muted/30 border-border/50 rounded-xl focus:border-primary"
-                    disabled={isLoading}
-                  />
-                </div>
-              </BorderBeamInput>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                <label htmlFor="password" className="text-sm font-medium text-white/80">
                   Password
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs text-blue-400 hover:underline"
                 >
                   Forgot password?
                 </Link>
               </div>
-              <BorderBeamInput active={password.length > 0}>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 pr-12 h-12 bg-muted/30 border-border/50 rounded-xl focus:border-primary"
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </BorderBeamInput>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-12 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
-            <GradientShimmerButton
+            {/* Remember Me */}
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMeState(e.target.checked)}
+                className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-sm text-white/50">Remember me</span>
+            </label>
+
+            <button
               type="submit"
               disabled={isLoading}
-              isLoading={isLoading}
-              className="w-full h-12 text-base"
+              className="w-full py-3.5 rounded-full bg-white text-black font-semibold hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Sign In
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </GradientShimmerButton>
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
           </form>
 
           {/* Sign Up Link */}
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          <p className="text-center text-sm text-white/40 mt-6">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-primary hover:underline font-semibold">
+            <Link href="/register" className="text-blue-400 hover:underline font-semibold">
               Create free account
             </Link>
           </p>
