@@ -74,18 +74,27 @@ Use this account to verify:
 export SUPABASE_URL=https://emotqkukvfwjycvwfvyj.supabase.co
 export SUPABASE_SERVICE_ROLE_KEY=<service-role-key-from-supabase-dashboard>
 
-# 2. Run the idempotent seed script:
+# 2a. Option A — run the TypeScript seed (requires local dev deps):
 npx tsx scripts/seed-admin-and-test-users.ts
+
+# 2b. Option B — run the zero-dependency seed (works on any box with Node ≥18,
+# including the production VPS where dev deps aren't installed):
+node scripts/seed-admin-standalone.mjs
 ```
 
-The script:
+Both scripts do the same thing:
 
 1. Creates the auth user if missing, or resets the password if it already
    exists (so these passwords are authoritative after every run).
 2. Upserts the row in `public.users` with `role`, `subscription_tier`,
    `subscription_status`, and a 5-year `subscription_ends_at`.
-3. Upserts an active row in `public.user_subscriptions` to keep the
-   entitlement middleware happy.
+3. PATCHes `subscription_status='active'` after the insert — an `on insert`
+   trigger on `public.users` resets new rows to `trial`, so the PATCH
+   runs post-trigger to pin the status. Without this step the account
+   still works, but the status column reads `trial` until first login.
+4. Best-effort upsert into `public.user_subscriptions` (will warn if the
+   table has no unique constraint on `user_id`; harmless — entitlement
+   middleware reads from `public.users` first).
 
 Run it again any time a teammate forgets the password — passwords reset
 cleanly without losing the underlying user IDs, saved notes, quiz
