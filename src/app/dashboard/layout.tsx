@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/auth-config';
 import { CommandCenterShell } from '@/components/layout/command-center-shell';
+import { WelcomeSplash } from '@/components/brand/welcome-splash';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DASHBOARD LAYOUT - Server Component with Robust Error Handling
@@ -19,17 +20,22 @@ export default async function DashboardLayout({
       redirect('/login');
     }
 
+    const firstName = (user.name || '').split(' ')[0];
+
     return (
-      <CommandCenterShell
-        user={{
-          name: user.name || 'User',
-          email: user.email,
-          role: user.role || 'Member',
-          avatarUrl: user.avatarUrl || undefined,
-        }}
-      >
-        {children}
-      </CommandCenterShell>
+      <>
+        <WelcomeSplash greetingName={firstName || undefined} />
+        <CommandCenterShell
+          user={{
+            name: user.name || 'User',
+            email: user.email,
+            role: user.role || 'Member',
+            avatarUrl: user.avatarUrl || undefined,
+          }}
+        >
+          {children}
+        </CommandCenterShell>
+      </>
     );
   } catch (error) {
     // Log the error for debugging
