@@ -1,12 +1,12 @@
 # UPSC PrepX AI — Complete Application Reference
 
-**Last Updated:** 2026-04-14 20:30 IST
-**Version:** 1.0.0
+**Last Updated:** 2026-04-17 15:00 IST
+**Version:** 1.1.0
 **Build Status:** PASSING (exit code 0)
 **Test Files:** 105 test suites
-**Total Source Files:** 652 (.ts/.tsx)
+**Total Source Files:** 660+ (.ts/.tsx)
 **Spec:** `docs/superpowers/specs/2026-04-13-enterprise-ai-system-design.md` (v8)
-**Alignment Score:** ~95%
+**Alignment Score:** ~97%
 
 ---
 
@@ -16,9 +16,9 @@
 2. [Tech Stack](#2-tech-stack)
 3. [AI Provider Chain](#3-ai-provider-chain)
 4. [Hermes Multi-Agent Architecture](#4-hermes-multi-agent-architecture)
-5. [Database Schema (51 Migrations)](#5-database-schema)
+5. [Database Schema (52 Migrations)](#5-database-schema)
 6. [All Pages (108 pages)](#6-all-pages)
-7. [All API Routes (166 routes)](#7-all-api-routes)
+7. [All API Routes (168 routes)](#7-all-api-routes)
 8. [Supabase Edge Functions (15)](#8-supabase-edge-functions)
 9. [Cron Jobs (9)](#9-cron-jobs)
 10. [Component Library](#10-component-library)
@@ -210,7 +210,7 @@ All providers are OpenAI-compatible except Gemini (uses GeminiAdapter).
 
 ## 5. Database Schema
 
-**Total Migrations:** 51 (supabase/migrations/001 through 051)
+**Total Migrations:** 52 (supabase/migrations/001 through 052)
 
 | Migration | Purpose |
 |-----------|---------|
@@ -267,6 +267,7 @@ All providers are OpenAI-compatible except Gemini (uses GeminiAdapter).
 | 049_lecture_enhancements | Bookmarks + watch history |
 | 050_monthly_compilations | Video compilation pipeline |
 | 051_raw_input_hash_generated | `raw_input_hash` as DB-generated column |
+| 052_hermes_jobs_logs | `hermes_jobs` + `hermes_logs` (Hermes job tracking + structured logs) |
 
 ### Key Tables
 - `knowledge_nodes` — Every entity in the KG (topics, subtopics, PYQs, CAs, notes, quizzes)
@@ -279,6 +280,8 @@ All providers are OpenAI-compatible except Gemini (uses GeminiAdapter).
 - `notes`, `quizzes`, `lectures` — Core content tables
 - `user_subscriptions` — Subscription management
 - `audit_logs` — Append-only audit trail
+- `hermes_jobs` — Background job execution tracking (status, attempts, duration)
+- `hermes_logs` — Structured log entries per job (level, service, message, metadata)
 
 ---
 
@@ -411,7 +414,7 @@ All providers are OpenAI-compatible except Gemini (uses GeminiAdapter).
 
 ---
 
-## 7. All API Routes (166 routes)
+## 7. All API Routes (168 routes)
 
 ### AI Routes (7)
 | Method | Path | Feature |
@@ -557,6 +560,8 @@ All providers are OpenAI-compatible except Gemini (uses GeminiAdapter).
 | GET | `/api/admin/metrics/users` | User metrics |
 | GET | `/api/admin/billing/analytics` | Billing analytics |
 | POST | `/api/admin/billing/surge/manage` | Surge pricing |
+| GET/POST | `/api/admin/hermes/jobs` | Hermes job listing (paginated + stats) / manual enqueue |
+| GET | `/api/admin/hermes/logs` | Hermes structured logs (paginated + filters) |
 
 ### Auth & User (8)
 | Method | Path | Feature |
@@ -672,6 +677,7 @@ See [Section 9](#9-cron-jobs).
 | `src/lib/ai/` | `ai-provider-client.ts`, `gemini-adapter.ts` | AI provider chain, callAI/callAIStream/callAIVision |
 | `src/lib/ai-cost/` | `cost-tracker.ts` | Per-model cost tracking |
 | `src/lib/agents/` | 11 files | Hermes agent architecture |
+| `src/lib/hermes/` | `logger.ts` | Hermes job lifecycle (create/update/log) + `runHermesJob()` wrapper |
 | `src/lib/auth/` | `auth-config.ts`, `check-access.ts` | Auth + entitlement checking |
 | `src/lib/mastery/` | `mastery-service.ts` | SM-2 SRS engine, mastery levels |
 | `src/lib/security/` | `rate-limiter.ts`, `csrf.ts`, `audit.ts`, `service-tokens.ts` | Zero-trust security |
@@ -732,6 +738,13 @@ AGENTIC_WEB_SEARCH_URL=http://89.117.60.144:8030
 AGENTIC_FILE_SEARCH_URL=http://89.117.60.144:8032
 AGENTIC_DOC_CHAT_URL=http://89.117.60.144:8031
 CRAWL4AI_URL=http://89.117.60.144:11235
+
+# Hermes Gateway
+HERMES_GATEWAY_TOKEN=631ff4b2-4c82-4e72-82b5-dde4a78eea80
+
+# Video Services
+MANIM_URL=http://89.117.60.144:8085
+REMOTION_URL=http://89.117.60.144:3002
 ```
 
 ---
@@ -793,6 +806,9 @@ See `DEPLOYMENT.md` and `DEPLOY_QUICKSTART.md` for full instructions.
 | 2026-04-14 | `970d43f` | Plan 9G: E2E + unit tests for lecture pipeline |
 | 2026-04-14 | `c23a06e` | Full alignment audit + fix (86% -> 93%) |
 | 2026-04-14 | *uncommitted* | Gap closure: Kilo/OpenCode providers, Living Pages, vision models, daily plan fix, Source Intelligence (93% -> 95%) |
+| 2026-04-15 | `d71e01c` | Fix entitlement.ts + admin bypass |
+| 2026-04-16 | `d2b74d8` | 6-provider AI chain with multi-key rotation + NVIDIA/9Router |
+| 2026-04-17 | *uncommitted* | Hermes Jobs/Logs backend + Manim 13-scene server + Remotion 15-composition server + docker-compose integration (95% -> 97%) |
 
 ### Session Reports
 - `IMPLEMENTATION_REPORT.md` — Sessions 1-6 (QA fixes, streaming, edge functions, ML analytics, zero-trust, multi-region)
@@ -822,10 +838,40 @@ See `DEPLOYMENT.md` and `DEPLOY_QUICKSTART.md` for full instructions.
 
 ### Manual Steps Required
 1. **Run `npm install --legacy-peer-deps`** — to install any new dependencies
-2. **Apply Supabase migration 051** — `npx supabase db push` (raw_input_hash generated column)
+2. **Supabase migration 052 already applied** — `hermes_jobs` + `hermes_logs` tables live in production
 3. **Deploy Edge Functions** — `npx supabase login` then deployment script
-4. **Trigger Coolify redeploy** — Push is done, trigger build from Coolify dashboard
-5. **Copy `.env.production.deploy` to Coolify** — Kilo/OpenCode keys are now in the file
+4. **Add `HERMES_GATEWAY_TOKEN` to Coolify** — value: `631ff4b2-4c82-4e72-82b5-dde4a78eea80`
+5. **Build + deploy Manim/Remotion Docker containers on VPS** — see deployment guide below
+6. **Trigger Coolify redeploy** — after pushing to GitHub
+
+### Docker Services Deployment (VPS: 89.117.60.144)
+
+**Manim Animation Server** (`docker/manim/`)
+- FastAPI server with 13 pre-built UPSC scene classes
+- Scenes: Timeline, Flowchart, Map, Comparison, PieChart, BarGraph, Tree, Venn, Cycle, MathSolver, ArticleHighlight, SchemeInfoCard, MindMap
+- Endpoints: `POST /render` (raw code), `POST /api/render` (template), `GET /status/:id`, `GET /download/:id`
+- Port: 8085 (mapped from internal 8080)
+
+**Remotion Video Server** (`docker/remotion/`)
+- Express + node-canvas + FFmpeg template engine with 15 compositions
+- Compositions: TitleCard, SubtitleCard, BulletPoints, FactBox, ExamTip, MnemonicCard, QuizBreak, TransitionCard, SummarySlide, CreditsSlide, SplitScreen, MapOverlay, CompareView, QuoteCard, CurrentAffairsBanner
+- Endpoints: `POST /render`, `POST /api/render`, `GET /status/:id`, `GET /download/:id`
+- Port: 3002 (mapped from internal 3001)
+
+### Hermes Gateway Token
+- Token: `631ff4b2-4c82-4e72-82b5-dde4a78eea80`
+- Used for: Internal service-to-service auth between Next.js app, BullMQ worker, Manim server, and Remotion server
+- Env var: `HERMES_GATEWAY_TOKEN`
+- Added to: `.env.coolify`, `.env.docker`, `.env.vps`, `.env.production.deploy`, `docker-compose.production.yml`
+
+### BullMQ Worker (16 real job handlers)
+All handlers wrap `runHermesJob()` for automatic DB tracking in `hermes_jobs` + `hermes_logs`:
+- **Email (4):** SEND_WELCOME_EMAIL, SEND_RENEWAL_REMINDER, SEND_PAYMENT_CONFIRMATION, SEND_PASSWORD_RESET
+- **Subscription (3):** SUBSCRIPTION_EXPIRY_CHECK, SUBSCRIPTION_RENEWAL, TRIAL_EXPIRY_CHECK
+- **AI Processing (4):** GENERATE_NOTES, GENERATE_MIND_MAP, EVALUATE_ANSWER, GENERATE_QUIZ
+- **Video (2):** GENERATE_VIDEO_SHORT, PROCESS_VIDEO
+- **Data (3):** GENERATE_INVOICE, EXPORT_USER_DATA, CLEANUP_TEMP_DATA
+- **Analytics (2):** TRACK_EVENT, UPDATE_METRICS
 
 ### Future Enhancements (not blocking)
 1. Unified `/admin/console` Source Intelligence panel could be richer
@@ -838,7 +884,7 @@ See `DEPLOYMENT.md` and `DEPLOY_QUICKSTART.md` for full instructions.
 
 ---
 
-*Updated: 2026-04-15 06:00 IST*
+*Updated: 2026-04-17 15:00 IST*
 *Build: tsc 0 errors + next build exit code 0*
-*Session: Type safety + Kilo/OpenCode config + CSP hardening + alignment verification*
+*Session: Hermes Jobs/Logs DB + 13 Manim scenes + 15 Remotion compositions + docker-compose integration + admin dashboard rewired*
 

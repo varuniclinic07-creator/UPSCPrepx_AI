@@ -49,33 +49,50 @@ services:
   # ============================================
 
   manim:
-    image: manimcommunity/manim:stable
+    build:
+      context: ./docker/manim
+      dockerfile: Dockerfile
+    image: upsc-manim:latest
     container_name: upsc-manim
     restart: unless-stopped
-    working_dir: /manim
     volumes:
       - manim_media:/manim/media
-      - manim_scenes:/manim/scenes
+      - manim_output:/manim/output
     ports:
       - '8085:8080'
-    command: [ 'tail', '-f', '/dev/null' ]
+    environment:
+      MANIM_QUALITY: ${MANIM_QUALITY:-medium_quality}
+      PORT: 8080
+      HERMES_GATEWAY_TOKEN: ${HERMES_GATEWAY_TOKEN}
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:8080/health' ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - upsc-network
 
   remotion:
-    image: node:20-slim
+    build:
+      context: ./docker/remotion
+      dockerfile: Dockerfile
+    image: upsc-remotion:latest
     container_name: upsc-remotion
     restart: unless-stopped
-    working_dir: /app
     volumes:
-      - remotion_output:/app/out
-      - remotion_cache:/app/.cache
+      - remotion_output:/app/output
+      - remotion_cache:/app/frames
     ports:
       - '3002:3001'
     environment:
       NODE_ENV: production
-      REMOTION_CONCURRENCY: ${REMOTION_CONCURRENCY:-2}
-    command: [ 'tail', '-f', '/dev/null' ]
+      PORT: 3001
+      HERMES_GATEWAY_TOKEN: ${HERMES_GATEWAY_TOKEN}
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:3001/health' ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - upsc-network
 
@@ -520,6 +537,7 @@ volumes:
   redis_data:
   minio_data:
   manim_media:
+  manim_output:
   manim_scenes:
   remotion_output:
   remotion_cache:

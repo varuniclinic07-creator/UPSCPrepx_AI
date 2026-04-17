@@ -1,0 +1,12 @@
+{
+  "name": "upsc-video-render",
+  "version": "2.0.0",
+  "private": true,
+  "dependencies": {
+    "express": "^4.18.2",
+    "canvas": "^2.11.2",
+    "fluent-ffmpeg": "^2.1.3",
+    "uuid": "^9.0.0",
+    "cors": "^2.8.5"
+  }
+}

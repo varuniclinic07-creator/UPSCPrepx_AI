@@ -2,11 +2,30 @@
  * Note Animation API — /api/notes/[id]/animate
  *
  * POST: Trigger Manim animation for a diagram in a note
+ * Supports both raw scene_code (legacy) and template-based rendering
+ * via the 13 pre-built scene classes in docker/manim/scenes/
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
+
+/** Scene templates map to docker/manim/scenes/ classes */
+const SCENE_TEMPLATES: Record<string, string> = {
+  timeline: 'TimelineScene',
+  flowchart: 'FlowchartScene',
+  map: 'MapScene',
+  comparison: 'ComparisonTableScene',
+  pie_chart: 'PieChartScene',
+  bar_graph: 'BarGraphScene',
+  tree: 'TreeDiagramScene',
+  venn: 'VennDiagramScene',
+  cycle: 'CycleScene',
+  math: 'MathSolverScene',
+  article: 'ArticleHighlightScene',
+  scheme: 'SchemeInfoCardScene',
+  mind_map: 'MindMapScene',
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,13 +33,12 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { diagramType, description, title } = await request.json();
+    const { diagramType, description, title, config } = await request.json();
 
-    if (!description) {
-      return NextResponse.json({ error: 'Description required' }, { status: 400 });
+    if (!description && !config) {
+      return NextResponse.json({ error: 'Description or config required' }, { status: 400 });
     }
 
-    // Call Manim service if available
     const manimUrl = process.env.MANIM_URL;
     if (!manimUrl) {
       return NextResponse.json({
@@ -29,19 +47,35 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate Manim scene code via AI
-    const sceneCode = generateManimScene(diagramType, description, title);
-
     try {
-      const resp = await fetch(`${manimUrl}/render`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scene_code: sceneCode,
-          scene_name: 'DiagramScene',
-          quality: 'medium_quality',
-        }),
-      });
+      let resp: Response;
+
+      // Use template-based rendering when a known diagramType is provided
+      const sceneName = SCENE_TEMPLATES[diagramType];
+      if (sceneName && config) {
+        resp = await fetch(`${manimUrl}/api/render`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: description || title || diagramType,
+            topic: title || diagramType,
+            type: diagramType,
+            config,
+          }),
+        });
+      } else {
+        // Fallback: raw scene_code rendering
+        const sceneCode = generateManimScene(diagramType, description, title);
+        resp = await fetch(`${manimUrl}/render`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scene_code: sceneCode,
+            scene_name: 'DiagramScene',
+            quality: 'medium_quality',
+          }),
+        });
+      }
 
       const data = await resp.json();
 
@@ -56,13 +90,12 @@ export async function POST(request: NextRequest) {
         message: 'Manim service is not reachable',
       });
     }
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
 function generateManimScene(type: string, description: string, title: string): string {
-  // Generate a basic Manim scene based on diagram type
   return `
 from manim import *
 
