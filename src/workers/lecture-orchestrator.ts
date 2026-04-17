@@ -3,7 +3,7 @@
 // Coordinates all phases of lecture generation
 // ═══════════════════════════════════════════════════════════════
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 import { generateOutline } from '@/lib/lecture-generator/outline-service';
 import { generateChapterScript } from '@/lib/lecture-generator/script-service';
@@ -11,8 +11,15 @@ import { generateVisuals } from '@/lib/lecture-generator/visual-service';
 import { generateLongTTS } from '@/lib/lecture-generator/tts-service';
 import { compilationQueue } from '@/lib/queues/lecture-queue';
 
+function getSupabase() {
+    return createClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+}
+
 export async function orchestrateLecture(lectureJobId: string) {
-    const supabase = await createClient();
+    const supabase = getSupabase();
 
     try {
         // Update status
@@ -56,18 +63,20 @@ export async function orchestrateLecture(lectureJobId: string) {
             );
 
             // Save chapter
-            await (supabase.from('lecture_chapters') as any).insert({
+            const { error: chapterInsertError } = await (supabase.from('lecture_chapters') as any).insert({
                 job_id: lectureJobId,
                 chapter_number: chapter.number,
                 title: chapter.title,
                 duration: chapter.duration || 0,
-                // Store script and visual prompts in content JSON
-                content: {
-                    script: script.script,
-                    visual_prompts: script.visualCues
-                },
+                subtopics: chapter.subtopics || [],
+                script: script.script,
+                visual_prompts: script.visualCues,
                 status: 'script_ready'
             });
+
+            if (chapterInsertError) {
+                throw new Error(`Failed to save chapter ${chapter.number}: ${chapterInsertError.message}`);
+            }
 
             const progress = 10 + ((i + 1) / outline.chapters.length) * 30;
             await updateJobProgress(lectureJobId, progress);
@@ -94,13 +103,17 @@ export async function orchestrateLecture(lectureJobId: string) {
                 const visuals = await generateVisuals(visualCues);
                 const imageUrls = visuals.map((v: any) => v.url);
 
-                await (supabase
+                const { error: chapterUpdateError } = await (supabase
                     .from('lecture_chapters') as any)
                     .update({
                         image_urls: imageUrls,
                         status: 'visuals_ready'
                     } as any)
                     .eq('id', chapter.id);
+
+                if (chapterUpdateError) {
+                    throw new Error(`Failed to save visuals for chapter ${chapter.chapter_number}: ${chapterUpdateError.message}`);
+                }
             }
 
             const progress = 40 + ((i + 1) / chapters.length) * 20;
@@ -121,13 +134,17 @@ export async function orchestrateLecture(lectureJobId: string) {
                 lectureJobId
             );
 
-            await (supabase
+            const { error: audioUpdateError } = await (supabase
                 .from('lecture_chapters') as any)
                 .update({
                     audio_url: audioPaths[0], // First audio file
                     status: 'audio_ready'
                 } as any)
                 .eq('id', chapter.id);
+
+            if (audioUpdateError) {
+                throw new Error(`Failed to save audio for chapter ${chapter.chapter_number}: ${audioUpdateError.message}`);
+            }
 
             const progress = 60 + ((i + 1) / chapters.length) * 20;
             await updateJobProgress(lectureJobId, progress);
@@ -153,7 +170,7 @@ export async function orchestrateLecture(lectureJobId: string) {
 }
 
 async function updateJobStatus(jobId: string, status: string, progress: number, phase: string) {
-    const supabase = await createClient();
+    const supabase = getSupabase();
     await (supabase
         .from('lecture_jobs') as any)
         .update({
@@ -166,7 +183,7 @@ async function updateJobStatus(jobId: string, status: string, progress: number, 
 }
 
 async function updateJobProgress(jobId: string, progress: number) {
-    const supabase = await createClient();
+    const supabase = getSupabase();
     await (supabase
         .from('lecture_jobs') as any)
         .update({

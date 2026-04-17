@@ -55,12 +55,13 @@ USER worker
 # Environment
 ENV NODE_ENV=production
 
-# Health check endpoint
-EXPOSE 3001
+# Worker health endpoint
+ENV PORT=3002
+EXPOSE 3002
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3001/health || exit 1
+    CMD curl -f http://localhost:3002/health || exit 1
 
 # Run the compiled worker
 CMD ["node", "dist/workers/bullmq-worker.js"]

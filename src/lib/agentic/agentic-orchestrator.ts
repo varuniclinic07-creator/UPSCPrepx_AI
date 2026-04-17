@@ -39,6 +39,27 @@ export interface AgenticSource {
   excerpt?: string;
 }
 
+const WHITELISTED_SOURCE_HOSTS = [
+  'visionias.in',
+  'drishtiias.com',
+  'thehindu.com',
+  'indianexpress.com',
+  'pib.gov.in',
+  'prs.org.in',
+  'prsindia.org',
+  'forumias.com',
+  'iasgyan.in',
+  'insightsonindia.com',
+  'ncert.nic.in',
+  'epathshala.nic.in',
+  'nios.ac.in',
+  'ignou.ac.in',
+  'egyankosh.ac.in',
+  'indiabudget.gov.in',
+  'niti.gov.in',
+  'upscpdf.com',
+];
+
 export class AgenticOrchestrator {
   private webSearchClient: WebSearchClient;
   private autodocClient: AutodocClient;
@@ -59,7 +80,6 @@ export class AgenticOrchestrator {
     const startTime = Date.now();
     const agenticSystemsUsed: string[] = [];
     const allSources: AgenticSource[] = [];
-    let rawContent: string[] = [];
 
     // Step 1: Analyze query intent
     const intent = await this.analyzeQueryIntent(query.query);
@@ -74,7 +94,6 @@ export class AgenticOrchestrator {
           upscFocused: true,
         });
         agenticSystemsUsed.push('web-search');
-        rawContent.push(...webResults.results.map(r => r.snippet));
         allSources.push(...webResults.results.map(r => ({
           system: 'web-search' as const,
           sourceName: r.title,
@@ -97,14 +116,13 @@ export class AgenticOrchestrator {
           maxResults: 5,
         });
         agenticSystemsUsed.push('file-search');
-        rawContent.push(...fileResults.results.map(r => r.content));
         allSources.push(...fileResults.results.map(r => ({
           system: 'file-search' as const,
           sourceName: r.fileName,
           sourceUrl: r.fileUrl,
           sourceType: r.sourceType,
           relevanceScore: r.relevanceScore,
-          excerpt: r.excerpt,
+          excerpt: r.excerpt || r.content,
         })));
       } catch (error) {
         console.error('File search failed:', error);
@@ -119,25 +137,36 @@ export class AgenticOrchestrator {
           userId: query.userId,
         });
         agenticSystemsUsed.push('autodoc');
-        rawContent.push(...docResults.results.map(r => r.content));
         allSources.push(...docResults.results.map(r => ({
           system: 'autodoc' as const,
           sourceName: r.documentName,
           sourceUrl: r.documentUrl,
           sourceType: 'standard_book' as const,
           relevanceScore: r.relevanceScore,
-          excerpt: r.excerpt,
+          excerpt: r.excerpt || r.content,
         })));
       } catch (error) {
         console.error('AutoDoc failed:', error);
       }
     }
 
+    const groundedSources = allSources.filter(source => this.isGroundedSource(source));
+    if (groundedSources.length === 0) {
+      throw new Error(
+        'Unable to generate grounded notes because no whitelisted or library sources were retrieved for this topic.'
+      );
+    }
+
+    const groundedContent = groundedSources
+      .map(source => source.excerpt?.trim())
+      .filter((excerpt): excerpt is string => Boolean(excerpt))
+      .join('\n\n');
+
     // Step 3: Generate notes using AI Provider (9Router → Groq → Ollama)
     const generatedContent = await this.aiProviderClient.generateNotes({
       topic: query.topic || query.query,
-      rawContent: rawContent.join('\n\n'),
-      sources: allSources,
+      rawContent: groundedContent,
+      sources: groundedSources,
       brevityLevel: query.brevityLevel || 'comprehensive',
       subject: query.subject,
     });
@@ -146,7 +175,7 @@ export class AgenticOrchestrator {
 
     return {
       content: generatedContent.content,
-      sources: allSources,
+      sources: groundedSources,
       agenticSystemsUsed,
       aiProviderUsed: generatedContent.providerUsed,
       wordCount: this.countWords(generatedContent.content),
@@ -207,6 +236,25 @@ export class AgenticOrchestrator {
    */
   private countWords(content: string): number {
     return content.trim().split(/\s+/).length;
+  }
+
+  private isGroundedSource(source: AgenticSource): boolean {
+    if (!source.sourceUrl) {
+      return source.system === 'file-search' || source.system === 'autodoc';
+    }
+
+    try {
+      const hostname = new URL(source.sourceUrl).hostname.toLowerCase();
+      if (hostname === 'gov.in' || hostname.endsWith('.gov.in')) {
+        return true;
+      }
+
+      return WHITELISTED_SOURCE_HOSTS.some(
+        allowed => hostname === allowed || hostname.endsWith(`.${allowed}`)
+      );
+    } catch {
+      return false;
+    }
   }
 }
 

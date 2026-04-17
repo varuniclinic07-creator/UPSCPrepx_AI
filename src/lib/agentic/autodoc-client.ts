@@ -1,3 +1,8 @@
+import {
+  hasConfiguredDocChatServiceUrl,
+  resolveDocChatServiceUrl,
+} from './service-urls';
+
 /**
  * BMAD Phase 4: Feature 10 - AutoDoc Thinker Client
  * Connects to autodoc-thinker service for document RAG
@@ -33,8 +38,7 @@ export class AutodocClient {
   private timeout: number;
 
   constructor() {
-    // Connect to autodoc-thinker service (URL must be set via AGENTIC_AUTODOC_URL env var)
-    this.baseUrl = process.env.AGENTIC_AUTODOC_URL || '';
+    this.baseUrl = resolveDocChatServiceUrl();
     this.timeout = 30000; // 30 seconds for document processing
   }
 
@@ -155,7 +159,7 @@ export function getAutodocClient(): AutodocClient {
  * Check if the autodoc service URL is configured
  */
 export function isAutodocAvailable(): boolean {
-  return !!process.env.AGENTIC_AUTODOC_URL;
+  return hasConfiguredDocChatServiceUrl();
 }
 
 /**

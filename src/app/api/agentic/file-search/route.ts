@@ -5,10 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
+import { resolveFileSearchServiceUrl } from '@/lib/agentic/service-urls';
 
 export const dynamic = 'force-dynamic';
 
-const SERVICE_URL = process.env.AGENTIC_FILE_SEARCH_URL || 'http://localhost:8032';
+const SERVICE_URL = resolveFileSearchServiceUrl();
 
 export async function POST(request: NextRequest) {
     try {

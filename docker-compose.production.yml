@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ============================================
   # CORE SERVICES
@@ -107,88 +105,30 @@ services:
     networks:
       - upsc-network
 
-  video-worker:
-    image: node:20-alpine
-    container_name: upsc-video-worker
+  bullmq-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: upsc-bullmq-worker:latest
+    container_name: upsc-bullmq-worker
     restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - video_processing:/data/videos
-      - video_worker_modules:/app/node_modules
     environment:
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      NODE_ENV: production
+      PORT: 3002
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      REDIS_URL: ${REDIS_URL}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      A4F_API_KEY: ${A4F_API_KEY}
-      A4F_BASE_URL: ${A4F_BASE_URL}
-      OUTPUT_DIR: /data/videos
+      MAUTIC_URL: ${MAUTIC_URL}
+      HERMES_GATEWAY_TOKEN: ${HERMES_GATEWAY_TOKEN}
     depends_on:
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-    command:
-      - /bin/sh
-      - -c
-      - |
-        apk add --no-cache ffmpeg git
-        cd /app
-        if [ ! -f package.json ]; then
-          npm init -y
-          npm install bullmq ioredis minio openai fluent-ffmpeg uuid
-        fi
-        cat > worker.js <<'EOF'
-        const { Worker } = require('bullmq');
-        const Redis = require('ioredis');
-        const OpenAI = require('openai');
-
-        const redis = new Redis({
-          host: process.env.REDIS_HOST || 'redis',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
-          password: process.env.REDIS_PASSWORD,
-          maxRetriesPerRequest: null,
-        });
-
-        const openai = new OpenAI({
-          apiKey: process.env.A4F_API_KEY,
-          baseURL: process.env.A4F_BASE_URL,
-        });
-
-        const worker = new Worker('lecture-queue', async (job) => {
-          console.log('Processing job:', job.name, job.data);
-          const { topic, jobId } = job.data;
-          
-          try {
-            await redis.hset('lecture:' + jobId, 'status', 'processing', 'progress', '10');
-            
-            const response = await openai.chat.completions.create({
-              model: 'provider-3/grok-4.1-fast',
-              messages: [
-                { role: 'system', content: 'You are a UPSC educator.' },
-                { role: 'user', content: 'Create lecture outline for: ' + topic }
-              ],
-              max_tokens: 2000,
-            });
-            
-            await redis.hset('lecture:' + jobId, 'status', 'ready', 'progress', '100', 'outline', response.choices[0].message.content);
-            console.log('Job complete:', jobId);
-            return { success: true };
-          } catch (error) {
-            await redis.hset('lecture:' + jobId, 'status', 'failed', 'error', error.message);
-            throw error;
-          }
-        }, { connection: redis, concurrency: 1 });
-
-        worker.on('completed', (job) => console.log('Completed:', job.id));
-        worker.on('failed', (job, err) => console.error('Failed:', job.id, err.message));
-
-        console.log('Video Worker started. Waiting for jobs...');
-        EOF
-        node worker.js
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:3002/health' ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - upsc-network
 
@@ -219,50 +159,15 @@ services:
     working_dir: /app
     ports:
       - '8030:8030'
-    environment:
-      CRAWL4AI_URL: http://crawl4ai:11235
-    depends_on:
-      - crawl4ai
+    volumes:
+      - ./docker/agentic-services:/app/services:ro
     command:
       - /bin/sh
       - -c
-      - |
-        pip install --no-cache-dir fastapi uvicorn httpx
-        cat > main.py <<'EOF'
-        from fastapi import FastAPI
-        from pydantic import BaseModel
-        import httpx
-        import os
-
-        app = FastAPI()
-        CRAWL4AI_URL = os.getenv("CRAWL4AI_URL", "http://crawl4ai:11235")
-
-        class SearchRequest(BaseModel):
-            query: str
-            limit: int = 10
-
-        @app.get("/health")
-        async def health():
-            return {"status": "healthy"}
-
-        @app.post("/search")
-        async def search(request: SearchRequest):
-            search_url = f"https://duckduckgo.com/?q={request.query}"
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                try:
-                    response = await client.post(
-                        f"{CRAWL4AI_URL}/crawl",
-                        json={"urls": [search_url], "extract_links": True, "max_depth": 1}
-                    )
-                    data = response.json()
-                    results = [{"title": link.get("text", ""), "url": link.get("href", ""), 
-                               "snippet": data.get("data", {}).get("markdown", "")[:200]}
-                               for link in data.get("data", {}).get("links", [])[:request.limit]]
-                    return {"results": results, "query": request.query, "total": len(results)}
-                except:
-                    return {"results": [], "query": request.query, "total": 0}
-        EOF
-        uvicorn main:app --host 0.0.0.0 --port 8030
+      - >
+        pip install --no-cache-dir fastapi uvicorn httpx beautifulsoup4 lxml &&
+        cd /app/services &&
+        uvicorn web_search_service:app --host 0.0.0.0 --port 8030
     networks:
       - upsc-network
 
@@ -274,39 +179,20 @@ services:
     volumes:
       - autodoc_data:/app/data
       - minio_data:/materials
+      - ./docker/agentic-services:/app/services:ro
     ports:
       - '8031:8031'
     environment:
-      AI_PROVIDER_URL: ${A4F_BASE_URL}
-      A4F_API_KEY: ${A4F_API_KEY}
       MATERIALS_PATH: /materials
     command:
       - /bin/sh
       - -c
-      - |
-        apt-get update && apt-get install -y tesseract-ocr poppler-utils
-        pip install --no-cache-dir fastapi uvicorn httpx pypdf2 python-docx
-        cat > main.py <<'EOF'
-        from fastapi import FastAPI
-        from pydantic import BaseModel
-        from typing import List, Optional
-
-        app = FastAPI()
-
-        class DocumentRequest(BaseModel):
-            query: str
-            documents: Optional[List[dict]] = []
-
-        @app.get("/health")
-        async def health():
-            return {"status": "healthy"}
-
-        @app.post("/analyze")
-        async def analyze(request: DocumentRequest):
-            return {"answer": f"Analysis for: {request.query}", "sources": [],
-                    "agentsUsed": ["retriever", "summarizer"], "processingTime": 1000}
-        EOF
-        uvicorn main:app --host 0.0.0.0 --port 8031
+      - >
+        apt-get update &&
+        apt-get install -y --no-install-recommends poppler-utils &&
+        pip install --no-cache-dir fastapi uvicorn pypdf2 python-docx &&
+        cd /app/services &&
+        uvicorn autodoc_service:app --host 0.0.0.0 --port 8031
     networks:
       - upsc-network
 
@@ -318,38 +204,20 @@ services:
     volumes:
       - file_search_data:/app/data
       - minio_data:/materials
+      - ./docker/agentic-services:/app/services:ro
     ports:
       - '8032:8032'
     environment:
-      AI_PROVIDER_URL: ${A4F_BASE_URL}
-      A4F_API_KEY: ${A4F_API_KEY}
       MATERIALS_PATH: /materials
     command:
       - /bin/sh
       - -c
-      - |
-        pip install --no-cache-dir fastapi uvicorn httpx
-        cat > main.py <<'EOF'
-        from fastapi import FastAPI
-        from pydantic import BaseModel
-        from typing import List, Optional
-
-        app = FastAPI()
-
-        class FileSearchRequest(BaseModel):
-            query: str
-            materialIds: Optional[List[str]] = []
-
-        @app.get("/health")
-        async def health():
-            return {"status": "healthy"}
-
-        @app.post("/search")
-        async def search(request: FileSearchRequest):
-            return {"results": [], "totalResults": 0, "query": request.query,
-                    "materialsSearched": 0, "navigationPath": [], "processingTime": 500}
-        EOF
-        uvicorn main:app --host 0.0.0.0 --port 8032
+      - >
+        apt-get update &&
+        apt-get install -y --no-install-recommends poppler-utils &&
+        pip install --no-cache-dir fastapi uvicorn pypdf2 python-docx &&
+        cd /app/services &&
+        uvicorn file_search_service:app --host 0.0.0.0 --port 8032
     networks:
       - upsc-network
 
@@ -542,7 +410,6 @@ volumes:
   remotion_output:
   remotion_cache:
   video_processing:
-  video_worker_modules:
   autodoc_data:
   file_search_data:
   mautic_data:

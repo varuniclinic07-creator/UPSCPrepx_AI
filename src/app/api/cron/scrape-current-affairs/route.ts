@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { scrapeCurrentAffairs, NEWS_SOURCES } from '@/lib/scraping/crawl4ai-client';
+import { isAuthorizedCronRequest } from '@/lib/cron/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,8 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     // 1. Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isAuthorizedCronRequest(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

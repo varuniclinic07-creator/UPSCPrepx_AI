@@ -72,6 +72,14 @@ describe('agentic clients', () => {
       expect(typeof mod.getAutodocClient).toBe('function');
     });
 
+    it('isAutodocAvailable returns true when AGENTIC_DOC_CHAT_URL is set', async () => {
+      delete process.env.AGENTIC_AUTODOC_URL;
+      process.env.AGENTIC_DOC_CHAT_URL = 'http://localhost:8031';
+      jest.resetModules();
+      const mod = await import('@/lib/agentic/autodoc-client');
+      expect(mod.isAutodocAvailable()).toBe(true);
+    });
+
     it('generateExplanation returns null on failure', async () => {
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
       jest.resetModules();

@@ -1,3 +1,8 @@
+import {
+  hasConfiguredWebSearchServiceUrl,
+  resolveWebSearchServiceUrl,
+} from './service-urls';
+
 /**
  * BMAD Phase 4: Feature 10 - Agentic Web Search Client
  * Connects to agentic-web-search service for live web search
@@ -32,8 +37,7 @@ export class WebSearchClient {
   private timeout: number;
 
   constructor() {
-    // Connect to agentic-web-search service (URL must be set via AGENTIC_WEB_SEARCH_URL env var)
-    this.baseUrl = process.env.AGENTIC_WEB_SEARCH_URL || '';
+    this.baseUrl = resolveWebSearchServiceUrl();
     this.timeout = 10000; // 10 seconds
   }
 
@@ -189,7 +193,7 @@ export function getWebSearchClient(): WebSearchClient {
  * Check if the web search service URL is configured
  */
 export function isWebSearchAvailable(): boolean {
-  return !!process.env.AGENTIC_WEB_SEARCH_URL;
+  return hasConfiguredWebSearchServiceUrl();
 }
 
 /**

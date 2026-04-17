@@ -6,14 +6,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
+import {
+    resolveDocChatServiceUrl,
+    resolveFileSearchServiceUrl,
+    resolveWebSearchServiceUrl,
+} from '@/lib/agentic/service-urls';
 
 export const dynamic = 'force-dynamic';
 
 
 const SERVICE_URLS = {
-    webSearch: process.env.AGENTIC_WEB_SEARCH_URL || '',
-    docChat: process.env.AGENTIC_AUTODOC_URL || '',
-    fileSearch: process.env.AGENTIC_FILE_SEARCH_URL || ''
+    webSearch: resolveWebSearchServiceUrl(),
+    docChat: resolveDocChatServiceUrl(),
+    fileSearch: resolveFileSearchServiceUrl()
 };
 
 interface OrchestrationRequest {

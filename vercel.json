@@ -1,8 +1,40 @@
 {
   "crons": [
     {
+      "path": "/api/cron/subscriptions",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/quality-sweep",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/video-generation",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/daily-plans",
+      "schedule": "0 5 * * *"
+    },
+    {
       "path": "/api/cron/scrape-current-affairs",
+      "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/cron/ca-ingestion",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/mastery-notifications",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/freshness-check",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/syllabus-coverage",
+      "schedule": "0 1 * * 0"
     }
   ]
 }

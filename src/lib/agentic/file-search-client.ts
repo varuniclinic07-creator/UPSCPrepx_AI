@@ -1,3 +1,8 @@
+import {
+  hasConfiguredFileSearchServiceUrl,
+  resolveFileSearchServiceUrl,
+} from './service-urls';
+
 /**
  * BMAD Phase 4: Feature 10 - Agentic File Search Client
  * Connects to agentic-file-search service for dynamic document navigation
@@ -37,8 +42,7 @@ export class FileSearchClient {
   private timeout: number;
 
   constructor() {
-    // Connect to agentic-file-search service (URL must be set via AGENTIC_FILE_SEARCH_URL env var)
-    this.baseUrl = process.env.AGENTIC_FILE_SEARCH_URL || '';
+    this.baseUrl = resolveFileSearchServiceUrl();
     this.timeout = 30000; // 30 seconds for file navigation
   }
 
@@ -159,7 +163,7 @@ export function getFileSearchClient(): FileSearchClient {
  * Check if the file search service URL is configured
  */
 export function isFileSearchAvailable(): boolean {
-  return !!process.env.AGENTIC_FILE_SEARCH_URL;
+  return hasConfiguredFileSearchServiceUrl();
 }
 
 /**

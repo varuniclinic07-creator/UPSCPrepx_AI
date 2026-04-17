@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runSubscriptionMaintenance } from '@/lib/payments/subscription-cron';
+import { isAuthorizedCronRequest } from '@/lib/cron/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,11 +17,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
     try {
-        // Verify cron secret
-        const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET;
-
-        if (!cronSecret) {
+        if (!process.env.CRON_SECRET && !process.env.HERMES_GATEWAY_TOKEN) {
             console.error('[Cron] CRON_SECRET not configured');
             return NextResponse.json(
                 { error: 'Server configuration error' },
@@ -28,7 +25,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+        if (!isAuthorizedCronRequest(request)) {
             console.warn('[Cron] Invalid or missing cron secret');
             return NextResponse.json(
                 { error: 'Unauthorized' },

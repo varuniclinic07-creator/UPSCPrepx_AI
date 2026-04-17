@@ -5,10 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/session';
+import { resolveWebSearchServiceUrl } from '@/lib/agentic/service-urls';
 
 export const dynamic = 'force-dynamic';
 
-const SERVICE_URL = process.env.AGENTIC_WEB_SEARCH_URL || 'http://localhost:8030';
+const SERVICE_URL = resolveWebSearchServiceUrl();
 
 export async function POST(request: NextRequest) {
     try {
