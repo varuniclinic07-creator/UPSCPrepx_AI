@@ -22,8 +22,11 @@ COPY src/lib/services ./src/lib/services
 COPY src/lib/queues ./src/lib/queues
 COPY src/workers ./src/workers
 
-# Compile TypeScript to JavaScript
-RUN npx tsc --outDir dist --rootDir src src/workers/**/*.ts src/lib/**/*.ts || true
+# Compile TypeScript to JavaScript — fail the build if compilation fails.
+# Uses a worker-specific tsconfig so the main app's stricter type-checking
+# doesn't block Docker builds, but real compile errors still surface.
+COPY tsconfig.worker.json ./
+RUN npx tsc -p tsconfig.worker.json
 
 # ═══════════════════════════════════════════════════════════════
 # PRODUCTION STAGE
