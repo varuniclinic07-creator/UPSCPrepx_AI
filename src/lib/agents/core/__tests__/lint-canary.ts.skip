@@ -1,0 +1,19 @@
+// Lint canary — documentation, NOT compiled (extension .ts.skip keeps tsc
+// and jest away from it). If you rename this file to `.ts`, ESLint MUST
+// error on the direct `.version` comparisons below per the rule defined
+// in `.eslintrc.json` overrides for `src/lib/agents/core/**`.
+//
+// This file exists so a reviewer can verify the rule is wired correctly:
+//   cp lint-canary.ts.skip lint-canary.ts && npm run lint src/lib/agents/core
+//   → expect 2 errors pointing to the two branches below.
+//   → then: rm lint-canary.ts (never commit it as .ts).
+
+const agent = { version: 'v1' };
+const other = { version: 'v2' };
+
+if (agent.version < 'v2') {
+  // should error — direct version compare
+}
+if (other.version === agent.version) {
+  // should error — direct version compare
+}

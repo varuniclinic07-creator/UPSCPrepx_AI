@@ -8,5 +8,23 @@
     "no-var": "error",
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/await-thenable": "error"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/lib/agents/core/**/*.ts", "src/app/dashboard/**/*.tsx"],
+      "excludedFiles": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "no-restricted-syntax": ["error",
+          {
+            "selector": "BinaryExpression[left.property.name='version'][operator=/^(<|>|==|===|!=|!==|<=|>=)$/]",
+            "message": "Use compareAgentVersions() from '@/lib/agents/core/versioning' — never compare agent version strings directly (spec §1.2 rule 4)."
+          },
+          {
+            "selector": "BinaryExpression[right.property.name='version'][operator=/^(<|>|==|===|!=|!==|<=|>=)$/]",
+            "message": "Use compareAgentVersions() from '@/lib/agents/core/versioning' — never compare agent version strings directly (spec §1.2 rule 4)."
+          }
+        ]
+      }
+    }
+  ]
 }
