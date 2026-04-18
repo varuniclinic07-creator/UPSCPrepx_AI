@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * EvaluationAgent Contract Gate.
  * Hits real Supabase. Uses feature='test' for all traces,
  * and cleans up traces + test rows after.
@@ -50,9 +52,19 @@ describe('EvaluationAgent contract', () => {
     // updateMastery silently fail and every downstream assertion passes
     // on empty data, masking real regressions.
     await sb.auth.admin.deleteUser(testUserId).catch(() => {});
+    // Sweep any dangling user with the previous-run email too (unique-email
+    // constraint on auth.users — a deleteUser-by-id on a mismatched-id row
+    // from a crashed prior run leaves the email squatting).
+    const staleEmail = `eval-contract-${testUserId.toLowerCase()}@test.invalid`;
+    const list = await sb.auth.admin.listUsers({ perPage: 200 });
+    for (const u of list.data?.users ?? []) {
+      if (u.email === staleEmail && u.id !== testUserId) {
+        await sb.auth.admin.deleteUser(u.id).catch(() => {});
+      }
+    }
     const { error: createErr } = await sb.auth.admin.createUser({
       id: testUserId,
-      email: `eval-contract-${testUserId.toLowerCase()}@test.invalid`,
+      email: staleEmail,
       email_confirm: true,
       password: 'contract-test-throwaway-pw',
     } as any);

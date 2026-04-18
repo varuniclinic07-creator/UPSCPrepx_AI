@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * KnowledgeAgent Contract Gate.
  * Hits real Supabase + real OpenAI. Uses feature='test' for all traces,
  * and cleans up traces + test rows after.

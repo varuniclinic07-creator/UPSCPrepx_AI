@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * OrchestratorAgent Contract Gate.
  * Hits real Supabase + real OpenAI. Exercises all 4 mentor modes,
  * the parent→child trace chain, and the recommendation / plan helpers.
@@ -40,9 +42,16 @@ describe('OrchestratorAgent contract', () => {
     await sb.from('v8_user_mastery').delete().eq('user_id', TEST_USER);
     await sb.from('v8_user_interactions').delete().eq('user_id', TEST_USER);
     await sb.auth.admin.deleteUser(TEST_USER).catch(() => {});
+    const staleEmail = `orch-contract-${TEST_USER.toLowerCase()}@test.invalid`;
+    const list = await sb.auth.admin.listUsers({ perPage: 200 });
+    for (const u of list.data?.users ?? []) {
+      if (u.email === staleEmail && u.id !== TEST_USER) {
+        await sb.auth.admin.deleteUser(u.id).catch(() => {});
+      }
+    }
     const { error: ce } = await sb.auth.admin.createUser({
       id: TEST_USER,
-      email: `orch-contract-${TEST_USER.toLowerCase()}@test.invalid`,
+      email: staleEmail,
       email_confirm: true,
       password: 'contract-test-throwaway-pw',
     } as any);
