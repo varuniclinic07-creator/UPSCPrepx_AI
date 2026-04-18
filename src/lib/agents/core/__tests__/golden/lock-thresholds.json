@@ -1,0 +1,18 @@
+{
+  "knowledge": {
+    "citationCountDeviation": 1,
+    "lengthPct": 0.20,
+    "schemaStrict": true
+  },
+  "evaluation": {
+    "scoreDriftPct": 0.05,
+    "masteryDriftPct": 0.05,
+    "schemaStrict": true
+  },
+  "orchestrator": {
+    "citationCountDeviation": 1,
+    "lengthPct": 0.25,
+    "schemaStrict": true,
+    "modeShapeStrict": true
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "userId": "00000000-0000-0000-0000-00000000BEEF",
+  "quizId": "fixture-quiz-1",
+  "topicId": "polity.fundamental_rights",
+  "questions": [
+    { "id": "q1", "correct": "A", "userAnswer": "A", "timeMs": 15000 },
+    { "id": "q2", "correct": "B", "userAnswer": "C", "timeMs": 22000 },
+    { "id": "q3", "correct": "D", "userAnswer": "D", "timeMs": 9000 }
+  ]
+}
