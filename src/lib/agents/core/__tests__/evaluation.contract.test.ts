@@ -42,15 +42,28 @@ describe('EvaluationAgent contract', () => {
   const testUserId = fixture.userId;
 
   beforeAll(async () => {
-    // Seed a throwaway auth user + clean slate in v8 tables
+    // Clean slate in v8 tables first (FK cascades would fail otherwise).
     await sb.from('v8_user_interactions').delete().eq('user_id', testUserId);
     await sb.from('v8_user_mastery').delete().eq('user_id', testUserId);
+    // Seed throwaway auth user — v8_user_interactions.user_id has a hard
+    // FK to auth.users(id) (migration 055). Without this the inserts in
+    // updateMastery silently fail and every downstream assertion passes
+    // on empty data, masking real regressions.
+    await sb.auth.admin.deleteUser(testUserId).catch(() => {});
+    const { error: createErr } = await sb.auth.admin.createUser({
+      id: testUserId,
+      email: `eval-contract-${testUserId.toLowerCase()}@test.invalid`,
+      email_confirm: true,
+      password: 'contract-test-throwaway-pw',
+    } as any);
+    if (createErr) throw new Error(`seed user failed: ${createErr.message}`);
   });
 
   afterAll(async () => {
     await sb.from('agent_traces').delete().eq('feature', 'test');
     await sb.from('v8_user_interactions').delete().eq('user_id', testUserId);
     await sb.from('v8_user_mastery').delete().eq('user_id', testUserId);
+    await sb.auth.admin.deleteUser(testUserId).catch(() => {});
   });
 
   it('exposes version v1 and scoringVersion v1', () => {
