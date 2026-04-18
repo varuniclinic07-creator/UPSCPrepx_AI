@@ -405,6 +405,77 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_traces: {
+        Row: {
+          agent: string
+          cost_usd: number | null
+          created_at: string
+          error: string | null
+          feature: string | null
+          id: string
+          input: Json | null
+          latency_ms: number | null
+          method: string
+          model: string | null
+          output: Json | null
+          parent_trace_id: string | null
+          status: string
+          tokens_in: number | null
+          tokens_out: number | null
+          trace_id: string
+          user_id: string | null
+          version: string | null
+        }
+        Insert: {
+          agent: string
+          cost_usd?: number | null
+          created_at?: string
+          error?: string | null
+          feature?: string | null
+          id?: string
+          input?: Json | null
+          latency_ms?: number | null
+          method: string
+          model?: string | null
+          output?: Json | null
+          parent_trace_id?: string | null
+          status?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          trace_id: string
+          user_id?: string | null
+          version?: string | null
+        }
+        Update: {
+          agent?: string
+          cost_usd?: number | null
+          created_at?: string
+          error?: string | null
+          feature?: string | null
+          id?: string
+          input?: Json | null
+          latency_ms?: number | null
+          method?: string
+          model?: string | null
+          output?: Json | null
+          parent_trace_id?: string | null
+          status?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          trace_id?: string
+          user_id?: string | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_traces_parent_trace_id_fkey"
+            columns: ["parent_trace_id"]
+            isOneToOne: false
+            referencedRelation: "agent_traces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agentic_cache: {
         Row: {
           created_at: string | null
@@ -8106,6 +8177,72 @@ export type Database = {
         }
         Relationships: []
       }
+      v8_user_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          result: Json | null
+          time_spent_ms: number | null
+          topic_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload: Json
+          result?: Json | null
+          time_spent_ms?: number | null
+          topic_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          result?: Json | null
+          time_spent_ms?: number | null
+          topic_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      v8_user_mastery: {
+        Row: {
+          confidence: number
+          last_seen: string
+          mastery: number
+          scoring_version: string
+          streak_days: number
+          topic_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence: number
+          last_seen?: string
+          mastery: number
+          scoring_version: string
+          streak_days?: number
+          topic_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number
+          last_seen?: string
+          mastery?: number
+          scoring_version?: string
+          streak_days?: number
+          topic_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_analytics_daily: {
         Row: {
           avg_watch_time_seconds: number | null
@@ -8816,6 +8953,65 @@ export type Database = {
           total_minutes: number | null
           total_tasks: number | null
           week_start: string | null
+        }
+        Relationships: []
+      }
+      v8_readiness_score: {
+        Row: {
+          most_recent_activity: string | null
+          overall_mastery: number | null
+          strong_count: number | null
+          topics_touched: number | null
+          user_id: string | null
+          weak_count: number | null
+        }
+        Relationships: []
+      }
+      v8_strong_topics: {
+        Row: {
+          confidence: number | null
+          last_seen: string | null
+          mastery: number | null
+          topic_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          last_seen?: string | null
+          mastery?: number | null
+          topic_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          last_seen?: string | null
+          mastery?: number | null
+          topic_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      v8_weak_topics: {
+        Row: {
+          confidence: number | null
+          last_seen: string | null
+          mastery: number | null
+          topic_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          last_seen?: string | null
+          mastery?: number | null
+          topic_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          last_seen?: string | null
+          mastery?: number | null
+          topic_id?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
