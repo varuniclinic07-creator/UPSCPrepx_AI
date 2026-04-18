@@ -12,6 +12,34 @@
 
 ---
 
+## Task Completion Contract (READ FIRST — applies to every task, every subagent)
+
+A task is **NOT complete** unless ALL of these are true. No exceptions. Self-report "done" only when every box is green.
+
+1. **All tests pass** — `npm test -- <scope>` exits 0. If the task adds a Contract Gate test, that test runs against real Supabase + real OpenAI and passes.
+2. **No regression in existing golden snapshots** — `npm test -- golden` stays green. New snapshots may be added; existing ones may NOT silently mutate.
+3. **Lint + typecheck clean** — `npm run lint` and `npx tsc --noEmit` exit 0. Warnings introduced by this task must be fixed in this task.
+4. **Minimal demo proof** — one of: (a) terminal output pasted in the task report showing the feature working end-to-end, (b) screenshot of the UI surface, or (c) a curl/jest command the reviewer can run locally to verify. No proof ⇒ task is not done.
+5. **Commit made** — work is committed with a conventional-commits-style message. Uncommitted changes ⇒ task is not done.
+
+If a subagent reports "done" without meeting all five, the reviewer must reject and re-dispatch.
+
+### Dual-write guardrail (enforce every task)
+
+**No component may write to both the legacy Hermes tables (`public.user_mastery`, `public.agent_runs`) and the v8 tables (`public.v8_user_mastery`, `public.v8_user_interactions`, `public.agent_traces`) in the same code path.** Separate writers, separate call sites, separate tests. If a task appears to require dual-write, stop and escalate — this is an architectural violation.
+
+Mechanical check: grep for any file that imports from both `src/lib/agents/*-agent.ts` (Hermes) and `src/lib/agents/core/*` (v8) — that is a smell and must be justified in the PR description.
+
+### Execution order (enforced by dispatcher)
+
+1. **Track A strictly sequential:** A1 → A2 → A3 → A4 → A5. No parallelism on the spine.
+2. **Track B parallel with A:** B1, B2, B4 start anytime after Day 0. B3 waits for A1.
+3. **HARD STOP at Day 7:** all three Contract Gates green + golden snapshots stable + `recomputeMastery` idempotency proven. If any fail, fix here — do not proceed.
+4. **Track C only after Day 7 green:** C1/C2/C3. Spec §2.0 forbids starting earlier.
+5. **Track D + infra last:** D1/D2/D3 + smoke script + PR template + observability check.
+
+---
+
 ## Pre-Phase: Environment & Existing-Code Reality
 
 **The following already exists and MUST NOT be broken:**
