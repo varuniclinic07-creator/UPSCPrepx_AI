@@ -128,6 +128,7 @@ interface OrchestratorAgent {
 1. Every agent exposes `readonly version` as a string-literal type — never bare `string`.
 2. Bumping any version requires: (a) golden-snapshot rebaseline, (b) migration note in `docs/changelog/`, (c) backward-compat shim retained for ≥1 prior version.
 3. Bumping `ScoringVersion` additionally requires running `recomputeMastery()` for all users as part of the deploy (migration script, not a one-off).
+4. **Version comparison MUST be lexical-safe** — use numeric-only ordering (`v1`, `v2`, `v10` treated as integers after the `v` prefix) OR full semver. Never rely on string `<`/`>` comparison. A utility `compareAgentVersions(a, b): -1 | 0 | 1` lives in `src/lib/agents/versioning.ts` and is the single legal way to compare versions anywhere in the codebase. Lint rule bans direct string comparison of `version` fields.
 
 **Enforcement rule (non-negotiable):** no feature code imports from `lib/services/*` for anything the agents cover. Notes page uses Knowledge Agent. Quiz page uses Evaluation Agent. Mentor page uses Orchestrator Agent. If a surface reaches Supabase directly for agent-territory data, Contract Gate fails and the PR does not merge.
 
@@ -144,7 +145,11 @@ Three tables (two new + views, one existing extended).
 | `weak_topics` / `strong_topics` / `readiness_score` | **read-only view** | — | No writes ever. Derived from `user_mastery`. |
 | `agent_traces` | **append-only** | `traces.ts` helper ONLY, called by every agent method | Observability backbone. Async/batched writes, no silent drops. |
 
-**Invariant:** `user_mastery` MUST be fully reconstructible from `user_interactions` alone. This is tested in Contract Gate — the Evaluation Agent golden fixture runs `recomputeMastery()` on a wiped `user_mastery` and asserts identical result. If reconstruction diverges, gate fails.
+**Invariant 1 — Reconstructibility:** `user_mastery` MUST be fully reconstructible from `user_interactions` alone. This is tested in Contract Gate — the Evaluation Agent golden fixture runs `recomputeMastery()` on a wiped `user_mastery` and asserts identical result. If reconstruction diverges, gate fails.
+
+**Invariant 2 — Idempotency:** `recomputeMastery()` MUST be idempotent and deterministic. Given the same `user_interactions` set, it MUST produce identical `user_mastery` output on every run, regardless of when run or how many times. Contract Gate test runs `recomputeMastery()` twice on the same fixture and byte-compares the result.
+
+**Invariant 3 — Source of Truth Priority:** In case of any conflict, disagreement, or partial-failure state between `user_interactions` and `user_mastery`, **`user_interactions` is the only source of truth.** The derived `user_mastery` is discarded and recomputed. This rule governs migrations, bug recovery, disaster recovery, and any state reconciliation. There is no scenario in which `user_mastery` overrides `user_interactions`.
 
 Direct Supabase access to `user_mastery` from any location outside `src/lib/agents/evaluation-agent.ts` is a blocker-level Contract Gate violation.
 
@@ -491,7 +496,9 @@ Specified above in §2.
    - Retaining backward-compat shim for ≥1 prior version (per §1.2 versioning rules)
    - New baseline committed alongside the version bump
 
-3. **Threshold config lives at** `src/lib/agents/__tests__/golden/lock-thresholds.json` — single source of truth for deviation limits, version-controlled, requires review to change.
+3. **Threshold config lives at** `src/lib/agents/__tests__/golden/lock-thresholds.json` — single source of truth for deviation limits, version-controlled, requires review to change. **Thresholds are per-agent** (Knowledge / Evaluation / Orchestrator each get their own limits; same limits for all three won't hold long-term as agents evolve at different rates).
+
+4. **Golden snapshots are immutable once promoted.** No silent overwrite. Re-baselining requires an explicit commit with message prefix `baseline: ` and a `docs/changelog/baseline-YYYY-MM-DD-<agent>.md` justification. CI rejects any PR that modifies a baseline file without the matching changelog entry. Prevents "accidental passing" regressions where a drifted output silently overwrites the baseline.
 
 This lock is what makes Phase 3 (voice, OCR, multilingual) safe. New input modes can change prompts and wrappers, but cannot silently degrade agent output quality.
 
