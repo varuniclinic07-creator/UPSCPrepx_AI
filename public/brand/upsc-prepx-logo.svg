@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 48" role="img" aria-label="UPSC PrepX AI">
+  <defs>
+    <linearGradient id="prepx-g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F97316"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <g fill="currentColor">
+    <path d="M12 8 L12 40 L20 40 L20 28 L28 28 C36 28 40 24 40 20 C40 12 36 8 28 8 Z M20 16 L28 16 C30 16 32 17 32 20 C32 22 30 22 28 22 L20 22 Z"/>
+    <text x="52" y="32" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="300" letter-spacing="-0.02em">UPSC</text>
+    <text x="120" y="32" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="700" letter-spacing="-0.02em" fill="url(#prepx-g)">PrepX</text>
+    <text x="190" y="32" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="300" letter-spacing="-0.02em">AI</text>
+  </g>
+</svg>

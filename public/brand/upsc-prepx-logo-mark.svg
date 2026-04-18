@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="UPSC PrepX AI mark">
+  <defs>
+    <linearGradient id="mark-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="10" fill="url(#mark-g)"/>
+  <path d="M14 12 L14 36 L20 36 L20 26 L26 26 C32 26 36 22 36 18 C36 12 32 8 26 8 L14 8 Z M20 14 L26 14 C28 14 30 15 30 18 C30 20 28 21 26 21 L20 21 Z" fill="#FFFFFF"/>
+</svg>

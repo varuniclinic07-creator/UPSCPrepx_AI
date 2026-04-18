@@ -103,6 +103,9 @@ const config: Config = {
 
         // Dock
         'dock-slide-up': 'dockSlideUp 0.8s ease-out',
+
+        // Brand
+        'logo-shimmer': 'logo-shimmer 3s ease-in-out infinite',
       },
       keyframes: {
         shimmer: {
@@ -164,6 +167,10 @@ const config: Config = {
         marqueeVertical: {
           '0%': { transform: 'translateY(0)' },
           '100%': { transform: 'translateY(-100%)' },
+        },
+        'logo-shimmer': {
+          '0%, 100%': { filter: 'drop-shadow(0 0 0 rgba(249,115,22,0))' },
+          '50%': { filter: 'drop-shadow(0 0 12px rgba(249,115,22,0.6))' },
         },
       },
       backgroundImage: {
