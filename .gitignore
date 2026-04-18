@@ -76,5 +76,9 @@ apikey-upsc.txt
 .env.production.deploy
 
 superpowers/
+# Design specs under docs/ are tracked; only runtime superpowers state is ignored
+!docs/superpowers/
+!docs/superpowers/specs/
+!docs/superpowers/specs/**
 _archive/
 docs/VPS_DEPLOYMENT_GUIDE.md
