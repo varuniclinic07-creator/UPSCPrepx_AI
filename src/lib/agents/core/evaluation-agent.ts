@@ -25,7 +25,13 @@ export class EvaluationAgentImpl implements EvaluationAgent {
     process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   );
   private feature: string;
-  constructor(opts: EvalInitOpts = {}) { this.feature = opts.feature ?? 'unknown'; }
+  private parentTraceId?: string;
+  private userId?: string;
+  constructor(opts: EvalInitOpts & { parentTraceId?: string; userId?: string } = {}) {
+    this.feature = opts.feature ?? 'unknown';
+    this.parentTraceId = opts.parentTraceId;
+    this.userId = opts.userId;
+  }
 
   async evaluateAttempt(attempt: QuizAttempt): Promise<ScoreResult> {
     const traceId = newTraceId();
@@ -42,7 +48,7 @@ export class EvaluationAgentImpl implements EvaluationAgent {
 
     const result: ScoreResult = { correctCount, totalCount, accuracyPct, timeTotalMs, perQuestion };
     await recordTrace({
-      traceId, agent: 'evaluation', method: 'evaluateAttempt', feature: this.feature,
+      traceId, agent: 'evaluation', method: 'evaluateAttempt', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', input: { quizId: attempt.quizId, count: totalCount },
       output: result, latencyMs: Date.now() - started, version: VERSION,
     });
@@ -67,7 +73,7 @@ export class EvaluationAgentImpl implements EvaluationAgent {
       relatedTopics: [q.topicId],
     };
     await recordTrace({
-      traceId, agent: 'evaluation', method: 'explainWrong', feature: this.feature,
+      traceId, agent: 'evaluation', method: 'explainWrong', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', input: { questionId: q.id, topicId: q.topicId },
       output: { citationCount: grounded.citations.length },
       latencyMs: Date.now() - started, version: VERSION,
@@ -92,7 +98,7 @@ export class EvaluationAgentImpl implements EvaluationAgent {
     const deltas = await this.recomputeMasteryInternal(userId);
 
     await recordTrace({
-      traceId, agent: 'evaluation', method: 'updateMastery', feature: this.feature,
+      traceId, agent: 'evaluation', method: 'updateMastery', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', input: { userId, topicId: attempt.topicId },
       output: { deltaCount: deltas.length }, latencyMs: Date.now() - started, version: VERSION,
     });
@@ -115,7 +121,7 @@ export class EvaluationAgentImpl implements EvaluationAgent {
       lastSeen: r.last_seen,
     }));
     await recordTrace({
-      traceId, agent: 'evaluation', method: 'weakTopics', feature: this.feature,
+      traceId, agent: 'evaluation', method: 'weakTopics', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', output: { count: out.length },
       latencyMs: Date.now() - started, version: VERSION,
     });
@@ -137,7 +143,7 @@ export class EvaluationAgentImpl implements EvaluationAgent {
       weakTopics: weak,
     };
     await recordTrace({
-      traceId, agent: 'evaluation', method: 'analytics', feature: this.feature,
+      traceId, agent: 'evaluation', method: 'analytics', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', output: summary,
       latencyMs: Date.now() - started, version: VERSION,
     });
@@ -149,7 +155,7 @@ export class EvaluationAgentImpl implements EvaluationAgent {
     const started = Date.now();
     await this.recomputeMasteryInternal(userId);
     await recordTrace({
-      traceId, agent: 'evaluation', method: 'recomputeMastery', feature: this.feature,
+      traceId, agent: 'evaluation', method: 'recomputeMastery', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', input: { userId },
       latencyMs: Date.now() - started, version: VERSION,
     });

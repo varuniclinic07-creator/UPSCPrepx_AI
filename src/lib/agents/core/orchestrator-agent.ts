@@ -15,6 +15,35 @@ import type {
 
 const VERSION: OrchestratorAgentVersion = 'v1';
 
+/**
+ * Tolerant JSON parser for LLM output. Gemma-family models occasionally emit
+ * truncated objects (max_tokens cutoff mid-string) or trailing prose after the
+ * JSON body. We attempt a progressive recovery so the orchestrator returns a
+ * shape-valid reply even under noisy provider output.
+ */
+function safeJsonParse(raw: string): any | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch {}
+  // Trim to the largest balanced prefix that ends at a close brace.
+  let depth = 0, inStr = false, esc = false, lastGood = -1;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (esc) { esc = false; continue; }
+    if (inStr) {
+      if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') { depth--; if (depth === 0) lastGood = i; }
+  }
+  if (lastGood > 0) {
+    try { return JSON.parse(raw.slice(0, lastGood + 1)); } catch {}
+  }
+  return null;
+}
+
 export interface OrchestratorInitOpts { feature?: string }
 
 export class OrchestratorAgentImpl implements OrchestratorAgent {
@@ -33,8 +62,8 @@ export class OrchestratorAgentImpl implements OrchestratorAgent {
 
     try {
       // Sub-agents inherit parent trace so calls chain
-      const knowledge = new KnowledgeAgentImpl({ feature: this.feature });
-      const evaluator = new EvaluationAgentImpl({ feature: this.feature });
+      const knowledge = new KnowledgeAgentImpl({ feature: this.feature, parentTraceId: parentTrace, userId });
+      const evaluator = new EvaluationAgentImpl({ feature: this.feature, parentTraceId: parentTrace, userId });
 
       let reply: MentorReply;
       switch (mode) {
@@ -54,7 +83,7 @@ export class OrchestratorAgentImpl implements OrchestratorAgent {
           const system = 'You are a UPSC mentor. Respond ONLY with JSON matching: {recommendation:string, rationale:string, nextSteps:string[], weakTopicsAddressed:string[]}.';
           const prompt = `User asked: ${message}\n\nTheir weak topics: ${analytics.weakTopics.map(w => w.topicId).join(', ') || 'none yet'}\nOverall mastery: ${analytics.overallMastery}\nRespond with JSON.`;
           const res = await chat({ model: STRATEGY_MODEL, system, prompt, jsonMode: true, maxTokens: 500 });
-          const parsed = JSON.parse(res.text);
+          const parsed = safeJsonParse(res.text) ?? {};
           reply = {
             mode: 'strategy',
             recommendation: String(parsed.recommendation ?? ''),
@@ -69,8 +98,8 @@ export class OrchestratorAgentImpl implements OrchestratorAgent {
           const system = 'You are a UPSC mentor. Output ONLY JSON: {topic:string, keyPoints:string[], commonMistakes:string[], quickQuiz?:[{q:string,a:string}]}.';
           const ctx = chunks.map((c: any, i: number) => `[C${i+1}] ${c.text}`).join('\n\n');
           const prompt = `Revise the topic for the student. Message: ${message}\n\nContext:\n${ctx}`;
-          const res = await chat({ model: DEFAULT_CHAT_MODEL, system, prompt, jsonMode: true, maxTokens: 500 });
-          const parsed = JSON.parse(res.text);
+          const res = await chat({ model: DEFAULT_CHAT_MODEL, system, prompt, jsonMode: true, maxTokens: 900 });
+          const parsed = safeJsonParse(res.text) ?? {};
           reply = {
             mode: 'revision',
             topic: String(parsed.topic ?? message),
@@ -94,7 +123,7 @@ export class OrchestratorAgentImpl implements OrchestratorAgent {
           const system = 'UPSC mentor. JSON only: {assessment:string, priorityFix:string}.';
           const prompt = `Student question: ${message}\nAnalytics: overall=${analytics.overallMastery}, strong=${strengths.length}, gaps=${gaps.length}\nTop weak: ${gaps[0]?.topicId ?? 'none'}`;
           const res = await chat({ model: DEFAULT_CHAT_MODEL, system, prompt, jsonMode: true, maxTokens: 350 });
-          const parsed = JSON.parse(res.text);
+          const parsed = safeJsonParse(res.text) ?? {};
           reply = {
             mode: 'diagnostic',
             assessment: String(parsed.assessment ?? ''),

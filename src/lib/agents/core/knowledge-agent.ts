@@ -31,8 +31,12 @@ export class KnowledgeAgentImpl implements KnowledgeAgent {
     process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   );
   private feature: string;
-  constructor(opts: AgentInitOpts = {}) {
+  private parentTraceId?: string;
+  private userId?: string;
+  constructor(opts: AgentInitOpts & { parentTraceId?: string; userId?: string } = {}) {
     this.feature = opts.feature ?? 'unknown';
+    this.parentTraceId = opts.parentTraceId;
+    this.userId = opts.userId;
   }
 
   async ingest(source: SourceInput): Promise<IngestResult> {
@@ -54,7 +58,7 @@ export class KnowledgeAgentImpl implements KnowledgeAgent {
       if (error) throw new Error(error.message);
 
       await recordTrace({
-        traceId, agent: 'knowledge', method: 'ingest', feature: this.feature,
+        traceId, agent: 'knowledge', method: 'ingest', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
         status: 'success', input: { type: source.type, chars: source.content.length },
         output: { sourceId, chunkCount: chunks.length },
         latencyMs: Date.now() - started,
@@ -63,7 +67,7 @@ export class KnowledgeAgentImpl implements KnowledgeAgent {
       return { sourceId, chunkCount: chunks.length, tokensProcessed: tokensIn };
     } catch (err: any) {
       await recordTrace({
-        traceId, agent: 'knowledge', method: 'ingest', feature: this.feature,
+        traceId, agent: 'knowledge', method: 'ingest', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
         status: 'failure', error: String(err?.message ?? err),
         latencyMs: Date.now() - started, version: VERSION,
       });
@@ -90,7 +94,7 @@ export class KnowledgeAgentImpl implements KnowledgeAgent {
         meta: { ...(r.meta ?? {}), sourceId: r.source_id },
       }));
       await recordTrace({
-        traceId, agent: 'knowledge', method: 'retrieve', feature: this.feature,
+        traceId, agent: 'knowledge', method: 'retrieve', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
         status: 'success', input: { query, topK, filter: opts.filter ?? null },
         output: { count: chunks.length }, latencyMs: Date.now() - started,
         tokensIn, model: 'text-embedding-3-small', version: VERSION,
@@ -98,7 +102,7 @@ export class KnowledgeAgentImpl implements KnowledgeAgent {
       return chunks;
     } catch (err: any) {
       await recordTrace({
-        traceId, agent: 'knowledge', method: 'retrieve', feature: this.feature,
+        traceId, agent: 'knowledge', method: 'retrieve', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
         status: 'failure', error: String(err?.message ?? err),
         latencyMs: Date.now() - started, version: VERSION,
       });
@@ -128,7 +132,7 @@ export class KnowledgeAgentImpl implements KnowledgeAgent {
         : [];
 
       await recordTrace({
-        traceId, agent: 'knowledge', method: 'ground', feature: this.feature,
+        traceId, agent: 'knowledge', method: 'ground', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
         status: 'success', input: { query, chunkCount: chunks.length, cite },
         output: { textLen: res.text.length, citationCount: citations.length },
         latencyMs: Date.now() - started,
@@ -139,7 +143,7 @@ export class KnowledgeAgentImpl implements KnowledgeAgent {
       return { text: res.text, citations, tokensIn: res.tokensIn, tokensOut: res.tokensOut };
     } catch (err: any) {
       await recordTrace({
-        traceId, agent: 'knowledge', method: 'ground', feature: this.feature,
+        traceId, agent: 'knowledge', method: 'ground', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
         status: 'failure', error: String(err?.message ?? err),
         latencyMs: Date.now() - started, version: VERSION,
       });
@@ -162,7 +166,11 @@ export class InMemoryKnowledgeAgent implements KnowledgeAgent {
   readonly version: KnowledgeAgentVersion = 'v1';
   private store: Array<{ id: string; sourceId: string; topicId?: string; text: string }> = [];
   private feature: string;
-  constructor(opts: AgentInitOpts = {}) { this.feature = opts.feature ?? 'unknown'; }
+  private parentTraceId?: string;
+  constructor(opts: AgentInitOpts & { parentTraceId?: string } = {}) {
+    this.feature = opts.feature ?? 'unknown';
+    this.parentTraceId = opts.parentTraceId;
+  }
 
   async ingest(source: SourceInput): Promise<IngestResult> {
     const sourceId = randomUUID();
@@ -171,7 +179,7 @@ export class InMemoryKnowledgeAgent implements KnowledgeAgent {
       this.store.push({ id: randomUUID(), sourceId, topicId: source.meta.topicId, text: c });
     }
     await recordTrace({
-      traceId: newTraceId(), agent: 'knowledge', method: 'ingest', feature: this.feature,
+      traceId: newTraceId(), agent: 'knowledge', method: 'ingest', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', version: 'v1',
     });
     return { sourceId, chunkCount: chunks.length, tokensProcessed: 0 };
@@ -196,7 +204,7 @@ export class InMemoryKnowledgeAgent implements KnowledgeAgent {
         meta: { sourceId: m.r.sourceId, topicId: m.r.topicId },
       }));
     await recordTrace({
-      traceId: newTraceId(), agent: 'knowledge', method: 'retrieve', feature: this.feature,
+      traceId: newTraceId(), agent: 'knowledge', method: 'retrieve', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', version: 'v1',
     });
     return matches;
@@ -205,7 +213,7 @@ export class InMemoryKnowledgeAgent implements KnowledgeAgent {
   async ground(query: string, chunks: RetrievedChunk[], opts: { cite?: boolean } = {}): Promise<GroundedAnswer> {
     const cite = opts.cite ?? true;
     await recordTrace({
-      traceId: newTraceId(), agent: 'knowledge', method: 'ground', feature: this.feature,
+      traceId: newTraceId(), agent: 'knowledge', method: 'ground', feature: this.feature, parentTraceId: this.parentTraceId, userId: this.userId,
       status: 'success', version: 'v1',
     });
     const text = `Based on ${chunks.length} chunks: ${chunks[0]?.text.slice(0, 120) ?? 'no data'}`;

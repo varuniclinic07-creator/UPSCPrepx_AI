@@ -17,7 +17,7 @@ import path from 'path';
     const envFile = fs.readFileSync(envPath, 'utf8');
     for (const rawLine of envFile.split(/\r?\n/)) {
       const line = rawLine.replace(/\r$/, '');
-      const m = line.match(/^(NEXT_PUBLIC_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY)=(.+)$/);
+      const m = line.match(/^(NEXT_PUBLIC_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|OLLAMA_API_KEY|OLLAMA_BASE_URL|OLLAMA_MODEL|OLLAMA_STRATEGY_MODEL|LLM_PROVIDER|EMBED_PROVIDER|EMBED_MODEL|NINEROUTER_EMBED_BASE_URL|NINEROUTER_EMBED_API_KEY)=(.+)$/);
       if (m) process.env[m[1]] = m[2].trim();
     }
   } catch {
