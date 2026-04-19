@@ -48,6 +48,16 @@ type DashboardData = {
   recentActivity: ActivityItem[];
   earnedBadges: string[];
   mentorTip: string | null;
+  /** Top-3 weak topics from v8_user_mastery (lowest mastery, min 3 attempts). */
+  weakTopics: MasteryTopic[];
+  /** Top-3 strongest topics from v8_user_mastery. */
+  strongTopics: MasteryTopic[];
+};
+
+type MasteryTopic = {
+  topicId: string;
+  mastery: number; // 0..1
+  attempts: number;
 };
 
 type ActivityItem = {
@@ -72,6 +82,8 @@ async function fetchDashboardData(): Promise<DashboardData> {
     recentActivity: [],
     earnedBadges: [],
     mentorTip: null,
+    weakTopics: [],
+    strongTopics: [],
   };
 
   try {
@@ -84,7 +96,7 @@ async function fetchDashboardData(): Promise<DashboardData> {
     if (!authUser) return empty;
 
     const db = supabase as any;
-    const [progressRes, quizRes, notesRes, activityRes] = await Promise.allSettled([
+    const [progressRes, quizRes, notesRes, activityRes, masteryRes] = await Promise.allSettled([
       db
         .from('user_progress')
         .select('syllabus_coverage, study_streak, best_streak, total_study_hours, last_active_dates, rank_estimate')
@@ -108,6 +120,12 @@ async function fetchDashboardData(): Promise<DashboardData> {
         .eq('user_id', authUser.id)
         .order('created_at', { ascending: false })
         .limit(5),
+      // Phase-1 B3: pull v8_user_mastery for the Topic Mastery card.
+      // Written by EvaluationAgent.updateMastery on every quiz submit.
+      db
+        .from('v8_user_mastery')
+        .select('topic_id, mastery, attempts')
+        .eq('user_id', authUser.id),
     ]);
 
     const data: DashboardData = { ...empty };
@@ -162,6 +180,22 @@ async function fetchDashboardData(): Promise<DashboardData> {
         timeLabel: formatRelativeTime(n.created_at),
         href: `/dashboard/notes/${n.id}`,
       }));
+    }
+
+    // B3: Topic Mastery — read v8_user_mastery (written by EvaluationAgent).
+    // Filter min-attempts >= 1 so freshly-guessed topics don't swamp the list.
+    if (masteryRes.status === 'fulfilled' && masteryRes.value.data?.length) {
+      const rows = (masteryRes.value.data as any[])
+        .map((r) => ({
+          topicId: String(r.topic_id ?? ''),
+          mastery: Number(r.mastery) || 0,
+          attempts: Number(r.attempts) || 0,
+        }))
+        .filter((r) => r.topicId && r.attempts >= 1);
+      const byAsc = [...rows].sort((a, b) => a.mastery - b.mastery);
+      const byDesc = [...rows].sort((a, b) => b.mastery - a.mastery);
+      data.weakTopics = byAsc.slice(0, 3);
+      data.strongTopics = byDesc.slice(0, 3);
     }
 
     // Badge earning rules — all real, no hardcoded earned:true
@@ -640,6 +674,30 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* ─── Topic Mastery (B3) — v8_user_mastery driven ─── */}
+      {(data.weakTopics.length > 0 || data.strongTopics.length > 0) && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-white">Topic Mastery</h2>
+              <p className="text-xs text-white/40 mt-0.5">
+                Live EMA from every quiz attempt · updated by the Evaluation Agent
+              </p>
+            </div>
+            <Link
+              href="/dashboard/analytics/mastery"
+              className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1"
+            >
+              Full breakdown <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            <MasteryCard tone="weak" title="Needs the most work" topics={data.weakTopics} />
+            <MasteryCard tone="strong" title="Strongest topics" topics={data.strongTopics} />
+          </div>
+        </section>
+      )}
+
       {/* ─── AI Performance Insights — only when we have real data ─── */}
       {!data.isFreshUser && data.mockCount > 0 && (
         <section>
@@ -699,6 +757,68 @@ function InsightCard({
         <h3 className="text-sm font-semibold text-white">{title}</h3>
       </div>
       <p className="text-sm text-white/50 leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+function MasteryCard({
+  tone,
+  title,
+  topics,
+}: {
+  tone: 'weak' | 'strong';
+  title: string;
+  topics: MasteryTopic[];
+}) {
+  const barColor =
+    tone === 'weak'
+      ? 'from-rose-500 to-orange-500'
+      : 'from-emerald-500 to-cyan-500';
+  const accent = tone === 'weak' ? 'text-rose-400' : 'text-emerald-400';
+  const iconBg = tone === 'weak' ? 'bg-rose-500/10' : 'bg-emerald-500/10';
+  const Icon = tone === 'weak' ? Target : Trophy;
+
+  return (
+    <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
+      <div className="flex items-center gap-3 mb-5">
+        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center`}>
+          <Icon className={`w-5 h-5 ${accent}`} />
+        </div>
+        <div>
+          <h3 className="font-display font-semibold text-white">{title}</h3>
+          <p className="text-xs text-white/30">Ranked by live mastery score</p>
+        </div>
+      </div>
+      {topics.length > 0 ? (
+        <ul className="space-y-3">
+          {topics.map((t) => {
+            const pct = Math.round(t.mastery * 100);
+            const label = t.topicId
+              .replace(/[-_]/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase());
+            return (
+              <li key={t.topicId} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/80 font-medium truncate">{label}</span>
+                  <span className={`text-xs font-mono ${accent}`}>
+                    {pct}% · {t.attempts} att
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-[width] duration-500`}
+                    style={{ width: `${Math.max(4, pct)}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-sm text-white/40 py-4">
+          Take a few quizzes to populate this view.
+        </p>
+      )}
     </div>
   );
 }
