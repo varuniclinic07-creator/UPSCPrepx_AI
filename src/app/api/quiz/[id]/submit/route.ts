@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { submitQuizAttempt } from '@/lib/services/quiz-service';
 import { requireUser } from '@/lib/auth/auth-config';
+import { EvaluationAgentImpl } from '@/lib/agents/core/evaluation-agent';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,8 +46,41 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Submit quiz attempt
+    // Submit quiz attempt (legacy path — keeps existing response shape intact).
     const attempt = await submitQuizAttempt(quizId, user.id, answers, timeTaken);
+
+    // Phase-1 C2: dual-write through Evaluation Agent so v8_user_interactions
+    // and v8_user_mastery reflect this attempt. Best-effort — legacy response
+    // shape stays unchanged even if v8 write fails.
+    try {
+      const supabase = await createServerSupabaseClient();
+      const { data: quizRow } = await supabase
+        .from('quizzes')
+        .select('id, subject, questions')
+        .eq('id', quizId)
+        .maybeSingle();
+      const qs = Array.isArray(quizRow?.questions) ? quizRow!.questions : [];
+      // Build v8 QuizAttempt shape — pull correct answer + userAnswer per question.
+      const v8Questions = qs.map((q: any) => ({
+        id: String(q.id ?? q.question_id ?? ''),
+        correct: String(q.correct_answer ?? q.correct ?? ''),
+        userAnswer: String(answers?.[q.id] ?? answers?.[q.question_id] ?? ''),
+        timeMs: Math.floor((Number(timeTaken) || 0) * 1000 / Math.max(1, qs.length)),
+      })).filter((q: any) => q.id);
+      if (v8Questions.length) {
+        const topicId = String(quizRow?.subject ?? 'unknown').toLowerCase();
+        const evaluator = new EvaluationAgentImpl({ feature: 'quiz', userId: user.id });
+        await evaluator.updateMastery(user.id, {
+          userId: user.id,
+          quizId,
+          topicId,
+          questions: v8Questions,
+        });
+      }
+    } catch (dualErr) {
+      // eslint-disable-next-line no-console
+      console.warn('[quiz/submit] v8 dual-write failed (legacy unaffected):', dualErr);
+    }
 
     return NextResponse.json({
       success: true,

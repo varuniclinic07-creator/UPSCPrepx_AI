@@ -126,7 +126,10 @@ supabase/migrations/
 ├── 054_v8_user_interactions.sql
 ├── 055_v8_user_mastery.sql
 ├── 056_v8_derived_views.sql
-└── 057_agent_traces.sql
+├── 057_agent_traces.sql
+├── 058_agent_traces_rls.sql           # RLS lockdown (follow-up to 057)
+├── 059_v8_knowledge_chunks.sql        # pgvector chunks (Day 3)
+└── 060_v8_match_chunks.sql            # cosine-similarity RPC (Day 3)
 
 scripts/
 └── smoke-fresh-user.mjs
@@ -344,7 +347,7 @@ git commit -m "feat(v8): add derived views for weak/strong topics + readiness (A
 CREATE TABLE IF NOT EXISTS agent_traces (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   trace_id          uuid NOT NULL,
-  parent_trace_id   uuid REFERENCES agent_traces(trace_id) DEFERRABLE INITIALLY DEFERRED,
+  parent_trace_id   uuid REFERENCES agent_traces(id),  -- FK target is id (PK), not trace_id: multiple rows share a trace_id so it's not unique
   agent             text NOT NULL CHECK (agent IN (
                       'knowledge','evaluation','orchestrator'
                     )),
@@ -393,7 +396,7 @@ SELECT column_name, data_type FROM information_schema.columns
 WHERE table_name = 'agent_traces' ORDER BY ordinal_position;
 SELECT indexname FROM pg_indexes WHERE tablename = 'agent_traces';
 ```
-Expected: 16 columns, 6 indexes.
+Expected: 18 columns, 7 indexes (6 custom + pkey).
 
 - [ ] **Step 4: Commit**
 

@@ -16,6 +16,7 @@ import { BentoGrid } from '@/components/magic-ui/bento-grid';
 import { ShimmerButton } from '@/components/magic-ui/shimmer-button';
 import { BorderBeamInput } from '@/components/magic-ui/border-beam';
 import { QuickGenerate } from '@/components/living-content/quick-generate';
+import { KnowledgeSearchPanel } from '@/components/knowledge/knowledge-search-panel';
 import type { Note } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -293,6 +294,15 @@ export default async function NotesPage({
         <Suspense fallback={<NotesLoading />}>
           <NotesList searchParams={resolvedParams} />
         </Suspense>
+      </section>
+
+      {/* C1 Phase-1: Knowledge Agent grounded search over ingested content. */}
+      <section className="max-w-7xl mx-auto px-4 md:px-8 py-10">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-lg font-semibold text-white">Ask across your notes (beta)</h2>
+        </div>
+        <KnowledgeSearchPanel />
       </section>
     </div>
   );

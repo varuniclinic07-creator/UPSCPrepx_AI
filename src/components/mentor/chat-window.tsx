@@ -10,13 +10,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, Bot, Loader2, AlertCircle } from 'lucide-react';
+import { Send, User, Bot, Loader2, AlertCircle, BookOpen, Target, RefreshCw, Stethoscope } from 'lucide-react';
+
+type MentorMode = 'explain' | 'strategy' | 'revision' | 'diagnostic';
 
 interface Message {
   id?: string;
   role: 'user' | 'assistant';
   content: string;
   created_at?: string;
+  mode?: MentorMode;
+  citations?: Array<{ sourceId: string; snippet: string; url?: string }>;
 }
 
 interface ChatWindowProps {
@@ -24,11 +28,19 @@ interface ChatWindowProps {
   sessionId: string | null;
 }
 
+const MODES: { id: MentorMode; label: string; labelHi: string; icon: React.ReactNode; hint: string }[] = [
+  { id: 'explain',    label: 'Explain',    labelHi: 'समझाएँ',    icon: <BookOpen className="w-3.5 h-3.5" />,    hint: 'Grounded, cited answers from notes + PYQ + CA.' },
+  { id: 'strategy',   label: 'Strategy',   labelHi: 'रणनीति',    icon: <Target className="w-3.5 h-3.5" />,      hint: 'A plan grounded in your weak topics + mastery.' },
+  { id: 'revision',   label: 'Revision',   labelHi: 'पुनरावृत्ति', icon: <RefreshCw className="w-3.5 h-3.5" />,   hint: 'Key points + common mistakes for a topic.' },
+  { id: 'diagnostic', label: 'Diagnostic', labelHi: 'विश्लेषण',   icon: <Stethoscope className="w-3.5 h-3.5" />, hint: 'Strengths, gaps, and your priority fix.' },
+];
+
 export function MentorChatWindow({ showHindi, sessionId }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<MentorMode>('explain');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -76,20 +88,39 @@ export function MentorChatWindow({ showHindi, sessionId }: ChatWindowProps) {
     setError(null);
 
     try {
-      // If no session, create one conceptually (would need API call in real app)
-      const currentSessionId = sessionId || 'temp-session-1'; 
-
-      const response = await fetch('/api/mentor/chat', {
+      // Route through Orchestrator Agent (Phase-1 C3). The reply shape varies
+      // by mode; render a mode-specific string. agent_traces captures provenance.
+      const response = await fetch('/api/agents/orchestrator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: currentSessionId, message: userMessage.content }),
+        body: JSON.stringify({ message: userMessage.content, mode }),
       });
 
       const data = await response.json();
-      if (data.success) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.data.reply }]);
+      if (data.success && data.reply) {
+        const r = data.reply;
+        let text = '';
+        let citations: Message['citations'] = [];
+        switch (r.mode) {
+          case 'explain':
+            text = r.answer ?? '';
+            citations = r.citations ?? [];
+            break;
+          case 'strategy':
+            text = `${r.recommendation ?? ''}\n\n${r.rationale ?? ''}${r.nextSteps?.length ? `\n\nNext steps:\n- ${r.nextSteps.join('\n- ')}` : ''}`;
+            break;
+          case 'revision':
+            text = `${r.topic ? `**${r.topic}**\n\n` : ''}${r.keyPoints?.length ? `Key points:\n- ${r.keyPoints.join('\n- ')}` : ''}${r.commonMistakes?.length ? `\n\nCommon mistakes:\n- ${r.commonMistakes.join('\n- ')}` : ''}`;
+            break;
+          case 'diagnostic':
+            text = `${r.assessment ?? ''}${r.priorityFix ? `\n\nPriority fix: ${r.priorityFix}` : ''}`;
+            break;
+          default:
+            text = JSON.stringify(r);
+        }
+        setMessages(prev => [...prev, { role: 'assistant', content: text, mode: r.mode, citations }]);
       } else {
-        setError(data.error);
+        setError(data.error || 'Mentor failed to respond');
       }
     } catch (err) {
       setError('Failed to get response');
@@ -134,8 +165,28 @@ export function MentorChatWindow({ showHindi, sessionId }: ChatWindowProps) {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Mode Selector (C3) — drives which OrchestratorAgent branch fires. */}
+      <div className="px-4 pt-3 pb-2 bg-white border-t border-gray-200 flex flex-wrap gap-2">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => setMode(m.id)}
+            title={m.hint}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+              mode === m.id
+                ? 'bg-saffron-600 border-saffron-600 text-white'
+                : 'bg-white border-gray-300 text-gray-700 hover:border-saffron-400 hover:text-saffron-700'
+            }`}
+          >
+            {m.icon}
+            {showHindi ? m.labelHi : m.label}
+          </button>
+        ))}
+      </div>
+
       {/* Input Area */}
-      <div className="p-4 bg-white border-t border-gray-200">
+      <div className="px-4 pb-4 pt-2 bg-white">
         <form onSubmit={handleSend} className="flex gap-2">
           <input
             type="text"
